@@ -1,0 +1,42 @@
+{
+	"name": "edu-nara",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"prepare": "svelte-kit sync || echo ''",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"lint": "prettier --check 'src/**/*.{svelte,ts,css}' '*.{js,ts,json}' pnpm-workspace.yaml && eslint .",
+		"format": "prettier --write 'src/**/*.{svelte,ts,css}' '*.{js,ts,json}' pnpm-workspace.yaml",
+		"test:e2e": "playwright test",
+		"test:e2e:ui": "playwright test --ui",
+		"test:unit": "echo 'no unit tests in phase 0 — added in phase 1'"
+	},
+	"devDependencies": {
+		"@eslint/js": "10.0.1",
+		"@playwright/test": "^1.48.0",
+		"@sveltejs/adapter-node": "^5.2.9",
+		"@sveltejs/kit": "^2.63.0",
+		"@sveltejs/vite-plugin-svelte": "^4.0.4",
+		"@types/node": "^22.7.5",
+		"autoprefixer": "^10.4.20",
+		"eslint": "^9.12.0",
+		"eslint-config-prettier": "^9.1.0",
+		"eslint-plugin-svelte": "^2.44.1",
+		"globals": "^17.12.0",
+		"postcss": "^8.4.47",
+		"prettier": "^3.6.2",
+		"prettier-plugin-svelte": "^3.3.3",
+		"svelte": "^5.56.1",
+		"svelte-check": "^4.6.0",
+		"svelte-eslint-parser": "^0.42.0",
+		"tailwindcss": "^3.4.13",
+		"typescript": "^5.6.2",
+		"typescript-eslint": "^8.8.1",
+		"vite": "^5.4.21"
+	}
+}

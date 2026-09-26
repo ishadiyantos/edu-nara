@@ -1,0 +1,25 @@
+# Edu Nara — Docker Compose untuk Raspberry Pi 5 (arm64)
+#
+# Deploy path: /DATA/AppData/edu-nara/
+# Akses via HTTP (tunnel eksternal sudah ada di Pi).
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: edu-nara:latest
+    container_name: edu-nara
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000/']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s

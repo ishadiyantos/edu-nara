@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =====================================================================
+ * Edu Nara — Design Tokens (Fase 0)
+ * Sesuai PLANNING.md §9. Divalidasi lewat prototipe, boleh direvisi.
+ * ===================================================================== */
+:root {
+	/* Warna */
+	--color-primary: #4f46e5;
+	--color-primary-soft: #eef2ff;
+	--color-accent: #0f766e;
+	--color-warning: #b45309;
+	--color-danger: #b91c1c;
+	--color-bg: #f8fafc;
+	--color-surface: #ffffff;
+	--color-text: #0f172a;
+	--color-text-muted: #475569;
+	--color-border: #e2e8f0;
+
+	/* Shape */
+	--radius-card: 1rem;
+
+	/* Elevation */
+	--shadow-card: 0 8px 30px rgb(15 23 42 / 0.08);
+	--shadow-lift: 0 12px 40px rgb(79 70 229 / 0.18);
+
+	/* Motion (dihormati prefers-reduced-motion) */
+	--motion-fast: 120ms;
+	--motion-base: 200ms;
+	--motion-slow: 320ms;
+	--motion-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* Reduced motion → matikan animasi */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.001ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.001ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
+/* =====================================================================
+ * Base
+ * ===================================================================== */
+@layer base {
+	html {
+		-webkit-text-size-adjust: 100%;
+		text-size-adjust: 100%;
+	}
+	body {
+		font-family: theme('fontFamily.sans');
+		min-height: 100dvh;
+	}
+	:focus-visible {
+		outline: 2px solid var(--color-primary);
+		outline-offset: 2px;
+		border-radius: 4px;
+	}
+	/* Target sentuh min 44x44 (WCAG) untuk semua tombol interaktif */
+	button,
+	a,
+	[role='button'],
+	input[type='button'],
+	input[type='submit'] {
+		min-height: 44px;
+	}
+	/* Input tipe teks: min tinggi 44 juga */
+	input:not([type='checkbox']):not([type='radio']),
+	select,
+	textarea {
+		min-height: 44px;
+	}
+}
+
+/* =====================================================================
+ * Component utilities
+ * ===================================================================== */
+@layer components {
+	.container-app {
+		@apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
+	}
+	.container-narrow {
+		@apply mx-auto w-full max-w-md px-4 sm:px-6;
+	}
+	.surface {
+		@apply rounded-card bg-surface shadow-card border border-border;
+	}
+	.link {
+		@apply text-primary underline-offset-4 hover:underline focus-visible:underline;
+	}
+}
