@@ -35,7 +35,9 @@ export const POST: import('./$types').RequestHandler = async (event) => {
 		const currentQuestion = getChoiceQuestion(store, question.id)!;
 		const lastEventId = events.publish(session.id, 'poll.tally', {
 			questionId: question.id,
-			counts: currentQuestion.showResults ? choiceTally(store, session.id, question.id) : undefined
+			...(getChoiceQuestion(store, question.id)?.showResults
+				? { counts: choiceTally(store, session.id, question.id) }
+				: {})
 		});
 		const released = currentQuestion.showResults;
 		return json({
@@ -51,7 +53,7 @@ export const POST: import('./$types').RequestHandler = async (event) => {
 						correctOptionIds: currentQuestion.options
 							.filter((option) => option.isCorrect)
 							.map((option) => option.id),
-					tally: choiceTally(store, session.id, question.id)
+						tally: choiceTally(store, session.id, question.id)
 					}
 				: {})
 		});

@@ -12,7 +12,7 @@
 </script>
 
 <svelte:head>
-	<title>Presenter — Multiple Choice</title>
+	<title>Presenter — Quiz</title>
 </svelte:head>
 
 <main class="min-h-dvh bg-slate-950 p-8 text-white">

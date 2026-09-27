@@ -4,7 +4,6 @@ import { ownedSession, snapshot, changeState } from '$lib/server/sessions';
 import { body, message, requireAdmin } from '$lib/server/http';
 import { events } from '$lib/server/events';
 import {
-	choiceTally,
 	getChoiceQuestionsByActivity,
 	quizLeaderboard,
 	setChoiceResults
