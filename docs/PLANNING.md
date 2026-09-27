@@ -1,6 +1,6 @@
 # Edu Nara — Planning Document
 
-> Dokumen ini menggabungkan Implementation Plan di `.hermes/plans/2026-09-26_184718-platform-edu-nara.md` (sumber kebenaran keputusan produk & teknis) dengan tambahan arsitektur modul & protokol event. Detail spesifikasi per-fitur ada di **`FEATURES.md`**; prompt siap-paste untuk AI coding assistant ada di **`PROMPT.md`**.
+> Dokumen ini menjadi acuan aktif pengembangan. Implementation Plan di `.hermes/plans/2026-09-26_184718-platform-edu-nara.md` adalah referensi historis, bukan aturan kerja yang mengalahkan dokumen ini. Detail spesifikasi per-fitur ada di **`FEATURES.md`**; prompt siap-paste untuk AI coding assistant ada di **`PROMPT.md`**.
 
 **Goal.** Membangun platform aktivitas kelas milik sendiri yang ringan, menarik, mobile-first, dan mudah dipakai mahasiswa melalui kode sesi tanpa akun.
 
@@ -198,7 +198,7 @@ data: {"...json..."}
 | Event | Trigger | Payload inti |
 |---|---|---|
 | `session.state` | connect, buka/tutup, presenter toggle | `{state, activeQuestionId, showResults}` |
-| `participant.count` | join/leave | `{count}` |
+| `participant.count` | join baru | `{count}` total peserta pernah bergabung, bukan online |
 | `poll.tally` | vote masuk (debounced 300 ms) | `{questionId, counts: {optionId: n}}` |
 | `wordcloud.snapshot` | kata baru (debounced 300 ms) | `{questionId, words: [{word, weight}]}` |
 | `board.post.new` / `board.post.moderated` / `board.post.removed` | admin/mahasiswa aksi | `{postId, columnId, status, ...}` |
@@ -220,9 +220,19 @@ data: {"...json..."}
 | 4a | Board teks + moderasi | Papan kolaborasi dasar | **v0.3** |
 | 4b | Board gambar/tautan | Upload aman + link | **v0.4** |
 | 5 | Crossword | Editor manual + player mobile | **v0.5** |
-| 6 | Hardening + Deploy | Keamanan, backup, load test, staging | **v1.0** |
+| 6 | Stabilitas akhir | Audit, regression, kapasitas, pemulihan; fitur sudah production | **v1.0** |
 
 **Aturan urutan:** jangan mulai fase berikutnya sebelum **acceptance criteria** fase aktif terpenuhi.
+
+**Aturan kerja Kanban:** workspace ini memakai satu worker aktif per profile agar perubahan fitur tidak saling menimpa. Fokus setiap task adalah alur fitur end-to-end yang bisa dipakai; smoke check dilakukan seperlunya selama implementasi. Deploy dan verifikasi utama dilakukan di Pi5. Full unit/integration/E2E/load/regression test dijalankan sebagai gate setelah fitur MVP selesai dan terdeploy, bukan berulang pada setiap perubahan kecil. Task yang terhambat runner atau scope campur harus dicatat sebagai blocker, bukan diulang tanpa bukti baru.
+
+**Alur iterasi fitur (urutan tetap, setiap fase):**
+
+1. Tulis source code fitur sampai alur end-to-end bisa dipakai.
+2. Cek murah yang relevan; tidak wajib membuat E2E baru per fitur. Build ARM64 dilakukan di Pi 5 sebelum mengganti container aktif.
+3. Stage file scope fitur, commit konvensional, `git push origin HEAD:main`, lalu verifikasi `git ls-remote origin refs/heads/main`.
+4. Deploy production Pi 5 (`./scripts/deploy.sh`) dan verifikasi health aktif.
+5. Test stabilitas penuh (§13) hanya di tahap akhir setelah fitur MVP terdeploy, sebelum rilis stabil v1.0; bukan setiap tag iterasi v0.x.
 
 ---
 
@@ -307,27 +317,38 @@ Keputusan berikut belum final; **default aman** dipakai sampai Anda memutuskan l
 
 Fitur dianggap selesai bila:
 
-- Alur admin **dan** mahasiswa lengkap, bukan hanya komponen demo.
-- Validasi **client dan server** tersedia.
-- State **loading, empty, error, disconnected, session-ended** tersedia.
-- Unit/integration/E2E relevan **lulus**.
-- Keyboard **dan** ponsel 360 px telah diuji.
-- Tidak menambah dependency bila native web/API Svelte cukup.
-- Production build lulus dan ukuran bundle ditinjau.
-- Dokumentasi penggunaan singkat tersedia.
-- Dipakai dalam **minimal satu simulasi kelas** dengan **dua browser berbeda**.
+- Alur admin **dan** mahasiswa lengkap dan bisa dipakai di kelas nyata.
+- Validasi **server** tersedia (validasi client menyusul bila perlu).
+- State penting tersedia: loading, error, session-ended. State kosong/edge lain boleh menyusul.
+- Alur utama dibuktikan dengan smoke manual atau otomatis, tanpa kewajiban menambah file E2E.
+- Commit sudah dipush ke GitHub dan SHA remote cocok.
+- Commit yang sama terdeploy di production Pi 5; release, health, dan fitur live terverifikasi.
+- Dipakai dalam minimal satu simulasi kelas singkat.
+
+Tidak diwajibkan per fitur: cakupan unit/integration penuh dan pengujian semua viewport. Audit luas masuk tahap stabilitas akhir; label, akses keyboard, dan validasi server tetap dibangun bersama fitur.
 
 ---
 
-## 13. Perintah Wajib (target script)
+## 13. Strategi Delivery & Stabilitas
 
+**Urutan utama:** source code fitur end-to-end → check/smoke seperlunya → commit dan push GitHub → deploy production Pi 5 → verifikasi health dan alur nyata → test stabilitas penuh di akhir / gate rilis.
+
+### Saat membangun fitur
+- Implementasikan alur yang bisa dipakai, bukan test suite terlebih dahulu.
+- Jalankan hanya check murah yang membantu mencegah kerusakan langsung; jangan mengulang test sama tanpa perubahan atau bukti baru.
+- Sebelum rilis fitur, satu alur manual atau E2E happy-path cukup sebagai acceptance. Jangan menunda fitur karena cakupan test.
+
+### Tahap akhir setelah fitur MVP terdeploy / sebelum rilis stabil v1.0
 ```bash
-npm run check           # svelte-check + tsc
-npm run lint
-npm run test:unit       # vitest
-npm run test:integration
-npm run test:e2e        # playwright
-npm run build           # production
+npm run check && npm run lint && npm run test:unit && npm run test:integration && npm run build
+npm run test:e2e
 ```
 
-Semua harus hijau sebelum tag rilis.
+Jalankan suite luas sekali pada tahap stabilitas akhir, lalu ulangi bagian yang gagal setelah perbaikan. Load/soak/restore memakai staging Pi 5 dengan data terisolasi, bukan membebani atau merusak production. Perubahan auth, otorisasi, upload, migrasi destruktif, atau backup/restore wajib mendapat pemeriksaan terarah sebelum aktivasi production; ini bukan alasan menjalankan seluruh suite tiap iterasi.
+
+### Aturan praktis
+- Test mengunci perilaku yang sudah dipilih; jangan menulis test dulu saat desain fitur masih berubah.
+- Unit test hanya untuk logika murni rawan bug.
+- Integration test hanya untuk kontrak penting: idempotency, isolasi sesi, akses lintas aktivitas.
+- Hindari test duplikat dan banyak file E2E untuk satu alur fitur.
+- Stabilitas luas (viewport, regression, load) menjadi tahap akhir setelah fitur terdeploy.

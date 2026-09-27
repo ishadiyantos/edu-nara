@@ -1,6 +1,6 @@
 # Edu Nara — Spesifikasi Fase & Fitur
 
-> Companion `PLANNING.md`. Setiap fase berisi objective, files, langkah, acceptance criteria dari plan Anda + wireframe teks & catatan implementasi.
+> Acuan fitur aktif. Utamakan source code end-to-end, push GitHub, lalu deploy production Pi 5 per fitur. Test stabilitas luas hanya pada tahap akhir; lihat `PLANNING.md` §12–13. Keamanan dan perlindungan data tetap dibangun bersama fitur.
 
 ---
 
@@ -13,14 +13,11 @@
 - Create: `src/routes/join/+page.svelte`
 - Create: `src/routes/admin/+layout.svelte`
 - Create: `src/app.css`
-- Test: `tests/e2e/navigation.spec.ts`
 
 **Langkah.**
 1. Tetapkan nama sementara, warna utama, font lokal/system, radius, shadow, spacing, dan state komponen.
 2. Buat wireframe: landing, join, dashboard, presenter, dan 4 layar aktivitas.
-3. Uji pada lebar **360 px, 768 px, 1440 px**.
-4. Uji keyboard, kontras, reduced motion, loading/empty/error state.
-5. Minta **3–5 mahasiswa** menyelesaikan alur join dari QR sampai kirim jawaban.
+3. Validasi alur join singkat dengan pengguna; rapikan hambatan yang nyata.
 
 **Wireframe teks — Mahasiswa (360 px).**
 ```
@@ -62,9 +59,6 @@ Waiting room:
 - Create: `src/hooks.server.ts`
 - Create: `src/routes/admin/login/+page.server.ts`
 - Create: `src/routes/api/join/+server.ts`
-- Test: `tests/unit/session-code.test.ts`
-- Test: `tests/integration/auth.test.ts`
-- Test: `tests/integration/join.test.ts`
 
 **Langkah.**
 1. Bootstrap SvelteKit TypeScript + scripts lint/check/test/build.
@@ -81,7 +75,7 @@ Waiting room:
 **Catatan implementasi SSE.**
 - Simpan koneksi di `Map<sessionId, Set<Client>>` in-memory.
 - Setiap client dapat `lastEventId` monotonic; server buffer 100 event terakhir per sesi untuk resume saat reconnect.
-- Heartbeat 20 s. Drop client bila 2 heartbeat terlewat.
+- Heartbeat server setiap 20 s; browser tidak mengirim ACK. Cleanup ketika request abort, otorisasi kedaluwarsa, atau antrean klien lambat penuh. Reconnect memakai replay/resync.
 
 **Acceptance criteria.** Admin login; activity kosong dapat dibuat; sesi menghasilkan kode; dua browser dapat join; reconnect **tidak** menggandakan peserta.
 
@@ -92,23 +86,16 @@ Waiting room:
 **Objective.** Aktivitas paling sederhana selesai end-to-end dan menjadi **pola** fitur berikutnya.
 
 **Files.**
-- Create: `src/lib/components/poll/ChoiceEditor.svelte`
-- Create: `src/lib/components/poll/ChoicePlayer.svelte`
-- Create: `src/lib/components/poll/ChoiceResults.svelte`
-- Create: `src/routes/admin/activities/[id]/poll/+page.svelte`
-- Create: `src/routes/api/polls/[questionId]/responses/+server.ts`
-- Test: `tests/unit/poll-validation.test.ts`
-- Test: `tests/integration/poll-response.test.ts`
-- Test: `tests/e2e/multiple-choice.spec.ts`
+- Implementasikan komponen editor, player, presenter dan endpoint submit pada struktur proyek saat ini.
+- Migration untuk pertanyaan, opsi, respons, dan constraint satu respons per peserta/pertanyaan.
 
 **Langkah.**
-1. **Failing tests dulu**: minimal 2 opsi, opsi kosong, duplikasi respons, sesi tertutup.
-2. Editor pertanyaan + opsi dengan **preview ponsel** di kanan.
-3. Endpoint submit **idempotent** (`Idempotency-Key` header atau `participant_id + question_id`).
-4. SSE broadcast **aggregate count**, bukan data peserta.
-5. Presenter results: **bar chart CSS/SVG** — jangan pakai chart framework.
-6. Kontrol tampil/sembunyikan hasil + buka/tutup voting.
-7. Ekspor CSV UTF-8 (waspada CSV formula injection: prefix `'` untuk sel yang diawali `=+-@`).
+1. Editor pertanyaan + opsi dengan **preview ponsel** di kanan.
+2. Endpoint submit idempotent (`Idempotency-Key` atau constraint peserta + pertanyaan).
+3. SSE broadcast aggregate count, bukan data peserta.
+4. Presenter results: bar chart CSS/SVG tanpa chart framework.
+5. Kontrol tampil/sembunyikan hasil + buka/tutup voting.
+6. Ekspor CSV UTF-8 dengan proteksi formula injection.
 
 **Wireframe — Player mahasiswa.**
 ```
@@ -126,7 +113,7 @@ Waiting room:
 └─────────────────────────┘
 ```
 
-**Acceptance criteria.** 50 klien lokal bisa memilih **tanpa respons hilang**; refresh mempertahankan pilihan; hasil **tidak bocor** sebelum admin membukanya.
+**Acceptance criteria.** Alur admin buat pertanyaan → mahasiswa pilih → tally presenter tampil, berjalan di aplikasi nyata. Refresh mempertahankan pilihan; hasil **tidak bocor** sebelum admin membukanya. Load/stress masuk gate rilis akhir, bukan per fitur.
 
 ---
 
@@ -134,21 +121,14 @@ Waiting room:
 
 **Objective.** Mahasiswa mengirim kata/frasa; presenter melihat agregasi live.
 
-**Files.**
-- Create: `src/lib/components/poll/WordCloudEditor.svelte`
-- Create: `src/lib/components/poll/WordCloudPlayer.svelte`
-- Create: `src/lib/components/poll/WordCloudResults.svelte`
-- Create: `src/lib/server/word-normalization.ts`
-- Test: `tests/unit/word-normalization.test.ts`
-- Test: `tests/integration/word-response.test.ts`
-- Test: `tests/e2e/word-cloud.spec.ts`
+**Files.** Implementasikan komponen Word Cloud editor/player/results dan logika normalisasi pada struktur proyek saat ini.
 
 **Langkah.**
-1. Batas **1–5 kata** per peserta, panjang max **80 karakter**.
-2. Normalisasi **deterministik** + tests: kapital, spasi, Unicode NFC, input kosong, karakter kontrol, ZWJ/ZWNJ.
+1. Batas 1–5 kata per peserta, panjang max 80 karakter.
+2. Normalisasi deterministik (kapital, spasi, Unicode NFC, input kosong, karakter kontrol).
 3. Config: jumlah kiriman per peserta + moderasi sebelum tampil.
-4. Agregasi kata di **SQL/server** (bukan client).
-5. Visualisasi responsif + **daftar frekuensi tersembunyi/alternatif** untuk screen reader (`aria-live=polite`).
+4. Agregasi kata di SQL/server (bukan client).
+5. Visualisasi responsif + daftar frekuensi alternatif untuk screen reader (`aria-live=polite`).
 6. Batasi frekuensi animasi (max 2 Hz) agar proyektor tidak tersendat.
 
 **Normalisasi minimal:**
@@ -160,7 +140,7 @@ export function normalize(raw: string): string {
 ```
 Sinonim/merge manual (dosen) datang setelah MVP.
 
-**Acceptance criteria.** Varian kapital/spasi tergabung; konten belum disetujui tidak tampil; **200 respons** tetap lancar pada laptop biasa.
+**Acceptance criteria.** Editor, kiriman mahasiswa, moderasi, dan agregasi presenter berjalan; varian kapital/spasi tergabung; konten belum disetujui tidak tampil. Target 200 respons diperiksa pada tahap stabilitas akhir.
 
 ---
 
@@ -174,8 +154,6 @@ Sinonim/merge manual (dosen) datang setelah MVP.
 - Create: `src/lib/components/board/PostComposer.svelte`
 - Create: `src/routes/api/boards/[boardId]/posts/+server.ts`
 - Create: `src/routes/api/boards/posts/[postId]/moderate/+server.ts`
-- Test: `tests/integration/board-post.test.ts`
-- Test: `tests/e2e/board.spec.ts`
 
 **Langkah.**
 1. Layout **columns** (bukan freeform) — lebih baik untuk mobile & aksesibilitas.
@@ -193,7 +171,6 @@ Sinonim/merge manual (dosen) datang setelah MVP.
 
 **Files tambahan.**
 - Create: `src/lib/server/uploads.ts`
-- Test: `tests/unit/upload-validation.test.ts`
 
 **Langkah.**
 1. Tautan: validasi skema **`http`/`https`** saja. **Jangan fetch preview URL** pada MVP (hindari SSRF).
@@ -218,9 +195,6 @@ Sinonim/merge manual (dosen) datang setelah MVP.
 - Create: `src/lib/components/crossword/ClueEditor.svelte`
 - Create: `src/lib/components/crossword/CrosswordPlayer.svelte`
 - Create: `src/lib/server/crossword.ts`
-- Test: `tests/unit/crossword-grid.test.ts`
-- Test: `tests/unit/crossword-score.test.ts`
-- Test: `tests/e2e/crossword.spec.ts`
 
 **Langkah.**
 1. Alfabet MVP: **huruf Latin**, angka opsional; normalisasi kapital & spasi.
@@ -246,16 +220,14 @@ Jawaban tidak dikirim. Cek dilakukan via `POST /api/crosswords/:id/check` dengan
 
 ---
 
-## Fase 6 — Hardening & Deployment (Rilis v1.0)
+## Fase 6 — Stabilitas Akhir (Rilis v1.0)
 
-**Objective.** Platform aman, dapat dipulihkan, dan layak dipakai di kelas.
+**Objective.** Validasi stabilitas platform setelah semua fitur MVP terdeploy. Keamanan dasar, Docker, dan perlindungan data bukan pekerjaan yang ditunda ke fase ini.
 
 **Files.**
 - Create: `.env.example`
 - Create: `Dockerfile`
-- Create: `docs/deployment.md`
-- Create: `docs/backup-restore.md`
-- Test: `tests/e2e/session-lifecycle.spec.ts`
+- Update: `docs/DEPLOY.md`; gunakan panduan deploy/backup yang ada, jangan membuat dokumen duplikat.
 
 **Langkah.**
 1. Validasi seluruh input di server dengan **Zod**.
@@ -265,42 +237,18 @@ Jawaban tidak dikirim. Cek dilakukan via `POST /api/crosswords/:id/check` dengan
 5. Retensi hasil (default **180 hari**) + tombol hapus data sesi dengan konfirmasi.
 6. Backup terjadwal + **uji restore** ke direktori sementara.
 7. Docker image **non-root** + volume persisten untuk DB & upload.
-8. `lint + typecheck + unit + integration + e2e + build + audit dependency`.
-9. **Load test** realistis untuk 100 peserta pada poll/word cloud.
-10. Deploy **staging** → smoke test dari ponsel di Wi-Fi & seluler.
+8. **Setelah semua fitur terdeploy**: baru jalankan suite penuh — `lint + typecheck + unit + integration + e2e + build + audit dependency`, dan load test 100 peserta bila target kapasitas dipakai. Ini gate rilis v1.0, bukan langkah per fitur.
 
-**Acceptance criteria.** Semua test lulus; restore backup terbukti; data tetap ada setelah restart container; 100 peserta simulasi tanpa error atau kehilangan respons.
+**Acceptance criteria.** Fitur terdeploy dan sehat di production; pada gate rilis akhir: suite penuh lulus, restore backup terbukti, data tetap ada setelah restart container.
 
 ---
 
-## Strategi Testing
+## Strategi Delivery (lihat PLANNING.md §13)
 
-### Unit
-- Generator kode sesi
-- Normalisasi kata
-- Validator crossword + perhitungan skor
-- Validasi upload & URL
-- State transition sesi
-
-### Integration
-- Login/logout + cookie
-- Join/rejoin sesi
-- Constraint satu respons per peserta
-- Moderasi post
-- Tutup sesi menolak respons baru
-- Ekspor CSV aman terhadap formula injection
-
-### E2E (Playwright)
-3 context: **admin, mahasiswa A, mahasiswa B**.
-
-Skenario wajib:
-1. Admin membuat aktivitas & membuka sesi.
-2. Dua mahasiswa join dengan kode.
-3. Keduanya mengirim respons.
-4. Presenter menerima update live.
-5. Admin menutup aktivitas.
-6. Respons baru ditolak dengan pesan jelas.
-7. Refresh/reconnect memulihkan state.
+- Urutan tiap fitur: source code end-to-end → check murah seperlunya → push GitHub → deploy production Pi 5 → verifikasi health. Test stabilitas lengkap hanya di akhir, sebelum rilis stabil v1.0, bukan setiap tag v0.x.
+- Jangan menulis test dulu untuk fitur yang masih berubah bentuk; test menyusul setelah alur stabil.
+- Unit test hanya untuk logika murni rawan bug: normalisasi kata, skor, generator kode sesi.
+- Integration test hanya untuk kontrak penting: idempotency, isolasi sesi, akses lintas aktivitas.
 
 ---
 

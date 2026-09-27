@@ -2,7 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
 	testDir: 'tests/e2e',
-	fullyParallel: true,
+	fullyParallel: false,
+	workers: 1,
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 2 : 0,
 	reporter: process.env.CI ? 'github' : 'list',
@@ -11,9 +12,9 @@ export default defineConfig({
 		trace: 'on-first-retry'
 	},
 	webServer: {
-		command: 'node node_modules/vite/bin/vite.js build && HOST=127.0.0.1 PORT=4173 node build/index.js',
+		command: 'node --import tsx scripts/e2e-server.ts',
 		port: 4173,
-		reuseExistingServer: !process.env.CI,
+		reuseExistingServer: false,
 		timeout: 120_000
 	},
 	projects: [

@@ -1,0 +1,1 @@
+ALTER TABLE `poll_questions` ADD `time_limit` integer DEFAULT 20 NOT NULL;

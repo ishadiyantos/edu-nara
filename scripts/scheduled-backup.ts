@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { chmodSync, closeSync, existsSync, mkdirSync, openSync, readdirSync, rmSync } from 'node:fs';
+import { chmodSync, closeSync, mkdirSync, openSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 const DAY = 86_400_000;
@@ -16,10 +16,21 @@ const retentionDays = Number(process.env.BACKUP_RETENTION_DAYS || 0);
 const now = Number(process.env.BACKUP_NOW || Date.now());
 const stamp =
 	parseTimestamp(process.env.BACKUP_TIMESTAMP) ??
-	new Date(now).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+	new Date(now)
+		.toISOString()
+		.replace(/[-:]/g, '')
+		.replace(/\.\d{3}/, '');
 
-if (!source || !backupDir || !Number.isSafeInteger(now) || !Number.isInteger(retentionDays) || retentionDays < 0) {
-	console.error('Scheduled backup failed. Check DATABASE_PATH, BACKUP_DIR, BACKUP_NOW and BACKUP_RETENTION_DAYS.');
+if (
+	!source ||
+	!backupDir ||
+	!Number.isSafeInteger(now) ||
+	!Number.isInteger(retentionDays) ||
+	retentionDays < 0
+) {
+	console.error(
+		'Scheduled backup failed. Check DATABASE_PATH, BACKUP_DIR, BACKUP_NOW and BACKUP_RETENTION_DAYS.'
+	);
 	process.exitCode = 1;
 } else {
 	let reserved = false;

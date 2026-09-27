@@ -1,66 +1,46 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import { Card, Input, Button, Container } from '$components/ui';
-	import { goto } from '$app/navigation';
-
-	let email = $state('');
-	let password = $state('');
-	let error = $state('');
+	let { form } = $props();
 	let loading = $state(false);
-
-	async function submit(e?: SubmitEvent) {
-		e?.preventDefault();
-		if (!email || !password) {
-			error = 'Email dan kata sandi wajib diisi.';
-			return;
-		}
-		loading = true;
-		// Fase 0: langsung ke dashboard mock
-		await new Promise((r) => setTimeout(r, 400));
-		loading = false;
-		goto('/admin');
-	}
 </script>
 
-<svelte:head>
-	<title>Masuk admin — Edu Nara</title>
-</svelte:head>
-
-<main class="min-h-dvh bg-bg pb-16 pt-10 sm:pt-16">
-	<Container size="narrow">
-		<a class="link mb-6 inline-block text-sm font-medium" href="/">← Kembali</a>
-		<Card>
-			<h1 class="mb-1 text-2xl font-bold">Masuk sebagai admin</h1>
-			<p class="mb-6 text-muted">Dosen/pemilik platform.</p>
+<svelte:head><title>Masuk admin — Edu Nara</title></svelte:head>
+<main class="min-h-dvh bg-bg py-10">
+	<Container size="narrow"
+		><a class="link mb-6 inline-block" href="/">← Kembali</a><Card>
+			<h1 class="mb-2 text-2xl font-bold">Masuk sebagai admin</h1>
+			<p class="mb-6 text-muted">Akun hanya disediakan pemilik platform.</p>
 			<form
-				onsubmit={(e) => {
-					e.preventDefault();
-					submit(e);
+				method="POST"
+				use:enhance={() => {
+					loading = true;
+					return async ({ update }) => {
+						await update();
+						loading = false;
+					};
 				}}
 				class="flex flex-col gap-5"
-				novalidate
 			>
 				<Input
 					label="Email"
+					name="email"
 					type="email"
-					bind:value={email}
-					autocomplete="email"
 					required
-					placeholder="admin@example.com"
+					autocomplete="username"
+					maxlength={254}
 				/>
 				<Input
 					label="Kata sandi"
+					name="password"
 					type="password"
-					bind:value={password}
-					autocomplete="current-password"
 					required
+					autocomplete="current-password"
+					maxlength={256}
 				/>
-				{#if error}
-					<p role="alert" class="text-sm font-medium text-danger">{error}</p>
-				{/if}
-				<Button type="submit" block size="lg" {loading}>
-					{loading ? 'Memeriksa…' : 'Masuk'}
-				</Button>
-			</form>
-		</Card>
-	</Container>
+				{#if form?.message}<p role="alert" class="text-danger">{form.message}</p>{/if}
+				<Button type="submit" {loading} block>Masuk</Button>
+			</form></Card
+		></Container
+	>
 </main>

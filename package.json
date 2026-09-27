@@ -7,14 +7,18 @@
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
-		"prepare": "svelte-kit sync || echo ''",
+		"prepare": "svelte-kit sync",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"lint": "prettier --check 'src/**/*.{svelte,ts,css}' '*.{js,ts,json}' pnpm-workspace.yaml && eslint .",
 		"format": "prettier --write 'src/**/*.{svelte,ts,css}' '*.{js,ts,json}' pnpm-workspace.yaml",
 		"test:e2e": "playwright test",
 		"test:e2e:ui": "playwright test --ui",
-		"test:unit": "echo 'no unit tests in phase 0 — added in phase 1'"
+		"test:unit": "vitest run tests/unit",
+		"test:integration": "vitest run tests/integration",
+		"db:migrate": "tsx scripts/migrate.ts",
+		"db:seed": "tsx scripts/seed.ts",
+		"start": "node build/index.js"
 	},
 	"devDependencies": {
 		"@eslint/js": "10.0.1",
@@ -37,6 +41,20 @@
 		"tailwindcss": "^3.4.13",
 		"typescript": "^5.6.2",
 		"typescript-eslint": "^8.8.1",
-		"vite": "^5.4.21"
+		"vite": "^5.4.21",
+		"vitest": "^3.2.6",
+		"@types/better-sqlite3": "^7.6.13",
+		"drizzle-kit": "^0.31.10"
+	},
+	"packageManager": "pnpm@12.6.0",
+	"engines": {
+		"node": ">=22.13.0"
+	},
+	"dependencies": {
+		"better-sqlite3": "13.0.3",
+		"drizzle-orm": "0.45.3",
+		"zod": "^4.3.6",
+		"tsx": "^4.21.0",
+		"pino": "^10.3.1"
 	}
 }

@@ -15,17 +15,17 @@ dan JANGAN kontradiksi dengan keputusannya.
 ## Konteks Produk
 Platform aktivitas interaktif untuk kelas mahasiswa (target 100 peserta / sesi).
 Mahasiswa join lewat kode sesi 6 karakter + nama tampilan (tanpa akun).
-Admin/dosen login. Self-host di 1 VPS, opsional Docker.
+Admin/dosen login. Production di Pi 5 ARM64, 10.200.10.5, lewat Docker Compose. Source canonical tetap di workspace; build/dependency berada di disk lokal Pi 5.
 
 Roadmap rilis (ikuti urutan, JANGAN paralel):
-- Fase 0: validasi UI (wireframe + user test 3-5 mahasiswa)
+- Fase 0: UI inti dan alur join yang jelas
 - Fase 1: fondasi (auth admin, kode sesi, join, SSE hidup)
 - Fase 2 → v0.1: Multiple Choice (vertical slice pertama = pola untuk fitur lain)
 - Fase 3 → v0.2: Word Cloud
 - Fase 4a → v0.3: Board teks + moderasi
 - Fase 4b → v0.4: Board gambar + tautan
 - Fase 5 → v0.5: Crossword (editor manual + player)
-- Fase 6 → v1.0: hardening + deploy
+- Fase 6 → v1.0: stabilitas akhir; fitur sudah dipush dan production per fase
 
 ## Stack Wajib
 - SvelteKit + TypeScript (adapter-node)
@@ -68,19 +68,22 @@ shadcn, chart library, state-management library, komponen library besar
    - Crossword: jawaban TIDAK BOLEH ada di payload klien
 9. **Commit granular**: 1 satuan logis = 1 commit konvensional
    (feat:, fix:, refactor:, test:, docs:, chore:).
-10. **Test yang berarti**: unit untuk logika pure + Playwright untuk 1 happy
-    path per fitur. Failing test dulu untuk aturan bisnis kritis.
+10. **Test proporsional**: implementasikan fitur end-to-end dulu. Check murah dan satu smoke/happy-path cukup selama iterasi. Test stabilitas lengkap menunggu semua fitur selesai dan deploy.
 
-## Definition of Done (WAJIB semua sebelum lanjut fase)
-- Alur admin DAN mahasiswa lengkap (bukan komponen demo)
-- Validasi client + server
-- State loading/empty/error/disconnected/session-ended tersedia
-- Unit/integration/E2E relevan lulus
-- Diuji di keyboard + ponsel 360 px
-- Tidak nambah dependency bila native web/Svelte cukup
-- Production build lulus + bundle size ditinjau
-- README singkat cara pakai
-- Simulasi kelas dengan 2 browser berbeda
+## Definition of Done per Fitur
+- Alur admin DAN mahasiswa lengkap dan bisa dipakai, bukan komponen demo.
+- Validasi server dan state penting tersedia.
+- Alur utama terverifikasi manual atau satu smoke/happy-path.
+- Source dipush ke GitHub.
+- Production deploy Pi 5 berhasil dan health/alur nyata terverifikasi.
+- Tidak nambah dependency bila native web/Svelte cukup.
+
+## Gate Stabilitas Akhir
+Tahap akhir setelah seluruh fitur MVP terdeploy, sebelum rilis stabil v1.0 (bukan setiap tag v0.x):
+```bash
+npm run check && npm run lint && npm run test:unit && npm run test:integration && npm run test:e2e && npm run build
+```
+Load/soak/restore berjalan pada staging Pi 5 dan DB terisolasi. Sebelum aktivasi production, perubahan auth, otorisasi, upload, migrasi destruktif, atau backup/restore tetap diperiksa secara terarah. Jangan menunda perlindungan data sampai akhir.
 
 ## Aturan Interaksi Denganku
 - Sebelum menulis kode di fase baru, tunjukkan RENCANA FILE (create/modify) +
@@ -92,14 +95,12 @@ shadcn, chart library, state-management library, komponen library besar
 - JANGAN over-engineer. Kalau ragu, pilih yang paling sederhana.
 - JANGAN mulai fase berikutnya sebelum acceptance criteria fase aktif lulus.
 
-## Perintah Wajib Sebelum Tag Rilis
-  npm run check
-  npm run lint
-  npm run test:unit
-  npm run test:integration
-  npm run test:e2e
-  npm run build
-Semua harus hijau.
+## Publikasi per fitur
+Satu worker menulis workspace. Stage hanya scope task, commit konvensional,
+push origin/main tanpa force-push, lalu cocokkan SHA dengan git ls-remote.
+Deploy source dari commit yang sama sesuai docs/DEPLOY.md. Catat release,
+health dan alur live. Jangan klaim selesai bila push atau deploy gagal.
+Jangan deploy working tree campuran atau secret/runtime data.
 ````
 
 ---
@@ -119,12 +120,12 @@ Rencana yang saya harapkan sebelum coding:
 Setelah rencana disetujui:
 1. Scaffold SvelteKit + TypeScript + Tailwind (pnpm).
 2. Bikin src/app.css dengan CSS vars token.
-3. Bikin 10 primitive UI di src/lib/components/ui/.
-4. Wireframe statis (tanpa backend) untuk semua layar di atas.
-5. Uji manual di 360/768/1440 px, keyboard, reduced motion.
-6. Playwright test tests/e2e/navigation.spec.ts untuk alur klik antar layar.
+3. Bikin primitive UI yang memang dipakai.
+4. Wireframe statis (tanpa backend) untuk layar yang dibutuhkan.
+5. Validasi alur join secara manual dengan pengguna.
+6. Commit scope Fase 0, push GitHub, deploy Pi 5 bila menjadi target preview, lalu cek health.
 
-Berhenti di sini. Saya akan lakukan uji ke 3-5 mahasiswa sebelum lanjut Fase 1.
+Lanjut ke Fase 1 setelah alur utama jelas. Test stabilitas luas menunggu gate akhir.
 ````
 
 ---
@@ -156,12 +157,7 @@ Implementasi:
 7. Health endpoint /api/health cek DB.
 8. Rate limit in-process untuk login/join/post/vote.
 
-Tests wajib:
-- tests/unit/session-code.test.ts (entropy + no ambiguous chars + collision retry)
-- tests/integration/auth.test.ts (login/logout/rotasi)
-- tests/integration/join.test.ts (join, rejoin, tidak duplikat setelah reconnect)
-
-Berhenti, tunggu review.
+Implementasikan sampai alur login → buat sesi → join → SSE → health berjalan. Jalankan check/smoke murah seperlunya, lalu commit scope Fase 1, push GitHub, deploy Pi 5, dan verifikasi alur nyata. Integration/regression menyusul di gate stabilitas akhir.
 ````
 
 ---
@@ -169,10 +165,9 @@ Berhenti, tunggu review.
 ## 🚀 KICKOFF — Fase 2 (Multiple Choice, v0.1)
 
 ````
-Lanjut Fase 2 — Multiple Choice. Baca docs/FEATURES.md §"Fase 2".
+Lanjut Fase 2 — Quiz (Multiple Choice). Baca docs/FEATURES.md §"Fase 2".
 
-Ini adalah VERTICAL SLICE yang jadi POLA untuk fitur berikutnya. Perhatikan
-extra baik. FAILING TESTS DULU untuk 4 kasus di FEATURES.md.
+Ini adalah VERTICAL SLICE yang jadi POLA untuk fitur berikutnya. Implementasikan dulu sampai alur admin → mahasiswa → hasil berjalan. Setelah source siap, push GitHub, deploy Pi 5, dan verifikasi alur nyata. Gate stabilitas penuh menunggu semua fitur selesai.
 
 Rencana:
 - File di FEATURES.md §"Fase 2"
@@ -185,7 +180,7 @@ Rencana:
 - SSE event: poll.tally { questionId, counts: {optionId: n} }, debounce 300ms
 - ChoiceResults: bar chart pakai <div style="width: X%"> — TANPA library
 
-Implementasi setelah rencana disetujui + failing tests hijau kuning:
+Implementasi source code langsung:
 1. Migration poll_questions, poll_options, poll_responses + unique index.
 2. ChoiceEditor.svelte (admin) dengan preview ponsel di panel kanan.
 3. ChoicePlayer.svelte (mahasiswa) — satu layar per pertanyaan.
@@ -194,10 +189,7 @@ Implementasi setelah rencana disetujui + failing tests hijau kuning:
 6. Kontrol admin: open/close voting, show/hide results.
 7. Ekspor CSV UTF-8 dengan proteksi formula injection (prefix "'" untuk
    sel yang diawali =+-@).
-8. Load test lokal: 50 client (script Node) submit paralel, verifikasi tidak
-   ada respons hilang.
-
-Berhenti, tunggu review sebelum tag v0.1.
+8. Setelah source siap: commit, push ke GitHub, deploy production Pi 5, lalu verifikasi admin → mahasiswa → presenter. Load/stress test ditunda ke gate stabilitas akhir.
 ````
 
 ---
@@ -217,13 +209,12 @@ Rencana:
   fallback flex dengan font-size berbobot. Load dinamis hanya di layar hasil.
 - aria-live=polite untuk daftar frekuensi (screen reader)
 
-Fokus tests:
-- tests/unit/word-normalization.test.ts:
-  kapital, spasi ganda, unicode NFC, ZWJ, kosong, karakter kontrol, > 80 char
-- tests/integration/word-response.test.ts: batas kiriman per peserta, moderasi
-- tests/e2e/word-cloud.spec.ts: 2 mahasiswa submit, presenter update, moderasi
+Hasil fitur: editor, player, moderasi, dan presenter tersambung. Normalisasi
+Unicode NFC, kapital, spasi, karakter kontrol dan batas 80 karakter konsisten.
+Buktikan kiriman mahasiswa tampil setelah moderasi; suite luas menunggu akhir.
 
-Berhenti, tunggu review.
+Setelah fitur siap: check murah, commit dan push GitHub, deploy production Pi 5,
+lalu verifikasi health dan alur nyata. Test stabilitas luas di akhir.
 ````
 
 ---
@@ -244,10 +235,11 @@ Endpoint:
   POST /api/boards/:boardId/posts { columnId, body }
   POST /api/boards/posts/:postId/moderate { action: 'approve'|'reject'|'hide' }
 
-Test happy path E2E: admin buat board 3 kolom → mahasiswa post → admin approve
-→ post muncul di semua peserta.
+Hasil fitur: admin membuat kolom, mahasiswa mengirim post, admin menyetujui,
+lalu post tampil live. Integrasikan UI/API/SSE; endpoint saja belum selesai.
 
-Berhenti, tunggu review.
+Setelah fitur siap: check murah, commit dan push GitHub, deploy production Pi 5,
+lalu verifikasi health dan alur nyata. Test stabilitas luas di akhir.
 ````
 
 ---
@@ -265,11 +257,12 @@ WAJIB fokus keamanan:
   dengan header X-Content-Type-Options: nosniff.
 - JANGAN fetch preview URL server-side (SSRF).
 
-Test wajib:
-- tests/unit/upload-validation.test.ts: PNG asli lolos; PHP script bernama .png
-  ditolak; SVG dengan <script> ditolak; oversized ditolak.
+Sebelum mengaktifkan upload di production, lakukan cek keamanan terarah:
+PNG valid diterima, file executable tersamar, SVG, dan oversized ditolak.
+Tidak perlu menambah suite lintas fitur.
 
-Berhenti, tunggu review.
+Setelah fitur siap: check murah, commit dan push GitHub, deploy production Pi 5,
+lalu verifikasi health dan alur nyata. Test stabilitas luas di akhir.
 ````
 
 ---
@@ -291,22 +284,21 @@ Rencana yang saya harapkan:
   backspace pindah cell)
 - Alfabet: Latin + angka opsional; normalisasi kapital & spasi
 
-Tests:
-- tests/unit/crossword-grid.test.ts: 3 dataset (5, 10, 20 kata), overlap valid,
-  overlap konflik ditolak, penomoran deterministik
-- tests/unit/crossword-score.test.ts: skor per kata, partial, penalti hint
-- tests/e2e/crossword.spec.ts: mahasiswa main sampai selesai, refresh
-  memulihkan progres, jawaban tidak di HTML awal
+Hasil fitur: editor grid dan petunjuk, player keyboard/mobile, autosave,
+penilaian server, dan pemulihan progres saat refresh. Pastikan kunci jawaban
+tidak masuk HTML/JSON klien. Perluasan dataset/regression menunggu tahap akhir.
 
-Berhenti, tunggu review.
+Setelah fitur siap: check murah, commit dan push GitHub, deploy production Pi 5,
+lalu verifikasi health dan alur nyata. Test stabilitas luas di akhir.
 ````
 
 ---
 
-## 🚀 KICKOFF — Fase 6 (Hardening & Deploy, v1.0)
+## KICKOFF — Fase 6 (Stabilitas Akhir, v1.0)
 
 ````
-Lanjut Fase 6 — Hardening & Deployment. Baca docs/FEATURES.md §"Fase 6".
+Lanjut Fase 6 — Stabilitas Akhir. Semua fitur MVP sudah production.
+Baca docs/FEATURES.md §"Fase 6". Keamanan dasar sudah ada; audit dan perbaiki gap.
 
 Checklist berurutan:
 1. Audit semua endpoint: Zod schema di setiap boundary.
@@ -322,9 +314,10 @@ Checklist berurutan:
 6. Backup harian: script sqlite backup (bukan cp file mentah) + tar.gz uploads.
    Uji restore ke /tmp/restore-test/ dan boot aplikasi dari sana.
 7. Dockerfile multi-stage node:22-alpine, USER non-root, volume /app/data.
-8. Load test 100 peserta pakai k6 atau autocannon: skenario poll + wordcloud.
-9. Staging deploy → smoke test dari 2 ponsel (Wi-Fi + seluler).
-10. docs/deployment.md + docs/backup-restore.md dengan perintah persis.
+8. Load test 100 peserta pada staging Pi 5 dengan data terisolasi; jangan
+   membebani production aktif. Pakai alat yang sudah tersedia.
+9. Regression dan viewport tambahan sekali, ulangi hanya bagian yang gagal.
+10. Perbaikan tetap dipush lalu dideploy; perbarui docs/DEPLOY.md.
 
 Semua perintah wajib (check, lint, test:unit, test:integration, test:e2e,
 build, audit) harus hijau. Baru boleh tag v1.0.
@@ -356,23 +349,20 @@ docs/FEATURES.md (objective, files, langkah, acceptance criteria).
 Simpan di docs/features/<slug>.md. Tunggu approval sebelum implementasi.
 ```
 
-### Setup VPS pertama kali
+### Deploy production Pi 5
 ```
-VPS Ubuntu 22.04 dengan domain <domain>. Bantu deploy Edu Nara:
-1. Cek prasyarat (docker, docker compose plugin, ufw)
-2. Isi Caddyfile / nginx dengan domain saya
-3. Setup .env production (generate secret 32 byte)
-4. docker compose up -d
-5. Verifikasi HTTPS + SSE jalan (curl -N)
-6. Setup cron backup harian sqlite → tar.gz di /root/backups/
-7. Setup logrotate untuk pino output
-Kasih langkah persis, saya copy-paste.
+Deploy commit fitur yang sudah dipush ke GitHub ke Pi 5 sesuai docs/DEPLOY.md.
+Periksa target, data persisten, rollback, dan source SHA. Build ARM64 sebelum
+mengganti container aktif. Pakai scripts/deploy.sh, cek exit code, current,
+container healthy dan alur fitur live. Jangan ubah tunnel/layanan lain.
 ```
 
-### Load test cepat
+### Load test tahap stabilitas akhir
 ```
-Buat script load test di scripts/loadtest.mjs pakai autocannon (bukan k6, biar
-tidak nambah runtime). Skenario: 100 virtual user selama 30 detik POST ke
+Hanya setelah fitur MVP selesai: gunakan staging Pi 5 dan DB terisolasi.
+Pakai alat yang tersedia; jangan tambah dependency bila skrip Node cukup.
+Skenario kapasitas mengikuti kontrak sesi/peserta nyata, bukan request anonim.
+Contoh target: 100 peserta, masing-masing satu respons POST ke
 /api/polls/:id/responses dengan Idempotency-Key acak. Report:
 - p50/p95/p99 latency
 - error rate
@@ -385,7 +375,7 @@ tidak nambah runtime). Skenario: 100 virtual user selama 30 detik POST ke
 ## 📝 CATATAN PENGGUNAAN
 
 - **Selalu load 3 dokumen** (`PLANNING.md`, `FEATURES.md`, `PROMPT.md`) ke context AI saat mulai sesi baru.
-- **Simpan progres di git**: setiap fase selesai → tag `v0.1a`, `v0.1`, `v0.2`, dst.
+- **Simpan progres di git**: setiap fitur selesai wajib commit, push, verifikasi SHA remote, deploy production Pi 5, dan cek live. Tag v0.x opsional; v1.0 setelah stabilitas akhir.
 - **Kalau AI ngawur / keluar scope**: paste ulang bagian "Aturan Interaksi Denganku" dari system prompt.
 - **Ganti stack di tengah jalan itu mahal**: kalau ragu, pause, diskusi dulu.
 - **Dokumen `.hermes/plans/2026-09-26_184718-platform-edu-nara.md`** adalah plan asli Anda — biarkan sebagai referensi historis; edit selanjutnya lakukan di `docs/`.

@@ -6,6 +6,12 @@ const config = {
 	preprocess: vitePreprocess(),
 	kit: {
 		adapter: adapter({ out: 'build' }),
+		csp: {
+			directives: {
+				'script-src': ['self'],
+				'frame-ancestors': ['none']
+			}
+		},
 		alias: {
 			$components: 'src/lib/components',
 			$lib: 'src/lib'

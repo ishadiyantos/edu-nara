@@ -9,6 +9,10 @@ export default {
 					soft: 'var(--color-primary-soft)'
 				},
 				accent: 'var(--color-accent)',
+				choice: 'var(--color-choice)',
+				cloud: 'var(--color-cloud)',
+				board: 'var(--color-board)',
+				crossword: 'var(--color-crossword)',
 				warning: 'var(--color-warning)',
 				danger: 'var(--color-danger)',
 				bg: 'var(--color-bg)',
