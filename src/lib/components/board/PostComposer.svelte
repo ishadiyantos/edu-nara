@@ -21,7 +21,8 @@
 		placeholder = 'Tulis kartu (maks 500 karakter)...'
 	}: Props = $props();
 
-	let body = $state(initialBody);
+	const initialText = () => initialBody;
+	let body = $state(initialText());
 	let sendState = $state<SendState>('idle');
 	let errorMessage = $state('');
 

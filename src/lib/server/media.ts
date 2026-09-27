@@ -17,7 +17,10 @@ export function validateImageUpload(input: Uint8Array | ArrayBuffer): ImageValid
 		return { ok: true, format: 'jpeg', contentType: 'image/jpeg' };
 	if (startsWith(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
 		return { ok: true, format: 'png', contentType: 'image/png' };
-	if (startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) && startsWith(bytes.subarray(8), [0x57, 0x45, 0x42, 0x50]))
+	if (
+		startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) &&
+		startsWith(bytes.subarray(8), [0x57, 0x45, 0x42, 0x50])
+	)
 		return { ok: true, format: 'webp', contentType: 'image/webp' };
 
 	return { ok: false, error: 'Format gambar tidak didukung.' };

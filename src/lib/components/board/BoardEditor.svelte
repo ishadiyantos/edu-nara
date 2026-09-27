@@ -34,7 +34,8 @@
 		onaddpost
 	}: Props = $props();
 
-	let localPosts = $state<BoardPost[]>([...posts]);
+	const initialPosts = () => [...posts];
+	let localPosts = $state<BoardPost[]>(initialPosts());
 	let filter = $state<'all' | PostStatus>('all');
 	let activeComposer = $state<string | null>(null);
 	let actionFeedback = $state('');

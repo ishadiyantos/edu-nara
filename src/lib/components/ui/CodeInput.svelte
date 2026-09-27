@@ -15,12 +15,12 @@
 
 	const ALPHABET = /^[A-HJ-NP-Z2-9]$/;
 	let refs: HTMLInputElement[] = $state([]);
-	let cells = $derived(Array.from({ length }, (_, i) => (value[i] ?? '').toString().toUpperCase()));
+	let cells = $derived(Array.from({ length }, (_, i) => (value[i] ?? '').trim().toUpperCase()));
 
 	function setCell(i: number, ch: string) {
 		const chars = value.padEnd(length, ' ').split('');
-		chars[i] = ch;
-		const next = chars.join('').replace(/ /g, '');
+		chars[i] = ch || ' ';
+		const next = chars.join('').trimEnd();
 		value = next;
 		onchange?.(next);
 	}

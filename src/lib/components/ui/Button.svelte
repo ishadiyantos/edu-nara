@@ -11,6 +11,7 @@
 		loading?: boolean;
 		block?: boolean;
 		ariaLabel?: string;
+		class?: string;
 		onclick?: (e: MouseEvent) => void;
 		children: import('svelte').Snippet;
 	};
@@ -24,6 +25,7 @@
 		loading = false,
 		block = false,
 		ariaLabel,
+		class: className,
 		onclick,
 		children
 	}: Props = $props();
@@ -48,7 +50,9 @@
 	};
 
 	let cls = $derived(
-		[base, variants[variant], sizes[size], block ? 'w-full' : ''].filter(Boolean).join(' ')
+		[base, variants[variant], sizes[size], block ? 'w-full' : '', className]
+			.filter(Boolean)
+			.join(' ')
 	);
 </script>
 

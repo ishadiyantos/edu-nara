@@ -2,6 +2,7 @@
 	type Props = {
 		label: string;
 		id?: string;
+		name?: string;
 		value?: string;
 		type?: 'text' | 'email' | 'password' | 'search' | 'url';
 		placeholder?: string;
@@ -11,11 +12,14 @@
 		autocomplete?: import('svelte/elements').HTMLInputAttributes['autocomplete'];
 		maxlength?: number;
 		oninput?: (e: Event) => void;
+		class?: string;
 	};
 
+	const generatedId = $props.id();
 	let {
 		label,
-		id = crypto.randomUUID(),
+		id = generatedId,
+		name,
 		value = $bindable(''),
 		type = 'text',
 		placeholder,
@@ -24,11 +28,12 @@
 		required = false,
 		autocomplete,
 		maxlength,
-		oninput
+		oninput,
+		class: className = ''
 	}: Props = $props();
 
 	const describedBy = $derived(
-		[error ? `${id}-error` : null, hint ? `${id}-hint` : null].filter(Boolean).join(' ')
+		[error ? `${id}-error` : null, hint && !error ? `${id}-hint` : null].filter(Boolean).join(' ')
 	);
 </script>
 
@@ -39,6 +44,7 @@
 	</label>
 	<input
 		{id}
+		{name}
 		{type}
 		{placeholder}
 		{autocomplete}
@@ -50,7 +56,7 @@
 		class="w-full rounded-xl border border-border bg-surface px-4 py-3 text-base
 		       placeholder:text-muted/60
 		       focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none
-		       aria-[invalid=true]:border-danger aria-[invalid=true]:focus:ring-danger/20"
+		       aria-[invalid=true]:border-danger aria-[invalid=true]:focus:ring-danger/20 {className}"
 		{oninput}
 	/>
 	{#if hint && !error}

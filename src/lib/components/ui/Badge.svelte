@@ -3,9 +3,10 @@
 	type Props = {
 		tone?: Tone;
 		dot?: boolean;
+		class?: string;
 		children: import('svelte').Snippet;
 	};
-	let { tone = 'neutral', dot = false, children }: Props = $props();
+	let { tone = 'neutral', dot = false, class: className = '', children }: Props = $props();
 
 	const tones: Record<Tone, string> = {
 		neutral: 'bg-slate-100 text-slate-800',
@@ -26,7 +27,7 @@
 <span
 	class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold {tones[
 		tone
-	]}"
+	]} {className}"
 >
 	{#if dot}
 		<span class="h-1.5 w-1.5 rounded-full {dotColors[tone]}" aria-hidden="true"></span>

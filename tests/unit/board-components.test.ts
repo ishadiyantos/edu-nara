@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
 	MAX_POST_BODY,
-	SAMPLE_COLUMNS,
 	SAMPLE_POSTS,
 	linkifyBody,
 	movePost,
 	postLength,
-	sortPosts,
 	statusLabel,
 	statusTone,
 	validatePostBody
