@@ -1,8 +1,8 @@
 import { UserError } from './errors';
 import { randomInt, randomUUID } from 'node:crypto';
-import { and, count, eq, gt } from 'drizzle-orm';
+import { and, asc, count, eq, gt } from 'drizzle-orm';
 import type { Store } from './db/client';
-import { activities, participants, sessions } from './db/schema';
+import { activities, participants, pollQuestions, sessions } from './db/schema';
 import { hashToken, newToken } from './auth';
 import { activitySchema, joinSchema, stateSchema } from '../validation';
 export function generateSessionCode() {
@@ -53,7 +53,21 @@ export function launchSession(
 			.onConflictDoNothing({ target: sessions.code })
 			.returning()
 			.get();
-		if (inserted) return inserted;
+		if (inserted) {
+			const first = store.db
+				.select({ id: pollQuestions.id })
+				.from(pollQuestions)
+				.where(eq(pollQuestions.activityId, activityId))
+				.orderBy(asc(pollQuestions.position))
+				.get();
+			if (first)
+				store.db
+					.update(sessions)
+					.set({ activeQuestionId: first.id })
+					.where(eq(sessions.id, inserted.id))
+					.run();
+			return { ...inserted, activeQuestionId: first?.id ?? null };
+		}
 	}
 	throw new UserError('Kode sesi tidak tersedia.');
 }
@@ -133,6 +147,7 @@ export function snapshot(store: Store, id: string) {
 		.select({
 			id: sessions.id,
 			code: sessions.code,
+			activeQuestionId: sessions.activeQuestionId,
 			state: sessions.state,
 			title: activities.title
 		})

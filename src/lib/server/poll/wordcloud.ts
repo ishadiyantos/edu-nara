@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { and, asc, eq, gt, max } from 'drizzle-orm';
+import { and, asc, eq, gt, isNull, max } from 'drizzle-orm';
 import type { Store } from '../db/client';
 import {
 	activities,
@@ -12,6 +12,7 @@ import { hashToken } from '../auth';
 import { UserError } from '../errors';
 import { wordcloudQuestionSchema } from '../../poll/validation';
 import { events } from '../events';
+import { ownedSession } from '../sessions';
 
 export type WordcloudStatus = 'pending' | 'approved' | 'rejected';
 
@@ -84,6 +85,13 @@ export function createWordcloudQuestion(
 		createdAt: Date.now()
 	};
 	store.db.insert(pollQuestions).values(row).run();
+	// Any already-launched session for this activity should point at the first
+	// question if it hasn't picked one yet.
+	store.db
+		.update(sessions)
+		.set({ activeQuestionId: row.id })
+		.where(and(eq(sessions.activityId, activityId), isNull(sessions.activeQuestionId)))
+		.run();
 	return row;
 }
 
@@ -98,6 +106,65 @@ export function getWordcloudQuestionsByActivity(store: Store, activityId: string
 
 export function getWordcloudQuestionByActivity(store: Store, activityId: string) {
 	return getWordcloudQuestionsByActivity(store, activityId)[0] ?? null;
+}
+
+export function activeQuestionId(store: Store, sessionId: string) {
+	const row = store.db
+		.select({ activeQuestionId: sessions.activeQuestionId, activityId: sessions.activityId })
+		.from(sessions)
+		.where(eq(sessions.id, sessionId))
+		.get();
+	if (!row) throw new UserError('Sesi tidak ditemukan.');
+	return (
+		row.activeQuestionId ?? getWordcloudQuestionsByActivity(store, row.activityId)[0]?.id ?? null
+	);
+}
+
+export function advanceActiveQuestion(
+	store: Store,
+	ownerId: string,
+	sessionId: string,
+	direction: number
+) {
+	if (direction !== 1 && direction !== -1) throw new UserError('Arah perpindahan tidak valid.');
+	const current = ownedSession(store, ownerId, sessionId);
+	if (current.state === 'ended') throw new UserError('Sesi sudah berakhir.');
+	ownedActivity(store, ownerId, current.activityId);
+	const questions = getWordcloudQuestionsByActivity(store, current.activityId);
+	const index = questions.findIndex(
+		(question) => question.id === (current.activeQuestionId ?? questions[0]?.id)
+	);
+	const next = questions[Math.min(questions.length - 1, Math.max(0, index + direction))];
+	if (!next || next.id === current.activeQuestionId) return current.activeQuestionId ?? null;
+	store.db
+		.update(sessions)
+		.set({ activeQuestionId: next.id })
+		.where(eq(sessions.id, sessionId))
+		.run();
+	events.publish(sessionId, 'session.question', { questionId: next.id });
+	return next.id;
+}
+
+export function setActiveQuestion(
+	store: Store,
+	ownerId: string,
+	sessionId: string,
+	questionId: string
+) {
+	const current = ownedSession(store, ownerId, sessionId);
+	if (current.state === 'ended') throw new UserError('Sesi sudah berakhir.');
+	ownedActivity(store, ownerId, current.activityId);
+	const questions = getWordcloudQuestionsByActivity(store, current.activityId);
+	if (!questions.some((question) => question.id === questionId))
+		throw new UserError('Pertanyaan tidak ditemukan.');
+	if (current.activeQuestionId === questionId) return questionId;
+	store.db
+		.update(sessions)
+		.set({ activeQuestionId: questionId })
+		.where(eq(sessions.id, sessionId))
+		.run();
+	events.publish(sessionId, 'session.question', { questionId });
+	return questionId;
 }
 
 export function updateWordcloudQuestion(
@@ -215,6 +282,8 @@ export function submitWordcloudResponse(
 				)
 				.get();
 			if (!question) throw new UserError('Pertanyaan tidak tersedia.');
+			if (activeQuestionId(store, sessionId) !== questionId)
+				throw new UserError('Pertanyaan belum aktif.');
 			const existing = store.db
 				.select()
 				.from(wordcloudResponses)

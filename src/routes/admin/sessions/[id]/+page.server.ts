@@ -96,6 +96,16 @@ export const actions = {
 					message: row.showResults ? 'Hasil dibuka.' : 'Hasil disembunyikan.'
 				};
 			}
+			if (data.action === 'question') {
+				const { advanceActiveQuestion, setActiveQuestion } =
+					await import('$lib/server/poll/wordcloud');
+				const direction = Number(data.direction);
+				const questionId =
+					data.questionId != null && data.questionId !== ''
+						? setActiveQuestion(store, owner, event.params.id, String(data.questionId))
+						: advanceActiveQuestion(store, owner, event.params.id, direction);
+				return { ok: true, message: questionId ? undefined : 'Tidak ada pertanyaan lain.' };
+			}
 			if (data.action === 'moderate') {
 				const { moderateWordcloudResponse } = await import('$lib/server/poll/wordcloud');
 				const row = moderateWordcloudResponse(

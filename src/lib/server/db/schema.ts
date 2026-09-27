@@ -32,6 +32,7 @@ export const sessions = sqliteTable('live_sessions', {
 	state: text({ enum: ['draft', 'open', 'closed', 'ended'] })
 		.notNull()
 		.default('draft'),
+	activeQuestionId: text('active_question_id'),
 	createdAt: integer('created_at').notNull(),
 	endedAt: integer('ended_at')
 });

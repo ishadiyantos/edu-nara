@@ -8,14 +8,23 @@
 		sessionCode,
 		sessionId,
 		questions,
+		activeQuestionId = null,
 		responses = []
 	}: {
 		sessionCode: string;
 		sessionId: string;
 		questions: Question[];
+		activeQuestionId?: string | null;
 		responses?: Response[];
 	} = $props();
-	let current = $state(0);
+	let syncedId = $state<string | null>(null);
+	const current = $derived(
+		Math.max(
+			0,
+			questions.findIndex((q) => q.id === (syncedId ?? activeQuestionId))
+		)
+	);
+	const question = $derived(questions[current]);
 	let value = $state('');
 	let sending = $state(false);
 	let message = $state('');
@@ -24,68 +33,94 @@
 	$effect(() => {
 		saved = responses;
 	});
-	const question = $derived(questions[current]);
 	const submitted = $derived(saved.filter((item) => item.questionId === question?.id));
 	const draftKey = $derived(`edu_wc_${sessionCode}_${question?.id ?? ''}`);
 	const maxWords = $derived(question?.wordLimit ?? 3);
-
-	onMount(() => {
+	let revision = 0;
+	async function refresh() {
+		const id = question?.id;
+		const request = ++revision;
+		if (!id) return;
 		try {
-			value = sessionStorage.getItem(draftKey) ?? '';
+			const response = await fetch(
+				`/api/wordcloud/${encodeURIComponent(sessionCode)}/responses?questionId=${encodeURIComponent(id)}`
+			);
+			if (!response.ok) return;
+			const data = await response.json();
+			if (request !== revision || question?.id !== id) return;
+			words = data.words ?? [];
+			saved = data.responses ?? saved;
 		} catch {
-			/* storage optional */
+			/* SSE reconnect retries. */
 		}
-		const source = new EventSource(`/api/sessions/${encodeURIComponent(sessionId)}/events`);
-		const refresh = async () => {
-			if (!question) return;
-			try {
-				const result = await fetch(
-					`/api/wordcloud/${encodeURIComponent(sessionCode)}/responses?questionId=${encodeURIComponent(question.id)}`
-				);
-				if (result.ok) {
-					const data = await result.json();
-					words = data.words ?? [];
-					saved = data.responses ?? saved;
-				}
-			} catch {
-				/* EventSource reconnects */
-			}
-		};
+	}
+	$effect(() => {
+		const key = draftKey;
+		words = [];
+		message = '';
+		try {
+			value = sessionStorage.getItem(key) ?? '';
+		} catch {
+			value = '';
+		}
 		void refresh();
-		source.addEventListener('snapshot', refresh);
-		source.addEventListener('resync', refresh);
+	});
+	onMount(() => {
+		const source = new EventSource(`/api/sessions/${encodeURIComponent(sessionId)}/events`);
+		const sync = (event: Event) => {
+			const state = JSON.parse((event as MessageEvent).data);
+			const next = state.activeQuestionId ?? state.questionId;
+			if (next && questions.some((q) => q.id === next)) syncedId = next;
+			void refresh();
+		};
+		for (const name of ['snapshot', 'resync', 'session.question'])
+			source.addEventListener(name, sync);
+		source.addEventListener('wordcloud.snapshot', () => {
+			void refresh();
+		});
 		source.addEventListener('session.state', () => {
 			void invalidateAll();
 		});
-		source.addEventListener('wordcloud.snapshot', refresh);
-		source.onopen = () => (message = 'Live');
-		source.onerror = () => (message = 'Menghubungkan ulang…');
-		return () => source.close();
+		source.onopen = () => {
+			message = 'Live';
+			void refresh();
+		};
+		source.onerror = () => {
+			message = 'Menghubungkan ulang…';
+		};
+		return () => {
+			source.close();
+			revision++;
+		};
 	});
-
 	async function submit() {
 		if (!question || !value.trim() || submitted.length >= maxWords || sending) return;
+		const id = question.id,
+			key = draftKey;
 		sending = true;
 		message = '';
 		try {
 			const response = await fetch(`/api/wordcloud/${encodeURIComponent(sessionCode)}/responses`, {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ questionId: question.id, word: value })
+				body: JSON.stringify({ questionId: id, word: value })
 			});
 			const result = await response.json();
 			if (!response.ok || !result.ok) throw new Error(result.message ?? 'Kiriman gagal.');
+			try {
+				sessionStorage.removeItem(key);
+			} catch {
+				/* Optional storage. */
+			}
+			if (question?.id !== id) return;
+			revision++;
 			if (!result.alreadySubmitted)
-				saved = [...saved, { questionId: question.id, word: result.word, status: result.status }];
+				saved = [...saved, { questionId: id, word: result.word, status: result.status }];
 			message = result.status === 'approved' ? 'Kiriman tampil.' : 'Kiriman menunggu moderasi.';
 			value = '';
-			try {
-				sessionStorage.removeItem(draftKey);
-			} catch {
-				/* storage optional */
-			}
-		} catch (error) {
-			message = error instanceof Error ? error.message : 'Kiriman gagal.';
+			void refresh();
+		} catch (err) {
+			if (question?.id === id) message = err instanceof Error ? err.message : 'Kiriman gagal.';
 		} finally {
 			sending = false;
 		}
@@ -152,13 +187,5 @@
 				</li>{/each}
 		</ul>
 	{/if}
-	{#if current < questions.length - 1}<button
-			type="button"
-			class="mt-5 min-h-11 rounded-xl border border-white/20 px-4 text-sm font-black hover:bg-white/10"
-			onclick={() => {
-				current += 1;
-				value = '';
-			}}>Pertanyaan berikutnya →</button
-		>{/if}
 	<div class="mt-6"><WordcloudResults {words} /></div>
 </section>

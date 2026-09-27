@@ -33,6 +33,7 @@ export class SseHub {
 		id: string,
 		name:
 			| 'session.state'
+			| 'session.question'
 			| 'participant.count'
 			| 'poll.tally'
 			| 'wordcloud.snapshot'

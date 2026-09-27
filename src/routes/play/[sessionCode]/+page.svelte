@@ -54,6 +54,7 @@
 					sessionCode={data.snapshot.code}
 					sessionId={data.snapshot.id}
 					questions={data.questions}
+					activeQuestionId={data.snapshot.activeQuestionId}
 					responses={data.responses}
 				/>
 			{:else}

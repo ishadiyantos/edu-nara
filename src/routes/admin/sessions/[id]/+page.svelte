@@ -1,10 +1,21 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
+	import { deserialize, enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import QuizLeaderboard from '$lib/components/poll/QuizLeaderboard.svelte';
 	import WordcloudResults from '$lib/components/poll/WordcloudResults.svelte';
 	let { data, form } = $props();
-	let activeIndex = $state(0);
+	let localIndex = $state(0);
+	let syncedId = $state<string | null>(null);
+	let switching = $state(false);
+	const activeIndex = $derived(
+		data.activityType === 'wordcloud'
+			? Math.max(
+					0,
+					data.questions.findIndex((q) => q.id === (syncedId ?? data.snapshot.activeQuestionId))
+				)
+			: localIndex
+	);
 	const questions = $derived(data.questions);
 	const active = $derived(questions[activeIndex]);
 	const choiceOptions = $derived(active && 'options' in active ? active.options : []);
@@ -42,10 +53,30 @@
 		presenting = false;
 		if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
 	}
-	function select(index: number) {
-		if (index < 0 || index >= questions.length) return;
-		activeIndex = index;
+	async function select(index: number) {
+		if (switching || index < 0 || index >= questions.length) return;
 		stopTimer();
+		if (data.activityType !== 'wordcloud') {
+			localIndex = index;
+			return;
+		}
+		switching = true;
+		errorMessage = '';
+		try {
+			const response = await fetch(window.location.pathname, {
+				method: 'POST',
+				headers: { 'x-sveltekit-action': 'true' },
+				body: new URLSearchParams({ action: 'question', questionId: questions[index].id })
+			});
+			const result = deserialize(await response.text());
+			if (result.type !== 'success') throw new Error('Perpindahan gagal. Coba lagi.');
+			syncedId = questions[index].id;
+			await invalidateAll();
+		} catch (err) {
+			errorMessage = err instanceof Error ? err.message : 'Perpindahan gagal.';
+		} finally {
+			switching = false;
+		}
 	}
 	function stopTimer() {
 		clearInterval(timer);
@@ -87,6 +118,7 @@
 		const sessionId = data.snapshot.id;
 		const isCloud = data.activityType === 'wordcloud';
 		let disposed = false;
+		words = [];
 		const refresh = async () => {
 			if (!id) return;
 			try {
@@ -96,6 +128,7 @@
 				const response = await fetch(url);
 				if (response.ok && !disposed) {
 					const result = await response.json();
+					if (disposed) return;
 					if (isCloud) words = result.words;
 					else tally = result.counts;
 				}
@@ -109,10 +142,12 @@
 			void refresh();
 		};
 		source.onerror = () => (connected = false);
-		for (const name of ['snapshot', 'resync', 'participant.count'])
+		for (const name of ['snapshot', 'resync', 'participant.count', 'session.question'])
 			source.addEventListener(name, (event) => {
 				const state = JSON.parse((event as MessageEvent).data);
 				if (state.count != null) count = state.count;
+				if (isCloud && (state.activeQuestionId || state.questionId))
+					syncedId = state.activeQuestionId ?? state.questionId;
 			});
 		for (const name of ['snapshot', 'resync', 'poll.tally', 'session.state', 'wordcloud.snapshot'])
 			source.addEventListener(name, refresh);
@@ -233,7 +268,7 @@
 		<section class="slide" data-testid="presenter-stage">
 			<p class="text-sm text-cyan-300">
 				{data.activityType === 'wordcloud'
-					? 'Word Cloud'
+					? `Word Cloud · ${activeIndex + 1} / ${questions.length}`
 					: `Soal ${activeIndex + 1} / ${questions.length}`}
 			</p>
 			<h1 class="my-5 text-3xl font-black leading-tight sm:text-5xl">{active.prompt}</h1>
@@ -309,18 +344,23 @@
 		>
 			{#each questions as question, i}<button
 					class="control"
+					disabled={switching || data.snapshot.state === 'ended'}
 					aria-current={i === activeIndex ? 'true' : undefined}
 					onclick={() => select(i)}>Soal {i + 1}: {question.prompt}</button
 				>{/each}
 		</nav>{/if}
 	{#if presenting}
 		<nav class:visible={controls} class="presenter-controls" aria-label="Kontrol presentasi">
-			<button class="control" disabled={activeIndex === 0} onclick={() => select(activeIndex - 1)}
-				>Sebelumnya</button
+			<button
+				class="control"
+				disabled={switching || data.snapshot.state === 'ended' || activeIndex === 0}
+				onclick={() => select(activeIndex - 1)}>Sebelumnya</button
 			>
 			<button
 				class="control"
-				disabled={activeIndex >= questions.length - 1}
+				disabled={switching ||
+					data.snapshot.state === 'ended' ||
+					activeIndex >= questions.length - 1}
 				onclick={() => select(activeIndex + 1)}>Berikutnya</button
 			>
 			<button class="control" onclick={exit} data-testid="exit-fullscreen"

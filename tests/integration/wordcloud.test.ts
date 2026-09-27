@@ -1,8 +1,16 @@
 import { afterEach, expect, test } from 'vitest';
 import { openDatabase } from '../../src/lib/server/db/client';
 import { seedAdmin } from '../../src/lib/server/auth';
-import { changeState, createActivity, joinSession, launchSession } from '../../src/lib/server/sessions';
 import {
+	changeState,
+	createActivity,
+	joinSession,
+	launchSession
+} from '../../src/lib/server/sessions';
+import {
+	activeQuestionId,
+	advanceActiveQuestion,
+	setActiveQuestion,
 	createWordcloudQuestion,
 	getWordcloudQuestionsByActivity,
 	moderateWordcloudResponse,
@@ -49,14 +57,21 @@ test('wordcloud submissions normalize, merge variants, cap per participant and s
 	const duplicate = submitWordcloudResponse(store, session.id, question.id, bayu.token, 'SERU');
 	expect(duplicate.row.word).toBe('seru');
 	submitWordcloudResponse(store, session.id, question.id, bayu.token, 'interaktif');
-	expect(() => submitWordcloudResponse(store, session.id, question.id, bayu.token, 'kelebihan')).toThrow();
+	expect(() =>
+		submitWordcloudResponse(store, session.id, question.id, bayu.token, 'kelebihan')
+	).toThrow();
 	expect(wordcloudSnapshot(store, session.id, question.id)).toEqual([]);
 	const queue = moderationQueue(store, admin.id, session.id, question.id);
 	expect(queue).toHaveLength(3);
 	const approved = moderateWordcloudResponse(store, admin.id, queue[0].id, 'approved');
 	expect(approved.status).toBe('approved');
 	expect(wordcloudSnapshot(store, session.id, question.id)).toEqual([{ word: 'seru', weight: 1 }]);
-	moderateWordcloudResponse(store, admin.id, queue.find((row) => row.id !== queue[0].id)!.id, 'rejected');
+	moderateWordcloudResponse(
+		store,
+		admin.id,
+		queue.find((row) => row.id !== queue[0].id)!.id,
+		'rejected'
+	);
 	expect(wordcloudSnapshot(store, session.id, question.id)).toEqual([{ word: 'seru', weight: 1 }]);
 });
 test('wordcloud submissions are approved automatically when moderation is off', async () => {
@@ -68,5 +83,74 @@ test('wordcloud submissions are approved automatically when moderation is off', 
 	});
 	const result = submitWordcloudResponse(store, session.id, question.id, ana.token, 'ringan');
 	expect(result.row.status).toBe('approved');
-	expect(wordcloudSnapshot(store, session.id, question.id)).toEqual([{ word: 'ringan', weight: 1 }]);
+	expect(wordcloudSnapshot(store, session.id, question.id)).toEqual([
+		{ word: 'ringan', weight: 1 }
+	]);
+});
+test('owner advances the active question and participants follow the same one', async () => {
+	const { store, admin, activity, session } = await fixture();
+	const first = createWordcloudQuestion(store, admin.id, activity.id, {
+		prompt: 'Pertanyaan satu?',
+		wordLimit: 2,
+		moderationEnabled: true
+	});
+	const second = createWordcloudQuestion(store, admin.id, activity.id, {
+		prompt: 'Pertanyaan dua?',
+		wordLimit: 2,
+		moderationEnabled: true
+	});
+	expect(activeQuestionId(store, session.id)).toBe(first.id);
+	expect(advanceActiveQuestion(store, admin.id, session.id, 1)).toBe(second.id);
+	expect(activeQuestionId(store, session.id)).toBe(second.id);
+	expect(advanceActiveQuestion(store, admin.id, session.id, 1)).toBe(second.id);
+	expect(advanceActiveQuestion(store, admin.id, session.id, -1)).toBe(first.id);
+	expect(advanceActiveQuestion(store, admin.id, session.id, -1)).toBe(first.id);
+});
+test('launch selects first question, isolates sessions, rejects inactive submissions and ended navigation', async () => {
+	const { store, admin, activity, session, ana } = await fixture();
+	const first = createWordcloudQuestion(store, admin.id, activity.id, {
+		prompt: 'Pertama?',
+		wordLimit: 2,
+		moderationEnabled: false
+	});
+	const second = createWordcloudQuestion(store, admin.id, activity.id, {
+		prompt: 'Kedua?',
+		wordLimit: 2,
+		moderationEnabled: false
+	});
+	const other = launchSession(store, admin.id, activity.id);
+	expect(other.activeQuestionId).toBe(first.id);
+	expect(() => submitWordcloudResponse(store, session.id, second.id, ana.token, 'belum')).toThrow(
+		/aktif/
+	);
+	setActiveQuestion(store, admin.id, session.id, second.id);
+	expect(activeQuestionId(store, other.id)).toBe(first.id);
+	expect(() => submitWordcloudResponse(store, session.id, first.id, ana.token, 'lama')).toThrow(
+		/aktif/
+	);
+	submitWordcloudResponse(store, session.id, second.id, ana.token, 'baru');
+	const foreign = createActivity(store, admin.id, { title: 'Lain', type: 'wordcloud' });
+	const foreignQuestion = createWordcloudQuestion(store, admin.id, foreign.id, {
+		prompt: 'Asing?',
+		wordLimit: 1,
+		moderationEnabled: true
+	});
+	expect(() => setActiveQuestion(store, admin.id, session.id, foreignQuestion.id)).toThrow();
+	changeState(store, admin.id, session.id, 'ended');
+	expect(() => setActiveQuestion(store, admin.id, session.id, first.id)).toThrow();
+	expect(() => advanceActiveQuestion(store, admin.id, session.id, -1)).toThrow();
+});
+test('a non-owner cannot advance the active question', async () => {
+	const { store, admin, activity, session, ana } = await fixture();
+	createWordcloudQuestion(store, admin.id, activity.id, {
+		prompt: 'Pertanyaan satu?',
+		wordLimit: 2,
+		moderationEnabled: true
+	});
+	createWordcloudQuestion(store, admin.id, activity.id, {
+		prompt: 'Pertanyaan dua?',
+		wordLimit: 2,
+		moderationEnabled: true
+	});
+	expect(() => advanceActiveQuestion(store, ana.token, session.id, 1)).toThrow();
 });
