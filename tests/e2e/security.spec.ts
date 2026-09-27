@@ -32,6 +32,7 @@ test('JSON CSRF, session isolation, cookie flags, rotation, logout and closed jo
 		const id = p.url().split('/').pop()!,
 			code = (await p.getByTestId('session-code').textContent())!.trim();
 		await p.getByRole('button', { name: 'Buka sesi', exact: true }).click();
+		await p.keyboard.press('Escape');
 		for (const hostile of ['https://evil.invalid', 'null']) {
 			expect(
 				(

@@ -7,6 +7,7 @@ import { limits } from '$lib/server/security';
 import { activities, sessions } from '$lib/server/db/schema';
 import { choiceTally, getChoiceQuestionByActivity } from '$lib/server/poll/choice';
 import { eq } from 'drizzle-orm';
+import { getWordcloudQuestionsByActivity, wordcloudSnapshot } from '$lib/server/poll/wordcloud';
 export const GET: import('./$types').RequestHandler = (event) => {
 	const store = database(),
 		id = event.params.id,
@@ -32,6 +33,14 @@ export const GET: import('./$types').RequestHandler = (event) => {
 	const question = getChoiceQuestionByActivity(store, joined.session.activityId);
 	const streamSnapshot = () => {
 		const base = snapshot(store, id);
+		if (joined.activity.type === 'wordcloud')
+			return {
+				...base,
+				wordcloud: getWordcloudQuestionsByActivity(store, joined.session.activityId).map((q) => ({
+					questionId: q.id,
+					words: wordcloudSnapshot(store, id, q.id)
+				}))
+			};
 		if (isOwner)
 			return { ...base, question, tally: question ? choiceTally(store, id, question.id) : null };
 		if (question?.showResults) return { ...base, tally: choiceTally(store, id, question.id) };

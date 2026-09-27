@@ -1,309 +1,397 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Card } from '$components/ui';
-	import SessionStatus from '$lib/components/SessionStatus.svelte';
+	import { onMount } from 'svelte';
 	import QuizLeaderboard from '$lib/components/poll/QuizLeaderboard.svelte';
-
+	import WordcloudResults from '$lib/components/poll/WordcloudResults.svelte';
 	let { data, form } = $props();
-
 	let activeIndex = $state(0);
-	let timerSeconds = $state(0);
-	let timerRunning = $state(false);
-	let timerInterval: ReturnType<typeof setInterval> | null = null;
-
 	const questions = $derived(data.questions);
 	const active = $derived(questions[activeIndex]);
-	const timerMax = $derived(active?.timeLimit ?? 20);
-	const timerColor = $derived(
-		timerSeconds > timerMax * 0.5
-			? '#10b981'
-			: timerSeconds > timerMax * 0.25
-				? '#f59e0b'
-				: '#ef4444'
-	);
-
-	// Live tally per question via SSE
+	const choiceOptions = $derived(active && 'options' in active ? active.options : []);
 	let tally = $state<Record<string, number>>({});
+	let words = $state<{ word: string; weight: number }[]>([]);
+	let moderation = $state<{ id: string; word: string; status: string }[]>([]);
 	let connected = $state(false);
-
+	let count = $state(0);
+	let errorMessage = $state('');
+	let presenting = $state(false);
+	let controls = $state(false);
+	let stage: HTMLElement;
+	let hideTimer: ReturnType<typeof setTimeout>;
+	let timerSeconds = $state(0);
+	let timerRunning = $state(false);
+	let timer: ReturnType<typeof setInterval> | undefined;
+	const total = $derived(Object.values(tally).reduce((sum, n) => sum + n, 0));
+	function reveal() {
+		controls = true;
+		clearTimeout(hideTimer);
+		hideTimer = setTimeout(() => (controls = false), 2500);
+	}
+	function present() {
+		presenting = true;
+		controls = false;
+		// The element already exists: invoke native API synchronously in the click gesture.
+		try {
+			void stage.requestFullscreen?.().catch(() => {});
+		} catch {
+			/* CSS fallback remains usable. */
+		}
+		stage.focus();
+	}
+	function exit() {
+		presenting = false;
+		if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+	}
+	function select(index: number) {
+		if (index < 0 || index >= questions.length) return;
+		activeIndex = index;
+		stopTimer();
+	}
+	function stopTimer() {
+		clearInterval(timer);
+		timerRunning = false;
+	}
+	function startTimer() {
+		stopTimer();
+		timerSeconds = 'timeLimit' in active ? active.timeLimit : 20;
+		timerRunning = true;
+		timer = setInterval(() => {
+			timerSeconds--;
+			if (timerSeconds <= 0) stopTimer();
+		}, 1000);
+	}
+	function key(event: KeyboardEvent) {
+		if (!presenting) return;
+		if (event.key === 'Escape') exit();
+		if (event.key === 'Tab') reveal();
+		if (event.target instanceof HTMLElement && event.target.closest('input,textarea,select,button'))
+			return;
+		if (event.key === 'ArrowRight') select(activeIndex + 1);
+		if (event.key === 'ArrowLeft') select(activeIndex - 1);
+	}
+	onMount(() => {
+		count = data.snapshot.count;
+		words = data.words;
+		const onChange = () => {
+			if (!document.fullscreenElement) presenting = false;
+		};
+		document.addEventListener('fullscreenchange', onChange);
+		return () => {
+			stopTimer();
+			clearTimeout(hideTimer);
+			document.removeEventListener('fullscreenchange', onChange);
+		};
+	});
 	$effect(() => {
+		const id = active?.id;
 		const sessionId = data.snapshot.id;
-		const questionId = active?.id;
-		const source = new EventSource(`/api/sessions/${encodeURIComponent(sessionId)}/events`);
+		const isCloud = data.activityType === 'wordcloud';
+		let disposed = false;
+		const refresh = async () => {
+			if (!id) return;
+			try {
+				const url = isCloud
+					? `/api/wordcloud/${data.snapshot.code}/responses?questionId=${id}`
+					: `/api/polls/${data.snapshot.code}/results?questionId=${id}`;
+				const response = await fetch(url);
+				if (response.ok && !disposed) {
+					const result = await response.json();
+					if (isCloud) words = result.words;
+					else tally = result.counts;
+				}
+			} catch {
+				/* EventSource reconnects. */
+			}
+		};
+		const source = new EventSource(`/api/sessions/${sessionId}/events`);
+		source.onopen = () => {
+			connected = true;
+			void refresh();
+		};
+		source.onerror = () => (connected = false);
+		for (const name of ['snapshot', 'resync', 'participant.count'])
+			source.addEventListener(name, (event) => {
+				const state = JSON.parse((event as MessageEvent).data);
+				if (state.count != null) count = state.count;
+			});
+		for (const name of ['snapshot', 'resync', 'poll.tally', 'session.state', 'wordcloud.snapshot'])
+			source.addEventListener(name, refresh);
+		void refresh();
+		return () => {
+			disposed = true;
+			source.close();
+		};
+	});
+	$effect(() => {
+		if (presenting || data.activityType !== 'wordcloud' || !active) return;
+		const id = active.id;
+		let disposed = false;
 		const refresh = async () => {
 			try {
 				const response = await fetch(
-					`/api/polls/${encodeURIComponent(data.snapshot.code)}/results?questionId=${encodeURIComponent(questionId ?? '')}`
+					`/api/wordcloud/sessions/${data.snapshot.id}/moderation/${id}`
 				);
-				if (response.ok && active?.id === questionId) {
-					const result = await response.json();
-					tally = result.counts ?? {};
-				}
+				if (response.ok && !disposed) moderation = (await response.json()).responses;
 			} catch {
-				/* reconnect keeps state */
+				/* Next poll retries owner-only queue. */
 			}
 		};
 		void refresh();
-		source.addEventListener('snapshot', refresh);
-		source.addEventListener('resync', refresh);
-		source.addEventListener('poll.tally', refresh);
-		source.addEventListener('session.state', refresh);
-		source.onopen = () => (connected = true);
-		source.onerror = () => (connected = false);
-		return () => source.close();
+		const interval = setInterval(refresh, 2000);
+		return () => {
+			disposed = true;
+			clearInterval(interval);
+		};
 	});
-
-	function selectQuestion(index: number) {
-		if (index < 0 || index >= questions.length) return;
-		activeIndex = index;
-		timerSeconds = questions[index].timeLimit;
-		stopTimer();
-	}
-
-	function startTimer() {
-		stopTimer();
-		timerSeconds = timerMax;
-		timerRunning = true;
-		timerInterval = setInterval(() => {
-			if (timerSeconds > 0) {
-				timerSeconds -= 1;
-				if (timerSeconds === 0) timerRunning = false;
-			} else {
-				timerRunning = false;
-				stopTimer();
-			}
-		}, 1000);
-	}
-
-	function stopTimer() {
-		if (timerInterval) {
-			clearInterval(timerInterval);
-			timerInterval = null;
+	async function moderate(id: string, status: 'approved' | 'rejected') {
+		errorMessage = '';
+		try {
+			const response = await fetch(`/api/wordcloud/responses/${id}/moderate`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ status })
+			});
+			const result = await response.json();
+			if (!response.ok) throw new Error(result.message ?? 'Moderasi gagal.');
+			moderation = moderation.map((item) => (item.id === id ? { ...item, status } : item));
+		} catch (err) {
+			errorMessage = err instanceof Error ? err.message : 'Moderasi gagal. Coba lagi.';
 		}
-		timerRunning = false;
 	}
-
-	const totalResponses = $derived(Object.values(tally).reduce((sum, n) => sum + n, 0));
 </script>
 
 <svelte:head><title>Sesi {data.snapshot.code} — Edu Nara</title></svelte:head>
-
-<main class="min-h-dvh bg-[#0b1120] py-4 text-white sm:py-6">
-	<div class="mx-auto max-w-6xl px-4 sm:px-6">
-		<!-- Top bar -->
-		<header
-			class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-gradient-to-r from-[#1e1b4b] to-[#0f172a] px-5 py-4 shadow-xl"
-		>
-			<div>
-				<p class="text-xs font-black uppercase tracking-[0.25em] text-[#38bdf8]">
-					Game Room · {data.snapshot.title}
-				</p>
-				<p class="mt-1 font-mono text-3xl font-black tracking-widest" data-testid="session-code">
-					{data.snapshot.code}
-				</p>
-			</div>
-			<div class="flex items-center gap-3">
-				<span
-					class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-black"
-					data-testid="participant-count"
-				>
-					<span
-						class="inline-block h-2.5 w-2.5 rounded-full {connected
-							? 'bg-emerald-400 animate-pulse'
-							: 'bg-rose-400'}"
-					></span>
-					{data.snapshot.count} peserta
-				</span>
-				<span
-					class="rounded-full bg-amber-400/15 border border-amber-400/40 px-4 py-2 text-sm font-black text-amber-300 uppercase tracking-wider"
-				>
-					{data.snapshot.state}
-				</span>
-			</div>
-		</header>
-
-		{#if form?.message}
-			<p
-				role="status"
-				class="mt-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 px-4 py-3 text-sm font-bold text-emerald-300"
-			>
-				{form.message}
+<svelte:window
+	onkeydown={key}
+	onpointermove={() => {
+		if (presenting) reveal();
+	}}
+	onpointerdown={() => {
+		if (presenting) reveal();
+	}}
+/>
+<main
+	bind:this={stage}
+	tabindex="-1"
+	class:presentation={presenting}
+	class="session-screen"
+	data-testid="session-screen"
+>
+	<header class="flex flex-wrap items-center justify-between gap-3">
+		<div>
+			<p class="text-sm font-bold text-cyan-300">Edu Nara · {data.snapshot.title}</p>
+			<p class="font-mono text-3xl font-black tracking-widest" data-testid="session-code">
+				{data.snapshot.code}
 			</p>
-		{/if}
-
-		<!-- Session controls -->
-		<div class="mt-4 flex flex-wrap gap-2">
+		</div>
+		<p class="text-sm">
+			<span data-testid="participant-count">{count}</span> peserta · {connected
+				? 'Live'
+				: 'Menghubungkan…'} ·
+			{data.snapshot.state}
+		</p>
+	</header>
+	{#if !presenting}
+		<div class="my-5 flex flex-wrap gap-3" data-testid="session-controls">
+			<a class="control" href="/admin">← Workspace</a>
 			{#each [{ state: 'open', label: 'Buka sesi' }, { state: 'closed', label: 'Tutup sesi' }, { state: 'ended', label: 'Akhiri sesi' }] as control}
-				<form method="POST" use:enhance>
+				<form
+					method="POST"
+					use:enhance={({ formData }) => {
+						if (formData.get('state') === 'open') present();
+						return async ({ result, update }) => {
+							await update();
+							if (result.type === 'failure' || result.type === 'error') exit();
+						};
+					}}
+				>
 					<input type="hidden" name="state" value={control.state} />
-					<Button
-						type="submit"
-						class="font-black"
-						variant={control.state === 'ended' ? 'ghost' : undefined}
+					<button
+						class="control"
 						disabled={data.snapshot.state === 'ended' ||
 							data.snapshot.state === control.state ||
 							(data.snapshot.state === 'draft' && control.state === 'closed')}
-						>{control.label}</Button
+						>{control.label}</button
 					>
 				</form>
 			{/each}
-			<a
-				class="ml-auto inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-4 py-2 text-sm font-black text-white/80 hover:bg-white/20"
-				href={data.joinUrl}>{data.joinUrl}</a
+			<button class="control" onclick={present} data-testid="fullscreen-button"
+				>Mode layar penuh</button
 			>
+			<a class="control" href={data.joinUrl}>Tautan bergabung</a>
 		</div>
-
-		{#if data.snapshot.state === 'ended' && data.leaderboard.length}
-			<!-- FINAL LEADERBOARD — gamified -->
-			<QuizLeaderboard entries={data.leaderboard} />
-		{:else if questions.length}
-			<!-- Game stage -->
-			<div class="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
-				<!-- Active question stage -->
-				<section
-					class="relative overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-b from-[#111827] to-[#0b1120] p-6 shadow-2xl sm:p-8"
-					data-testid="presenter-stage"
-					aria-live="polite"
-				>
-					<div
-						class="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-indigo-600/20 blur-3xl"
-						aria-hidden="true"
-					></div>
-					<div
-						class="pointer-events-none absolute -left-16 bottom-0 h-56 w-56 rounded-full bg-cyan-600/10 blur-3xl"
-						aria-hidden="true"
-					></div>
-
-					<div class="relative flex items-start justify-between gap-4">
-						<div>
-							<p class="text-xs font-black uppercase tracking-[0.22em] text-[#38bdf8]">
-								Soal {activeIndex + 1} / {questions.length}
-							</p>
-							<h2
-								class="mt-3 max-w-2xl text-2xl font-black leading-tight tracking-tight sm:text-4xl"
-							>
-								{active.prompt}
-							</h2>
-						</div>
-						<!-- Big timer -->
-						<div class="relative flex shrink-0 flex-col items-center">
-							<svg class="h-24 w-24 -rotate-90 transform sm:h-28 sm:w-28" viewBox="0 0 44 44">
-								<circle
-									cx="22"
-									cy="22"
-									r="18"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="3"
-									class="text-white/10"
-								/>
-								<circle
-									cx="22"
-									cy="22"
-									r="18"
-									fill="none"
-									stroke={timerColor}
-									stroke-width="3"
-									stroke-dasharray={113.1}
-									stroke-dashoffset={113.1 * (1 - timerSeconds / timerMax)}
-									stroke-linecap="round"
-									class="transition-all duration-1000 ease-linear"
-								/>
-							</svg>
-							<span class="absolute text-2xl font-black sm:text-3xl" style={`color:${timerColor}`}>
-								{timerSeconds}s
-							</span>
-							<button
-								class="mt-2 rounded-xl px-4 py-2 text-xs font-black uppercase tracking-wider transition
-								{timerRunning ? 'bg-rose-500/80 hover:bg-rose-500' : 'bg-emerald-500/80 hover:bg-emerald-500'}"
-								onclick={() => (timerRunning ? stopTimer() : startTimer())}
-							>
-								{timerRunning ? '⏸ Jeda' : '▶ Mulai'}
-							</button>
-						</div>
-					</div>
-
-					<!-- Tally bars -->
-					<div class="relative mt-8 space-y-3" data-testid="presenter-tally">
-						<p class="text-sm font-bold text-white/60">
-							{totalResponses} jawaban masuk · {connected ? 'live' : 'menghubungkan…'}
-						</p>
-						{#each active.options as option, i}
-							{@const value = tally[option.id] ?? 0}
-							{@const width = totalResponses ? (value / totalResponses) * 100 : 0}
-							<div class="flex items-center gap-3">
-								<span
-									class="grid h-9 w-9 shrink-0 place-items-center rounded-xl font-black text-white {[
-										'bg-[#ff416c]',
-										'bg-[#00b4db]',
-										'bg-[#f7971e]',
-										'bg-[#8e2de2]'
-									][i % 4]}"
-								>
-									{String.fromCharCode(65 + i)}
-								</span>
-								<div class="min-w-0 flex-1">
-									<div class="flex justify-between text-sm font-bold">
-										<span class="truncate">{option.label}</span>
-										<span class="ml-3 shrink-0 text-white/70">{value}</span>
-									</div>
-									<div class="mt-1 h-4 overflow-hidden rounded-full bg-white/10">
-										<div
-											class="h-full rounded-full transition-all duration-500 {[
-												'bg-[#ff416c]',
-												'bg-[#00b4db]',
-												'bg-[#f7971e]',
-												'bg-[#8e2de2]'
-											][i % 4]}"
-											style={`width:${width}%`}
-										></div>
-									</div>
-								</div>
-							</div>
-						{/each}
-					</div>
-
-					<!-- Show/hide results -->
-					<form method="POST" use:enhance class="relative mt-6">
-						<input type="hidden" name="action" value="results" />
-						<input type="hidden" name="questionId" value={active.id} />
-						<input type="hidden" name="showResults" value={String(!active.showResults)} />
-						<Button type="submit" variant="ghost" class="font-black">
-							{active.showResults ? '🙈 Sembunyikan hasil' : '👁 Tampilkan hasil ke mahasiswa'}
-						</Button>
-					</form>
-				</section>
-
-				<!-- Question selector -->
-				<aside class="space-y-2" aria-label="Daftar soal">
-					<p class="px-1 text-xs font-black uppercase tracking-[0.2em] text-white/50">
-						Soal · klik untuk tayang
+		<p class="text-sm text-slate-300">
+			Buka sesi memulai tayangan. Gerakkan pointer, sentuh layar, atau tekan Tab untuk kontrol.
+			Escape keluar; panah berpindah soal.
+		</p>
+	{/if}
+	{#if form?.message}<p role="status">{form.message}</p>{/if}
+	{#if errorMessage}<p role="alert">{errorMessage}</p>{/if}
+	{#if data.snapshot.state === 'ended' && data.leaderboard.length}
+		<QuizLeaderboard entries={data.leaderboard} />
+	{:else if active}
+		<section class="slide" data-testid="presenter-stage">
+			<p class="text-sm text-cyan-300">
+				{data.activityType === 'wordcloud'
+					? 'Word Cloud'
+					: `Soal ${activeIndex + 1} / ${questions.length}`}
+			</p>
+			<h1 class="my-5 text-3xl font-black leading-tight sm:text-5xl">{active.prompt}</h1>
+			{#if data.activityType === 'wordcloud'}
+				<WordcloudResults {words} presentation={presenting} />
+			{:else}
+				<div class="space-y-5" data-testid="presenter-tally">
+					<p class="text-slate-300">
+						{total} pilihan masuk {timerRunning ? `· ${timerSeconds}s` : ''}
 					</p>
-					{#each questions as question, i}
-						<button
-							class="w-full rounded-2xl border px-4 py-3 text-left transition
-							{i === activeIndex
-								? 'border-[#38bdf8] bg-[#38bdf8]/15 shadow-[0_0_20px_rgba(56,189,248,0.25)]'
-								: 'border-white/10 bg-white/5 hover:bg-white/10'}"
-							onclick={() => selectQuestion(i)}
-							aria-current={i === activeIndex ? 'true' : undefined}
-						>
-							<div class="flex items-center justify-between gap-2">
-								<span class="text-xs font-black text-white/60">SOAL {i + 1}</span>
-								<span class="text-xs font-black text-amber-300">⏱ {question.timeLimit}s</span>
+					{#each choiceOptions as option, i}
+						{@const value = tally[option.id] ?? 0}
+						<div>
+							<div class="flex justify-between gap-3 text-lg font-bold">
+								<span>{String.fromCharCode(65 + i)}. {option.label}</span><span>{value}</span>
 							</div>
-							<p class="mt-1 truncate text-sm font-bold">{question.prompt}</p>
-						</button>
+							<div class="mt-2 h-5 rounded-full bg-white/10">
+								<div
+									class="h-full rounded-full bg-cyan-400 transition-[width] duration-500 motion-reduce:transition-none"
+									style:width={`${total ? (value / total) * 100 : 0}%`}
+								></div>
+							</div>
+						</div>
 					{/each}
-				</aside>
-			</div>
-		{:else}
-			<Card class="mt-6 p-6 text-primary">
-				<SessionStatus snapshot={data.snapshot} />
-				{#if !questions.length}
-					<p class="mt-4 text-sm text-muted">Belum ada soal. Buka editor kuis untuk menambahkan.</p>
+				</div>
+				{#if !presenting}
+					<div class="mt-6 flex flex-wrap gap-3">
+						<button class="control" onclick={() => (timerRunning ? stopTimer() : startTimer())}
+							>{timerRunning ? 'Jeda' : 'Mulai timer'}</button
+						>
+						<form method="POST" use:enhance>
+							<input type="hidden" name="action" value="results" /><input
+								type="hidden"
+								name="questionId"
+								value={active.id}
+							/><input
+								type="hidden"
+								name="showResults"
+								value={String(!active.showResults)}
+							/><button class="control"
+								>{active.showResults ? 'Sembunyikan hasil' : 'Tampilkan hasil ke mahasiswa'}</button
+							>
+						</form>
+					</div>
 				{/if}
-			</Card>
-		{/if}
-	</div>
+			{/if}
+		</section>
+	{:else}<p class="my-10">Belum ada pertanyaan. Kembali ke workspace dan buka editor.</p>{/if}
+	{#if !presenting && data.activityType === 'wordcloud'}
+		<aside class="mt-8 rounded-2xl border border-white/20 p-5" aria-label="Antrean moderasi">
+			<h2 class="text-xl font-bold">
+				Moderasi · {moderation.filter((item) => item.status === 'pending').length} menunggu
+			</h2>
+			<p class="text-sm text-slate-300">Panel privat dosen. Hanya kata disetujui masuk tayangan.</p>
+			{#each moderation as item}<div
+					class="mt-3 flex flex-wrap items-center gap-3 border-t border-white/10 pt-3"
+					data-testid="moderation-item"
+				>
+					<span class="min-w-0 flex-1 break-words">{item.word} · {item.status}</span
+					>{#if item.status !== 'approved'}<button
+							class="control"
+							onclick={() => moderate(item.id, 'approved')}>Setujui</button
+						>{/if}{#if item.status !== 'rejected'}<button
+							class="control"
+							onclick={() => moderate(item.id, 'rejected')}>Tolak</button
+						>{/if}
+				</div>{:else}<p class="mt-4">Belum ada kiriman.</p>{/each}
+		</aside>
+	{/if}
+	{#if !presenting && questions.length > 1}<nav
+			class="mt-6 flex flex-wrap gap-2"
+			aria-label="Daftar soal"
+		>
+			{#each questions as question, i}<button
+					class="control"
+					aria-current={i === activeIndex ? 'true' : undefined}
+					onclick={() => select(i)}>Soal {i + 1}: {question.prompt}</button
+				>{/each}
+		</nav>{/if}
+	{#if presenting}
+		<nav class:visible={controls} class="presenter-controls" aria-label="Kontrol presentasi">
+			<button class="control" disabled={activeIndex === 0} onclick={() => select(activeIndex - 1)}
+				>Sebelumnya</button
+			>
+			<button
+				class="control"
+				disabled={activeIndex >= questions.length - 1}
+				onclick={() => select(activeIndex + 1)}>Berikutnya</button
+			>
+			<button class="control" onclick={exit} data-testid="exit-fullscreen"
+				>Keluar presentasi (Esc)</button
+			>
+		</nav>
+	{/if}
 </main>
+
+<style>
+	.session-screen {
+		min-height: 100dvh;
+		padding: clamp(1rem, 3vw, 3rem);
+		background: #0b1120;
+		color: white;
+		outline: none;
+	}
+	.session-screen:not(.presentation) {
+		max-width: 1440px;
+		margin: auto;
+	}
+	.presentation {
+		position: fixed;
+		inset: 0;
+		z-index: 100;
+		width: 100%;
+		height: 100dvh;
+		overflow: auto;
+	}
+	.slide {
+		margin-top: 2rem;
+		padding: clamp(1rem, 3vw, 3rem);
+		border-radius: 2rem;
+		background: #111827;
+	}
+	.presentation .slide {
+		min-height: 75dvh;
+	}
+	.control {
+		display: inline-flex;
+		min-height: 44px;
+		align-items: center;
+		justify-content: center;
+		border: 1px solid #64748b;
+		border-radius: 0.75rem;
+		padding: 0.5rem 1rem;
+		font-weight: 700;
+		color: white;
+		background: #1e293b;
+	}
+	.control:disabled {
+		opacity: 0.4;
+	}
+	.control:focus-visible {
+		outline: 3px solid #67e8f9;
+		outline-offset: 3px;
+	}
+	.presenter-controls {
+		position: fixed;
+		bottom: 1rem;
+		left: 50%;
+		transform: translateX(-50%);
+		display: flex;
+		gap: 0.5rem;
+		max-width: 95vw;
+		opacity: 0;
+		pointer-events: none;
+	}
+	.presenter-controls.visible,
+	.presenter-controls:focus-within {
+		opacity: 1;
+		pointer-events: auto;
+	}
+</style>

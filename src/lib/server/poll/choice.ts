@@ -76,7 +76,7 @@ export function getChoiceQuestion(store: Store, questionId: string) {
 	const question = store.db
 		.select()
 		.from(pollQuestions)
-		.where(eq(pollQuestions.id, questionId))
+		.where(and(eq(pollQuestions.id, questionId), eq(pollQuestions.kind, 'choice')))
 		.get();
 	if (!question) return null;
 	return {
@@ -94,7 +94,7 @@ export function getChoiceQuestionsByActivity(store: Store, activityId: string) {
 	return store.db
 		.select()
 		.from(pollQuestions)
-		.where(eq(pollQuestions.activityId, activityId))
+		.where(and(eq(pollQuestions.activityId, activityId), eq(pollQuestions.kind, 'choice')))
 		.orderBy(asc(pollQuestions.position))
 		.all()
 		.map((question) => getChoiceQuestion(store, question.id)!);
@@ -115,7 +115,13 @@ export function updateChoiceQuestion(
 		.select({ question: pollQuestions })
 		.from(pollQuestions)
 		.innerJoin(activities, eq(activities.id, pollQuestions.activityId))
-		.where(and(eq(pollQuestions.id, questionId), eq(activities.ownerId, ownerId)))
+		.where(
+			and(
+				eq(pollQuestions.id, questionId),
+				eq(activities.ownerId, ownerId),
+				eq(pollQuestions.kind, 'choice')
+			)
+		)
 		.get();
 	if (!row) throw new UserError('Pertanyaan tidak ditemukan.');
 	const currentOptions = store.db
@@ -151,7 +157,13 @@ export function setChoiceCorrectOptions(
 		.select({ question: pollQuestions })
 		.from(pollQuestions)
 		.innerJoin(activities, eq(activities.id, pollQuestions.activityId))
-		.where(and(eq(pollQuestions.id, questionId), eq(activities.ownerId, ownerId)))
+		.where(
+			and(
+				eq(pollQuestions.id, questionId),
+				eq(activities.ownerId, ownerId),
+				eq(pollQuestions.kind, 'choice')
+			)
+		)
 		.get();
 	const uniqueIds = [...new Set(optionIds)];
 	const valid = store.db
@@ -182,7 +194,13 @@ export function setChoiceResults(
 		.select({ question: pollQuestions })
 		.from(pollQuestions)
 		.innerJoin(activities, eq(activities.id, pollQuestions.activityId))
-		.where(and(eq(pollQuestions.id, questionId), eq(activities.ownerId, ownerId)))
+		.where(
+			and(
+				eq(pollQuestions.id, questionId),
+				eq(activities.ownerId, ownerId),
+				eq(pollQuestions.kind, 'choice')
+			)
+		)
 		.get();
 	if (!row) throw new UserError('Pertanyaan tidak ditemukan.');
 	return store.db
@@ -253,7 +271,7 @@ export function submitChoiceResponse(
 	const question = store.db
 		.select()
 		.from(pollQuestions)
-		.where(eq(pollQuestions.id, questionId))
+		.where(and(eq(pollQuestions.id, questionId), eq(pollQuestions.kind, 'choice')))
 		.get();
 	const uniqueIds = [...new Set(optionIds)];
 	const options = store.db

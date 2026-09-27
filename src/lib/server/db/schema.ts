@@ -60,6 +60,11 @@ export const pollQuestions = sqliteTable(
 		position: integer().notNull().default(0),
 		showResults: integer('show_results', { mode: 'boolean' }).notNull().default(false),
 		timeLimit: integer('time_limit').notNull().default(20),
+		kind: text({ enum: ['choice', 'wordcloud'] })
+			.notNull()
+			.default('choice'),
+		wordLimit: integer('word_limit').notNull().default(1),
+		moderationEnabled: integer('moderation_enabled', { mode: 'boolean' }).notNull().default(true),
 		createdAt: integer('created_at').notNull()
 	},
 	(t) => [
@@ -157,5 +162,29 @@ export const boardPosts = sqliteTable(
 	(t) => [
 		index('board_post_session_column').on(t.sessionId, t.columnId),
 		index('board_post_status').on(t.sessionId, t.status)
+	]
+);
+export const wordcloudResponses = sqliteTable(
+	'wordcloud_responses',
+	{
+		id: text().primaryKey(),
+		questionId: text('question_id')
+			.notNull()
+			.references(() => pollQuestions.id),
+		sessionId: text('session_id')
+			.notNull()
+			.references(() => sessions.id),
+		participantId: text('participant_id')
+			.notNull()
+			.references(() => participants.id),
+		word: text().notNull(),
+		status: text({ enum: ['pending', 'approved', 'rejected'] })
+			.notNull()
+			.default('pending'),
+		createdAt: integer('created_at').notNull()
+	},
+	(t) => [
+		uniqueIndex('wordcloud_response_once').on(t.questionId, t.sessionId, t.participantId, t.word),
+		index('wordcloud_response_question_status').on(t.questionId, t.sessionId, t.status)
 	]
 );

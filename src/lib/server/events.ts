@@ -35,6 +35,7 @@ export class SseHub {
 			| 'session.state'
 			| 'participant.count'
 			| 'poll.tally'
+			| 'wordcloud.snapshot'
 			| 'board.post.new'
 			| 'board.post.moderated'
 			| 'board.post.removed'

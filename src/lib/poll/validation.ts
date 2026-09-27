@@ -41,4 +41,18 @@ export const choiceResponseSchema = z
 			ctx.addIssue({ code: 'custom', path: ['optionIds'], message: 'Pilihan jawaban duplikat.' });
 	});
 export type ChoiceQuestionInput = z.infer<typeof choiceQuestionSchema>;
+export const wordcloudQuestionSchema = z
+	.object({
+		prompt: z.string().trim().min(1, 'Pertanyaan tidak boleh kosong.').max(1000),
+		wordLimit: z.coerce.number().int().min(1).max(5).default(3),
+		moderationEnabled: z.boolean().default(true)
+	})
+	.strict();
+export const wordcloudResponseSchema = z
+	.object({ questionId: z.string().trim().min(1).max(100), word: z.string().min(1).max(80) })
+	.strict();
+export const wordcloudModerationSchema = z
+	.object({ status: z.enum(['approved', 'rejected']) })
+	.strict();
 export type ChoiceResponseInput = z.infer<typeof choiceResponseSchema>;
+export type WordcloudQuestionInput = z.infer<typeof wordcloudQuestionSchema>;

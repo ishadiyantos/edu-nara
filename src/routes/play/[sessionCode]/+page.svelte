@@ -2,6 +2,7 @@
 	import { Container } from '$components/ui';
 	import SessionStatus from '$lib/components/SessionStatus.svelte';
 	import ChoicePlayer from '$lib/components/poll/ChoicePlayer.svelte';
+	import WordcloudPlayer from '$lib/components/poll/WordcloudPlayer.svelte';
 	let { data } = $props();
 </script>
 
@@ -48,13 +49,22 @@
 					One screen, one challenge <span class="sr-only">Satu layar, satu tantangan</span>
 				</span>
 			</div>
-			<ChoicePlayer
-				sessionCode={data.snapshot.code}
-				sessionId={data.snapshot.id}
-				questions={data.questions}
-				responses={data.responses}
-				initialScore={data.initialScore}
-			/>
+			{#if data.activityType === 'wordcloud'}
+				<WordcloudPlayer
+					sessionCode={data.snapshot.code}
+					sessionId={data.snapshot.id}
+					questions={data.questions}
+					responses={data.responses}
+				/>
+			{:else}
+				<ChoicePlayer
+					sessionCode={data.snapshot.code}
+					sessionId={data.snapshot.id}
+					questions={data.questions}
+					responses={data.responses}
+					initialScore={data.initialScore}
+				/>
+			{/if}
 		{:else}
 			<SessionStatus snapshot={data.snapshot} />
 		{/if}

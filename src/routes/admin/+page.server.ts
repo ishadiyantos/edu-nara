@@ -36,7 +36,7 @@ export const actions = {
 		} catch (err) {
 			return fail(400, { message: message(err) });
 		}
-		return { message: 'Aktivitas kosong dibuat. Editor hadir pada fase berikutnya.' };
+		return { message: 'Aktivitas dibuat. Buka editor untuk menyiapkan pertanyaan.' };
 	},
 	launch: async (event) => {
 		const owner = requireAdmin(event);

@@ -70,6 +70,7 @@ test('quiz supports a question bank, multiple correct answers, and a game-show s
 		await student.getByRole('button', { name: 'Lihat skor' }).click();
 		await expect(student.getByTestId('quiz-finished')).toContainText('0');
 
+		await page.keyboard.press('Escape');
 		// Dosen membuka hasil untuk soal pertama; mahasiswa refresh dan harus melihat skor + kunci.
 		await page.getByRole('button', { name: 'Tampilkan hasil ke mahasiswa' }).click();
 		await expect(student.getByTestId('quiz-finished')).toBeVisible();

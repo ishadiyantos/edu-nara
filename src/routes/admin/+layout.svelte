@@ -7,7 +7,7 @@
 	const isLogin = $derived($page.url.pathname === '/admin/login');
 </script>
 
-{#if isLogin}
+{#if isLogin || $page.url.pathname.startsWith('/admin/sessions/')}
 	{@render children()}
 {:else}
 	<div
