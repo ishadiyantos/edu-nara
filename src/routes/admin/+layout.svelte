@@ -30,7 +30,7 @@
 		<header
 			class="sticky top-0 z-40 border-b border-white/10 bg-[#0f172a]/80 backdrop-blur-xl shadow-lg"
 		>
-			<Container>
+			<Container class="!max-w-none">
 				<div class="flex h-16 min-w-0 items-center justify-between gap-3">
 					<a href="/admin" class="flex shrink-0 items-center gap-2.5 group">
 						<span
@@ -86,7 +86,7 @@
 			</Container>
 		</header>
 		<main class="py-8 relative z-10 flex-1">
-			<Container>
+			<Container class="!max-w-none">
 				{@render children()}
 			</Container>
 		</main>

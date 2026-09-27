@@ -26,6 +26,10 @@ test('word cloud edit, submit, moderate, reconnect, native fullscreen and fallba
 	await page.reload();
 	await expect(page.getByTestId('wordcloud-question-item')).toHaveCount(2);
 	await page.getByRole('button', { name: 'Luncurkan Word Cloud' }).click();
+	const screen = page.getByTestId('session-screen');
+	const bounds = await screen.boundingBox();
+	expect.soft(bounds!.x).toBe(0);
+	expect.soft(bounds!.width).toBe(await page.evaluate(() => document.documentElement.clientWidth));
 	const code = (await page.getByTestId('session-code').textContent())!.trim();
 	const sessionId = page.url().split('/').pop()!;
 	// Wrap native API, not replace: proves gesture call and native success.
@@ -46,6 +50,7 @@ test('word cloud edit, submit, moderate, reconnect, native fullscreen and fallba
 		.toBe('true');
 	await expect.poll(() => page.evaluate(() => Boolean(document.fullscreenElement))).toBe(true);
 	await expect(page.getByTestId('session-controls')).toHaveCount(0);
+	expect.soft(await screen.evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(true);
 	await expect(page.getByRole('link', { name: 'Dashboard', exact: true })).toHaveCount(0);
 	const context = await browser.newContext();
 	try {
@@ -97,6 +102,38 @@ test('word cloud edit, submit, moderate, reconnect, native fullscreen and fallba
 		await expect(student.getByTestId('wordcloud-results')).toContainText('séru');
 		await student.reload();
 		await expect(student.getByTestId('wordcloud-results')).toContainText('séru');
+		await page.evaluate(() => {
+			HTMLElement.prototype.requestFullscreen = () => Promise.reject(new Error('test fallback'));
+		});
+		const viewport = page.viewportSize()!;
+		for (const size of [
+			{ width: 1920, height: 1080 },
+			{ width: 1920, height: 914 },
+			{ width: 1366, height: 768 },
+			{ width: 360, height: 780 }
+		]) {
+			await page.setViewportSize(size);
+			await page.getByTestId('fullscreen-button').click();
+			const layout = await screen.evaluate((el) => {
+				const svg = el.querySelector('svg')!.getBoundingClientRect();
+				return {
+					scrolls: el.scrollHeight > el.clientHeight,
+					top: svg.top,
+					bottom: svg.bottom,
+					height: svg.height,
+					viewport: innerHeight
+				};
+			});
+			expect(layout.scrolls).toBe(false);
+			expect(layout.top).toBeGreaterThanOrEqual(0);
+			expect(layout.bottom).toBeLessThanOrEqual(layout.viewport);
+			expect(layout.height).toBeGreaterThan(100);
+			await page.keyboard.press('Escape');
+			const bounds = await screen.boundingBox();
+			expect(bounds!.x).toBe(0);
+			expect(bounds!.width).toBe(await page.evaluate(() => document.documentElement.clientWidth));
+		}
+		await page.setViewportSize(viewport);
 		await page.getByRole('button', { name: 'Tolak', exact: true }).click();
 		await expect(student.getByTestId('wordcloud-results')).not.toContainText('séru');
 		// Teacher advances to the second question; both screens follow the same active question.
@@ -131,6 +168,25 @@ test('word cloud edit, submit, moderate, reconnect, native fullscreen and fallba
 		await expect(page.getByTestId('exit-fullscreen')).toBeFocused();
 		await page.keyboard.press('Enter');
 		await expect(page.getByTestId('session-controls')).toBeVisible();
+		await page.getByRole('button', { name: 'Akhiri sesi', exact: true }).click();
+		await expect(page.locator('header')).toContainText('ended');
+		const firstQuestion = page.getByRole('button', {
+			name: 'Soal 1: Bagaimana kelas ini?',
+			exact: true
+		});
+		await expect(firstQuestion).toBeEnabled();
+		await firstQuestion.click();
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bagaimana kelas ini?');
+		await page.reload();
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bagaimana kelas ini?');
+		await page.getByTestId('fullscreen-button').click();
+		await page.keyboard.press('ArrowRight');
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Satu kata untuk dosen?');
+		await expect(page.getByRole('button', { name: 'Sebelumnya', exact: true })).toBeEnabled();
+		await page.keyboard.press('ArrowLeft');
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bagaimana kelas ini?');
+		await page.keyboard.press('Escape');
+		await expect(page.getByRole('button', { name: 'Buka sesi', exact: true })).toBeDisabled();
 		await student.setViewportSize({ width: 360, height: 780 });
 		expect(await student.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
 			true

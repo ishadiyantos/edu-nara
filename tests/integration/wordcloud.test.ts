@@ -106,7 +106,7 @@ test('owner advances the active question and participants follow the same one', 
 	expect(advanceActiveQuestion(store, admin.id, session.id, -1)).toBe(first.id);
 	expect(advanceActiveQuestion(store, admin.id, session.id, -1)).toBe(first.id);
 });
-test('launch selects first question, isolates sessions, rejects inactive submissions and ended navigation', async () => {
+test('launch selects first question, isolates sessions, allows ended review but rejects inactive and ended submissions', async () => {
 	const { store, admin, activity, session, ana } = await fixture();
 	const first = createWordcloudQuestion(store, admin.id, activity.id, {
 		prompt: 'Pertama?',
@@ -137,8 +137,11 @@ test('launch selects first question, isolates sessions, rejects inactive submiss
 	});
 	expect(() => setActiveQuestion(store, admin.id, session.id, foreignQuestion.id)).toThrow();
 	changeState(store, admin.id, session.id, 'ended');
-	expect(() => setActiveQuestion(store, admin.id, session.id, first.id)).toThrow();
-	expect(() => advanceActiveQuestion(store, admin.id, session.id, -1)).toThrow();
+	expect(setActiveQuestion(store, admin.id, session.id, first.id)).toBe(first.id);
+	expect(advanceActiveQuestion(store, admin.id, session.id, 1)).toBe(second.id);
+	expect(() => submitWordcloudResponse(store, session.id, second.id, ana.token, 'tambah')).toThrow(
+		/Sesi tidak menerima jawaban\./
+	);
 });
 test('a non-owner cannot advance the active question', async () => {
 	const { store, admin, activity, session, ana } = await fixture();

@@ -128,7 +128,6 @@ export function advanceActiveQuestion(
 ) {
 	if (direction !== 1 && direction !== -1) throw new UserError('Arah perpindahan tidak valid.');
 	const current = ownedSession(store, ownerId, sessionId);
-	if (current.state === 'ended') throw new UserError('Sesi sudah berakhir.');
 	ownedActivity(store, ownerId, current.activityId);
 	const questions = getWordcloudQuestionsByActivity(store, current.activityId);
 	const index = questions.findIndex(
@@ -152,7 +151,6 @@ export function setActiveQuestion(
 	questionId: string
 ) {
 	const current = ownedSession(store, ownerId, sessionId);
-	if (current.state === 'ended') throw new UserError('Sesi sudah berakhir.');
 	ownedActivity(store, ownerId, current.activityId);
 	const questions = getWordcloudQuestionsByActivity(store, current.activityId);
 	if (!questions.some((question) => question.id === questionId))

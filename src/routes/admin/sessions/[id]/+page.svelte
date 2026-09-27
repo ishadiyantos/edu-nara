@@ -95,7 +95,7 @@
 		if (!presenting) return;
 		if (event.key === 'Escape') exit();
 		if (event.key === 'Tab') reveal();
-		if (event.target instanceof HTMLElement && event.target.closest('input,textarea,select,button'))
+		if (event.target instanceof HTMLElement && event.target.closest('input,textarea,select'))
 			return;
 		if (event.key === 'ArrowRight') select(activeIndex + 1);
 		if (event.key === 'ArrowLeft') select(activeIndex - 1);
@@ -344,7 +344,7 @@
 		>
 			{#each questions as question, i}<button
 					class="control"
-					disabled={switching || data.snapshot.state === 'ended'}
+					disabled={switching}
 					aria-current={i === activeIndex ? 'true' : undefined}
 					onclick={() => select(i)}>Soal {i + 1}: {question.prompt}</button
 				>{/each}
@@ -353,14 +353,12 @@
 		<nav class:visible={controls} class="presenter-controls" aria-label="Kontrol presentasi">
 			<button
 				class="control"
-				disabled={switching || data.snapshot.state === 'ended' || activeIndex === 0}
+				disabled={switching || activeIndex === 0}
 				onclick={() => select(activeIndex - 1)}>Sebelumnya</button
 			>
 			<button
 				class="control"
-				disabled={switching ||
-					data.snapshot.state === 'ended' ||
-					activeIndex >= questions.length - 1}
+				disabled={switching || activeIndex >= questions.length - 1}
 				onclick={() => select(activeIndex + 1)}>Berikutnya</button
 			>
 			<button class="control" onclick={exit} data-testid="exit-fullscreen"
@@ -379,8 +377,7 @@
 		outline: none;
 	}
 	.session-screen:not(.presentation) {
-		max-width: 1440px;
-		margin: auto;
+		width: 100%;
 	}
 	.presentation {
 		position: fixed;
@@ -388,7 +385,11 @@
 		z-index: 100;
 		width: 100%;
 		height: 100dvh;
-		overflow: auto;
+		display: flex;
+		flex-direction: column;
+		gap: clamp(0.5rem, 2vh, 1.25rem);
+		padding: clamp(0.75rem, 2vw, 2rem);
+		overflow: hidden;
 	}
 	.slide {
 		margin-top: 2rem;
@@ -396,8 +397,25 @@
 		border-radius: 2rem;
 		background: #111827;
 	}
+	.presentation header {
+		flex-shrink: 0;
+	}
 	.presentation .slide {
-		min-height: 75dvh;
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		min-height: 0;
+		margin-top: 0;
+		padding: clamp(0.75rem, 2vw, 2rem);
+	}
+	.presentation .slide h1 {
+		margin: clamp(0.5rem, 2vh, 1.25rem) 0;
+		font-size: clamp(1.5rem, 4vw, 3rem);
+		overflow-wrap: anywhere;
+	}
+	.control[aria-current='true'] {
+		border-color: #67e8f9;
+		background: #164e63;
 	}
 	.control {
 		display: inline-flex;

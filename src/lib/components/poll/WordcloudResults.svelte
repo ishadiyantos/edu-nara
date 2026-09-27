@@ -11,7 +11,8 @@
 </script>
 
 <div
-	class="rounded-[2rem] border border-white/10 bg-slate-950/40 p-5 sm:p-8"
+	class:compact={presentation}
+	class="wordcloud-results rounded-[2rem] border border-white/10 bg-slate-950/40 p-5 sm:p-8"
 	data-testid="wordcloud-results"
 	aria-live="polite"
 >
@@ -62,10 +63,32 @@
 </div>
 
 <style>
+	.wordcloud-results.compact {
+		display: flex;
+		min-height: 0;
+		flex: 1;
+		flex-direction: column;
+		padding: clamp(0.75rem, 2vw, 1.5rem);
+	}
 	.cloud-frame {
 		min-height: 320px;
-		container-type: inline-size;
 	}
+	.compact .cloud-frame {
+		position: relative;
+		min-height: 0;
+		flex: 1;
+	}
+	.compact .cloud-frame svg {
+		position: absolute;
+		inset: 0;
+		min-height: 0;
+		height: 100%;
+	}
+	.compact .cloud-empty {
+		min-height: 0;
+		flex: 1;
+	}
+
 	.cloud-frame svg {
 		display: block;
 		width: 100%;
