@@ -9,6 +9,7 @@ test('landing tetap satu layar tanpa scroll pada ponsel', async ({ page }) => {
 	await page.setViewportSize({ width: 360, height: 780 });
 	await page.goto('/');
 	await expect(page.getByTestId('join-shell')).toBeVisible();
+	await expect(page.getByTestId('game-show-landing')).toBeVisible();
 	await expect(page.evaluate(() => document.documentElement.scrollHeight)).resolves.toBeLessThanOrEqual(780);
 	await expect(page.getByText('Masukkan kode sesi dari dosenmu')).toBeVisible();
 });
