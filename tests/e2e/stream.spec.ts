@@ -7,9 +7,14 @@ test('authorized stream sends aggregate snapshot, resumes cursor, resyncs invali
 	await page.getByLabel('Email').fill('phase1@example.test');
 	await page.getByLabel('Kata sandi').fill('phase1-test-only-password-2026');
 	await page.getByRole('button', { name: 'Masuk', exact: true }).click();
-	await page.getByLabel('Judul aktivitas').fill('Stream');
+	await page.getByLabel('Judul aktivitas').fill(`Stream ${Date.now()}`);
 	await page.getByRole('button', { name: 'Buat aktivitas' }).click();
+	const popupPromise = page.context().waitForEvent('page');
 	await page.getByRole('button', { name: 'Luncurkan sesi' }).first().click();
+	const presenter = await popupPromise;
+	await presenter.waitForLoadState();
+	await presenter.bringToFront();
+	page = presenter;
 	const id = page.url().split('/').pop()!;
 	const frames = await page.evaluate(async (id) => {
 		const read = async (last?: string, heartbeat = false) => {

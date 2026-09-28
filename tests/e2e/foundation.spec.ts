@@ -9,10 +9,15 @@ test('admin auth, activity, two guests, rejoin, live lifecycle and access isolat
 	await page.getByLabel('Kata sandi').fill('phase1-test-only-password-2026');
 	await page.getByRole('button', { name: 'Masuk', exact: true }).click();
 	await expect(page).toHaveURL(/\/admin$/);
-	await page.getByLabel('Judul aktivitas').fill('Kelas pengujian');
+	await page.getByLabel('Judul aktivitas').fill(`Kelas pengujian ${Date.now()}`);
 	await page.getByRole('button', { name: 'Buat aktivitas' }).click();
+	const popupPromise = page.context().waitForEvent('page');
 	await page.getByRole('button', { name: 'Luncurkan sesi' }).last().click();
-	await expect(page).toHaveURL(/admin\/sessions\//);
+	const presenter = await popupPromise;
+	await presenter.waitForLoadState();
+	await expect(presenter).toHaveURL(/admin\/sessions\//);
+	await presenter.bringToFront();
+	page = presenter;
 	const code = (await page.getByTestId('session-code').textContent())!.trim();
 	const id = page.url().split('/').pop()!;
 	await page.getByRole('button', { name: 'Buka sesi', exact: true }).click();
@@ -47,7 +52,7 @@ test('admin auth, activity, two guests, rejoin, live lifecycle and access isolat
 		await expect(guest.getByTestId('session-state')).toHaveText('Sesi ditutup');
 		await page.getByRole('button', { name: 'Akhiri sesi' }).click();
 		await expect(guest2.getByTestId('session-state')).toHaveText('Sesi selesai');
-		await page.getByRole('link', { name: '← Workspace', exact: true }).click();
+		await page.getByRole('link', { name: 'Workspace', exact: true }).click();
 		await page.getByRole('button', { name: 'Keluar', exact: true }).click();
 		await expect(page).toHaveURL(/admin\/login/);
 		expect((await page.request.get(`/admin/sessions/${id}`, { maxRedirects: 0 })).status()).toBe(

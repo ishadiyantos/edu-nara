@@ -216,7 +216,7 @@
 					<p class="mt-2 flex-1 text-sm leading-6 text-white/70">
 						Siapkan konten dan luncurkan saat kelas siap dimulai.
 					</p>
-					<form method="POST" action="?/launch" class="mt-5">
+					<form method="POST" action="?/launch" target="_blank" rel="noopener" class="mt-5">
 						<input type="hidden" name="activityId" value={activity.id} />
 						{#if activity.type === 'choice' || activity.type === 'wordcloud'}
 							<div class="grid gap-2 sm:grid-cols-2">

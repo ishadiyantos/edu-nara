@@ -67,6 +67,7 @@ test('join token hashed, rejoin idempotent, cookie scoped, counts aggregate, clo
 	expect(() => joinSession(s, { code: session.code, displayName: 'Bob' })).toThrow();
 	expect(joinSession(s, { code: session.code, displayName: 'Ana' }, p.token).token).toBe(p.token);
 	expect(Object.keys(snapshot(s, session.id)).sort()).toEqual([
+		'activeQuestionId',
 		'code',
 		'count',
 		'id',

@@ -24,11 +24,16 @@ test('JSON CSRF, session isolation, cookie flags, rotation, logout and closed jo
 		await outsider.addCookies([{ ...first }]);
 		expect((await outsider.request.get('/admin', { maxRedirects: 0 })).status()).toBe(303);
 		await outsider.clearCookies();
-		const p = await admin.newPage();
+		let p = await admin.newPage();
 		await p.goto('/admin');
-		await p.getByLabel('Judul aktivitas').fill('Isolasi');
+		await p.getByLabel('Judul aktivitas').fill(`Isolasi ${Date.now()}`);
 		await p.getByRole('button', { name: 'Buat aktivitas' }).click();
+		const popupPromise = p.context().waitForEvent('page');
 		await p.getByRole('button', { name: 'Luncurkan sesi' }).first().click();
+		const presenter = await popupPromise;
+		await presenter.waitForLoadState();
+		await presenter.bringToFront();
+		p = presenter;
 		const id = p.url().split('/').pop()!,
 			code = (await p.getByTestId('session-code').textContent())!.trim();
 		await p.getByRole('button', { name: 'Buka sesi', exact: true }).click();
@@ -113,7 +118,9 @@ test('JSON CSRF, session isolation, cookie flags, rotation, logout and closed jo
 			'x-frame-options': 'DENY'
 		});
 		expect(
-			(await outsider.request.post('/api/join', { data: { code, displayName: 'No Origin' } })).status()
+			(
+				await outsider.request.post('/api/join', { data: { code, displayName: 'No Origin' } })
+			).status()
 		).toBe(403);
 		expect(
 			(

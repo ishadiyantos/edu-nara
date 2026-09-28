@@ -105,7 +105,12 @@
 		Maksimal 80 karakter per kiriman. Duplikat dari peserta yang sama tidak dihitung ulang. Mengubah
 		moderasi tidak menyetujui kiriman lama.
 	</p>
-	{#if data.questions.length}<form method="POST" action="/admin?/launch">
+	{#if data.questions.length}<form
+			method="POST"
+			action="/admin?/launch"
+			target="_blank"
+			rel="noopener"
+		>
 			<input type="hidden" name="activityId" value={data.activity.id} /><button
 				class="min-h-12 rounded-xl border border-cyan-300 px-5 font-bold"
 				>Luncurkan Word Cloud</button

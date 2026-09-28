@@ -9,7 +9,7 @@ test('word cloud edit, submit, moderate, reconnect, native fullscreen and fallba
 	await page.getByLabel('Email').fill('phase1@example.test');
 	await page.getByLabel('Kata sandi').fill('phase1-test-only-password-2026');
 	await page.getByRole('button', { name: 'Masuk', exact: true }).click();
-	await page.getByLabel('Judul aktivitas').fill('Cloud flow');
+	await page.getByLabel('Judul aktivitas').fill(`Cloud flow ${Date.now()}`);
 	await page.getByLabel('Jenis aktivitas').selectOption('wordcloud');
 	await page.getByRole('button', { name: 'Buat aktivitas' }).click();
 	await page.getByRole('link', { name: 'Buka editor' }).first().click();
@@ -25,7 +25,15 @@ test('word cloud edit, submit, moderate, reconnect, native fullscreen and fallba
 	await expect(page.getByRole('status')).toHaveText('Pertanyaan tersimpan.');
 	await page.reload();
 	await expect(page.getByTestId('wordcloud-question-item')).toHaveCount(2);
+	const popupPromise = page.context().waitForEvent('page');
 	await page.getByRole('button', { name: 'Luncurkan Word Cloud' }).click();
+	const presenter = await popupPromise;
+	await presenter.waitForLoadState();
+	await presenter.bringToFront();
+	page = presenter;
+	await expect(page.getByTestId('joining-instructions')).toBeVisible();
+	await expect(page.getByRole('img', { name: 'QR code sesi' })).toBeVisible();
+	await expect(page.getByTestId('presenter-stage')).toHaveCount(0);
 	const screen = page.getByTestId('session-screen');
 	const bounds = await screen.boundingBox();
 	expect.soft(bounds!.x).toBe(0);
@@ -44,12 +52,13 @@ test('word cloud edit, submit, moderate, reconnect, native fullscreen and fallba
 	});
 	await page.getByRole('button', { name: 'Buka sesi', exact: true }).click();
 	await expect(page.locator('header')).toContainText('open');
+	await page.getByTestId('fullscreen-button').click();
 	await expect(page.getByTestId('session-screen')).toHaveClass(/presentation/);
 	await expect
 		.poll(() => page.evaluate(() => document.documentElement.dataset.fullscreenGesture))
 		.toBe('true');
 	await expect.poll(() => page.evaluate(() => Boolean(document.fullscreenElement))).toBe(true);
-	await expect(page.getByTestId('session-controls')).toHaveCount(0);
+	await expect(page.getByTestId('session-controls')).toHaveCSS('opacity', '0');
 	expect.soft(await screen.evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(true);
 	await expect(page.getByRole('link', { name: 'Dashboard', exact: true })).toHaveCount(0);
 	const context = await browser.newContext();
@@ -115,7 +124,9 @@ test('word cloud edit, submit, moderate, reconnect, native fullscreen and fallba
 			await page.setViewportSize(size);
 			await page.getByTestId('fullscreen-button').click();
 			const layout = await screen.evaluate((el) => {
-				const svg = el.querySelector('svg')!.getBoundingClientRect();
+				const svg = el
+					.querySelector('[data-testid="wordcloud-results"] svg')!
+					.getBoundingClientRect();
 				return {
 					scrolls: el.scrollHeight > el.clientHeight,
 					top: svg.top,
@@ -134,6 +145,8 @@ test('word cloud edit, submit, moderate, reconnect, native fullscreen and fallba
 			expect(bounds!.width).toBe(await page.evaluate(() => document.documentElement.clientWidth));
 		}
 		await page.setViewportSize(viewport);
+		await page.keyboard.press('Escape');
+		await expect(page.getByTestId('session-screen')).not.toHaveClass(/presentation/);
 		await page.getByRole('button', { name: 'Tolak', exact: true }).click();
 		await expect(student.getByTestId('wordcloud-results')).not.toContainText('séru');
 		// Teacher advances to the second question; both screens follow the same active question.
@@ -153,7 +166,7 @@ test('word cloud edit, submit, moderate, reconnect, native fullscreen and fallba
 		});
 		await page.getByTestId('fullscreen-button').click();
 		await expect(page.getByTestId('session-screen')).toHaveClass(/presentation/);
-		await expect(page.getByTestId('session-controls')).toHaveCount(0);
+		await expect(page.getByTestId('session-controls')).toHaveCSS('opacity', '0');
 		await page.mouse.move(20, 20);
 		await expect(page.getByRole('navigation', { name: 'Kontrol presentasi' })).toHaveCSS(
 			'opacity',

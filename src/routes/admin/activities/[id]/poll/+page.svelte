@@ -200,7 +200,13 @@
 							showForm = true;
 						}}>+ Tambah pertanyaan</Button
 					>{/if}
-				{#if data.questions.length}<form class="mt-4" method="POST" action="/admin?/launch">
+				{#if data.questions.length}<form
+						class="mt-4"
+						method="POST"
+						action="/admin?/launch"
+						target="_blank"
+						rel="noopener"
+					>
 						<input type="hidden" name="activityId" value={data.activity.id} /><Button
 							type="submit"
 							variant="ghost"

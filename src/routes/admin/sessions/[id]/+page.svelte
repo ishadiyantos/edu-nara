@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { deserialize, enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import QuizLeaderboard from '$lib/components/poll/QuizLeaderboard.svelte';
 	import WordcloudResults from '$lib/components/poll/WordcloudResults.svelte';
+	import { Icon, QRCode } from '$components/ui';
 	let { data, form } = $props();
 	let localIndex = $state(0);
 	let syncedId = $state<string | null>(null);
@@ -27,12 +28,21 @@
 	let errorMessage = $state('');
 	let presenting = $state(false);
 	let controls = $state(false);
+	let view = $state<'join' | 'activity'>(
+		untrack(() => (data.snapshot.state === 'draft' ? 'join' : 'activity'))
+	);
 	let stage: HTMLElement;
 	let hideTimer: ReturnType<typeof setTimeout>;
 	let timerSeconds = $state(0);
 	let timerRunning = $state(false);
 	let timer: ReturnType<typeof setInterval> | undefined;
 	const total = $derived(Object.values(tally).reduce((sum, n) => sum + n, 0));
+	const showJoin = $derived(view === 'join');
+	const statusControls = [
+		{ state: 'open', label: 'Buka sesi', icon: 'play' },
+		{ state: 'closed', label: 'Tutup sesi', icon: 'eye-off' },
+		{ state: 'ended', label: 'Akhiri sesi', icon: 'stop' }
+	] as const;
 	function reveal() {
 		controls = true;
 		clearTimeout(hideTimer);
@@ -56,6 +66,7 @@
 	async function select(index: number) {
 		if (switching || index < 0 || index >= questions.length) return;
 		stopTimer();
+		view = 'activity';
 		if (data.activityType !== 'wordcloud') {
 			localIndex = index;
 			return;
@@ -92,13 +103,17 @@
 		}, 1000);
 	}
 	function key(event: KeyboardEvent) {
+		if (event.target instanceof HTMLElement && event.target.closest('input,textarea,select'))
+			return;
+		if (event.key.toLowerCase() === 'i' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+			view = showJoin ? 'activity' : 'join';
+			reveal();
+		}
 		if (!presenting) return;
 		if (event.key === 'Escape') exit();
 		if (event.key === 'Tab') reveal();
-		if (event.target instanceof HTMLElement && event.target.closest('input,textarea,select'))
-			return;
-		if (event.key === 'ArrowRight') select(activeIndex + 1);
-		if (event.key === 'ArrowLeft') select(activeIndex - 1);
+		if (!showJoin && event.key === 'ArrowRight') select(activeIndex + 1);
+		if (!showJoin && event.key === 'ArrowLeft') select(activeIndex - 1);
 	}
 	onMount(() => {
 		count = data.snapshot.count;
@@ -146,6 +161,7 @@
 			source.addEventListener(name, (event) => {
 				const state = JSON.parse((event as MessageEvent).data);
 				if (state.count != null) count = state.count;
+				if (state.state === 'ended' || state.state === 'closed') view = 'activity';
 				if (isCloud && (state.activeQuestionId || state.questionId))
 					syncedId = state.activeQuestionId ?? state.questionId;
 			});
@@ -226,45 +242,99 @@
 			{data.snapshot.state}
 		</p>
 	</header>
-	{#if !presenting}
-		<div class="my-5 flex flex-wrap gap-3" data-testid="session-controls">
-			<a class="control" href="/admin">← Workspace</a>
-			{#each [{ state: 'open', label: 'Buka sesi' }, { state: 'closed', label: 'Tutup sesi' }, { state: 'ended', label: 'Akhiri sesi' }] as control}
-				<form
-					method="POST"
-					use:enhance={({ formData }) => {
-						if (formData.get('state') === 'open') present();
-						return async ({ result, update }) => {
-							await update();
-							if (result.type === 'failure' || result.type === 'error') exit();
-						};
-					}}
-				>
-					<input type="hidden" name="state" value={control.state} />
-					<button
-						class="control"
-						disabled={data.snapshot.state === 'ended' ||
-							data.snapshot.state === control.state ||
-							(data.snapshot.state === 'draft' && control.state === 'closed')}
-						>{control.label}</button
-					>
-				</form>
-			{/each}
-			<button class="control" onclick={present} data-testid="fullscreen-button"
-				>Mode layar penuh</button
+	<div
+		class:visible={!presenting || controls}
+		class="session-toolbar"
+		data-testid="session-controls"
+		role="group"
+		aria-label="Kontrol sesi"
+	>
+		<a class="floating-control" href="/admin" aria-label="Workspace" title="Workspace"
+			><Icon name="arrow-left" /> <span>Workspace</span></a
+		>
+		{#each statusControls as control}
+			<form
+				method="POST"
+				use:enhance={({ formData }) => {
+					return async ({ result, update }) => {
+						await update();
+						if (result.type === 'success' && formData.get('state') === 'open') view = 'activity';
+					};
+				}}
 			>
-			<a class="control" href={data.joinUrl}>Tautan bergabung</a>
-		</div>
-		<p class="text-sm text-slate-300">
-			Buka sesi memulai tayangan. Gerakkan pointer, sentuh layar, atau tekan Tab untuk kontrol.
-			Escape keluar; panah berpindah soal.
-		</p>
-	{/if}
+				<input type="hidden" name="state" value={control.state} />
+				<button
+					class="floating-control"
+					aria-label={control.label}
+					title={control.label}
+					disabled={data.snapshot.state === 'ended' ||
+						data.snapshot.state === control.state ||
+						(data.snapshot.state === 'draft' && control.state === 'closed')}
+					><Icon name={control.icon} /> <span>{control.label}</span></button
+				>
+			</form>
+		{/each}
+		{#if !presenting}<button
+				class="floating-control"
+				onclick={present}
+				data-testid="fullscreen-button"
+				aria-label="Mode layar penuh"
+				title="Mode layar penuh"><Icon name="fullscreen" /> <span>Mode layar penuh</span></button
+			>{/if}
+		<button
+			class="floating-control"
+			onclick={() => (view = showJoin ? 'activity' : 'join')}
+			aria-label={showJoin ? 'Sembunyikan petunjuk bergabung' : 'Tampilkan petunjuk bergabung'}
+			aria-pressed={showJoin}
+			title={showJoin ? 'Sembunyikan petunjuk (I)' : 'Petunjuk bergabung (I)'}
+			><Icon name="qr" /><span>QR & kode</span></button
+		>
+		<a
+			class="floating-control"
+			href={data.joinUrl}
+			target="_blank"
+			rel="noopener"
+			aria-label="Tautan bergabung"
+			title="Tautan bergabung"><Icon name="link" /> <span>Tautan bergabung</span></a
+		>
+	</div>
 	{#if form?.message}<p role="status">{form.message}</p>{/if}
 	{#if errorMessage}<p role="alert">{errorMessage}</p>{/if}
-	{#if data.snapshot.state === 'ended' && data.leaderboard.length}
-		<QuizLeaderboard entries={data.leaderboard} />
+	{#if showJoin}
+		<section class="joining-panel" data-testid="joining-instructions">
+			<div>
+				<p class="text-xs font-black uppercase tracking-[0.25em] text-cyan-300">Cara bergabung</p>
+				<h1 class="mt-3 text-3xl font-black leading-tight sm:text-5xl">
+					Pindai QR atau buka tautan, lalu masukkan kode sesi.
+				</h1>
+				<p class="mt-4 text-lg text-slate-300">
+					Kode sesi
+					<span class="ml-2 font-mono text-2xl font-black tracking-[0.3em] text-white"
+						>{data.snapshot.code}</span
+					>
+				</p>
+				<p class="mt-2 text-sm text-slate-400">
+					{data.snapshot.title} · {count} peserta sudah bergabung
+				</p>
+				<div class="mt-6 flex flex-wrap gap-3">
+					<a class="control" href={data.joinUrl} target="_blank" rel="noopener"
+						>Buka halaman bergabung</a
+					>
+					{#if data.snapshot.state !== 'draft'}<button
+							class="control"
+							onclick={() => (view = 'activity')}
+							><Icon name="arrow-right" /> Kembali ke aktivitas</button
+						>{/if}
+				</div>
+			</div>
+			<div class="joining-qr">
+				<QRCode value={data.joinUrl} size={320} label="QR code sesi" />
+			</div>
+		</section>
 	{:else if active}
+		{#if !presenting && data.snapshot.state === 'ended' && data.leaderboard.length}
+			<QuizLeaderboard entries={data.leaderboard} />
+		{/if}
 		<section class="slide" data-testid="presenter-stage">
 			<p class="text-sm text-cyan-300">
 				{data.activityType === 'wordcloud'
@@ -317,7 +387,7 @@
 			{/if}
 		</section>
 	{:else}<p class="my-10">Belum ada pertanyaan. Kembali ke workspace dan buka editor.</p>{/if}
-	{#if !presenting && data.activityType === 'wordcloud'}
+	{#if !presenting && !showJoin && data.activityType === 'wordcloud'}
 		<aside class="mt-8 rounded-2xl border border-white/20 p-5" aria-label="Antrean moderasi">
 			<h2 class="text-xl font-bold">
 				Moderasi · {moderation.filter((item) => item.status === 'pending').length} menunggu
@@ -338,7 +408,7 @@
 				</div>{:else}<p class="mt-4">Belum ada kiriman.</p>{/each}
 		</aside>
 	{/if}
-	{#if !presenting && questions.length > 1}<nav
+	{#if !presenting && !showJoin && questions.length > 1}<nav
 			class="mt-6 flex flex-wrap gap-2"
 			aria-label="Daftar soal"
 		>
@@ -353,16 +423,18 @@
 		<nav class:visible={controls} class="presenter-controls" aria-label="Kontrol presentasi">
 			<button
 				class="control"
-				disabled={switching || activeIndex === 0}
-				onclick={() => select(activeIndex - 1)}>Sebelumnya</button
+				disabled={showJoin || switching || activeIndex === 0}
+				onclick={() => select(activeIndex - 1)}
+				><Icon name="arrow-left" /><span>Sebelumnya</span></button
 			>
 			<button
 				class="control"
-				disabled={switching || activeIndex >= questions.length - 1}
-				onclick={() => select(activeIndex + 1)}>Berikutnya</button
+				disabled={showJoin || switching || activeIndex >= questions.length - 1}
+				onclick={() => select(activeIndex + 1)}
+				><Icon name="arrow-right" /><span>Berikutnya</span></button
 			>
 			<button class="control" onclick={exit} data-testid="exit-fullscreen"
-				>Keluar presentasi (Esc)</button
+				><Icon name="close" /><span>Keluar presentasi (Esc)</span></button
 			>
 		</nav>
 	{/if}
@@ -378,6 +450,7 @@
 	}
 	.session-screen:not(.presentation) {
 		width: 100%;
+		padding-bottom: 6rem;
 	}
 	.presentation {
 		position: fixed;
@@ -389,6 +462,7 @@
 		flex-direction: column;
 		gap: clamp(0.5rem, 2vh, 1.25rem);
 		padding: clamp(0.75rem, 2vw, 2rem);
+		padding-bottom: 9rem;
 		overflow: hidden;
 	}
 	.slide {
@@ -426,6 +500,7 @@
 		border-radius: 0.75rem;
 		padding: 0.5rem 1rem;
 		font-weight: 700;
+		gap: 0.5rem;
 		color: white;
 		background: #1e293b;
 	}
@@ -444,6 +519,10 @@
 		display: flex;
 		gap: 0.5rem;
 		max-width: 95vw;
+		width: max-content;
+		border-radius: 999px;
+		padding: 0.3rem;
+		background: #e2e8f0;
 		opacity: 0;
 		pointer-events: none;
 	}
@@ -451,5 +530,179 @@
 	.presenter-controls:focus-within {
 		opacity: 1;
 		pointer-events: auto;
+	}
+	/* Floating control dock, Mentimeter-style: pill row, icon-first, label on hover. */
+	.session-toolbar {
+		position: fixed;
+		left: 50%;
+		bottom: 0.75rem;
+		transform: translateX(-50%);
+		width: max-content;
+		z-index: 60;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: center;
+		gap: 0.4rem;
+		max-width: min(96vw, 64rem);
+		padding: 0.4rem;
+		border: 1px solid rgba(148, 163, 184, 0.35);
+		border-radius: 999px;
+		background: rgba(15, 23, 42, 0.92);
+		backdrop-filter: blur(10px);
+		box-shadow: 0 12px 30px rgba(2, 6, 23, 0.55);
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 0.25s ease;
+	}
+	.presentation .session-toolbar {
+		bottom: 4.75rem;
+		background: rgba(241, 245, 249, 0.92);
+		border-color: rgba(15, 23, 42, 0.12);
+	}
+	.session-toolbar.visible,
+	.session-toolbar:focus-within {
+		opacity: 1;
+		pointer-events: auto;
+	}
+	.presentation .session-toolbar.visible {
+		opacity: 0.92;
+	}
+	.floating-control {
+		position: relative;
+		display: inline-flex;
+		min-height: 44px;
+		min-width: 44px;
+		align-items: center;
+		justify-content: center;
+		gap: 0.4rem;
+		padding: 0.55rem 0.6rem;
+		border: 0;
+		border-radius: 999px;
+		background: transparent;
+		color: #e2e8f0;
+		font-size: 0.85rem;
+		font-weight: 700;
+		cursor: pointer;
+		transition:
+			background-color 0.2s ease,
+			color 0.2s ease;
+	}
+	.presentation .floating-control {
+		color: #0f172a;
+	}
+	.floating-control:hover:not(:disabled) {
+		background: rgba(255, 255, 255, 0.14);
+	}
+	.presentation .floating-control:hover:not(:disabled) {
+		background: rgba(15, 23, 42, 0.1);
+	}
+	.floating-control[aria-pressed='true'] {
+		background: rgba(103, 232, 249, 0.25);
+	}
+	.floating-control:disabled {
+		opacity: 0.35;
+		cursor: not-allowed;
+	}
+	.floating-control:focus-visible {
+		outline: 3px solid #67e8f9;
+		outline-offset: 2px;
+	}
+	.floating-control span {
+		display: none;
+		white-space: nowrap;
+	}
+	.floating-control::after {
+		content: attr(title);
+		position: absolute;
+		bottom: calc(100% + 0.65rem);
+		left: 50%;
+		transform: translateX(-50%);
+		background: #020617;
+		color: #fff;
+		font-size: 0.8rem;
+		white-space: nowrap;
+		padding: 0.5rem 0.7rem;
+		border-radius: 0.6rem;
+		opacity: 0;
+		pointer-events: none;
+	}
+	.floating-control:hover::after,
+	.floating-control:focus-visible::after {
+		opacity: 1;
+	}
+	@media (min-width: 1100px) {
+		.session-screen:not(.presentation) .floating-control span {
+			display: inline;
+		}
+	}
+	@media (max-width: 640px) {
+		.session-screen:not(.presentation) {
+			padding-bottom: 11rem;
+		}
+		.session-toolbar {
+			border-radius: 999px;
+		}
+	}
+	/* Joining instructions: the first thing a presenter shows the class. */
+	.joining-panel {
+		display: grid;
+		gap: clamp(1.5rem, 4vw, 3rem);
+		align-items: center;
+		margin-top: clamp(1rem, 3vh, 2.5rem);
+		padding: clamp(1.25rem, 3vw, 2.5rem);
+		border: 1px solid rgba(148, 163, 184, 0.25);
+		border-radius: 2rem;
+		background: #111827;
+	}
+	@media (min-width: 900px) {
+		.joining-panel {
+			grid-template-columns: 1fr auto;
+		}
+	}
+	.joining-qr {
+		display: flex;
+		justify-content: center;
+	}
+	.presentation .joining-panel {
+		flex: 1;
+		min-height: 0;
+		margin-top: 0;
+	}
+	.joining-panel h1 {
+		font-size: clamp(1.35rem, 3vw, 3rem);
+	}
+	.joining-qr {
+		min-width: 0;
+	}
+	@media (max-width: 899px) {
+		.joining-panel {
+			text-align: center;
+			gap: 0.75rem;
+			padding: 1rem;
+		}
+		.joining-panel h1 {
+			margin-top: 0.5rem;
+		}
+		.joining-qr :global(svg) {
+			width: min(52vw, 220px);
+		}
+		.joining-panel :global(.qr-code) {
+			padding: 0.3rem;
+		}
+		.joining-panel .mt-6 {
+			margin-top: 0.75rem;
+			justify-content: center;
+		}
+		.presenter-controls .control {
+			padding: 0.5rem;
+			font-size: 0.75rem;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.session-toolbar,
+		.floating-control {
+			transition: none;
+		}
 	}
 </style>
