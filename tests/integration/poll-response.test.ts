@@ -102,7 +102,7 @@ test('response cannot target another activity and closed sessions reject', async
 	).toThrow('Pilihan tidak tersedia.');
 	changeState(store, admin.id, session.id, 'closed');
 });
-test('hasil tetap privat sampai dibuka lalu skor peserta pulih', async () => {
+test('penilaian tetap privat untuk peserta meskipun hasil dibuka', async () => {
 	const { store, admin, activity, session, ana } = await fixture();
 	const question = createChoiceQuestion(store, admin.id, activity.id, {
 		prompt: 'Pilih dua',
@@ -114,12 +114,12 @@ test('hasil tetap privat sampai dibuka lalu skor peserta pulih', async () => {
 		question.options[2].id
 	]);
 	const hidden = participantChoiceResponses(store, session.id, ana.token)[0];
-	expect(hidden.isCorrect).toBeNull();
-	expect(hidden.points).toBe(0);
-	expect(hidden.correctOptionIds).toEqual([]);
+	expect(hidden).not.toHaveProperty('isCorrect');
+	expect(hidden).not.toHaveProperty('points');
+	expect(hidden).not.toHaveProperty('correctOptionIds');
 	setChoiceResults(store, admin.id, question.id, true);
 	const revealed = participantChoiceResponses(store, session.id, ana.token)[0];
-	expect(revealed.isCorrect).toBe(true);
-	expect(revealed.points).toBe(1000);
-	expect(revealed.correctOptionIds).toEqual([]);
+	expect(revealed).not.toHaveProperty('isCorrect');
+	expect(revealed).not.toHaveProperty('points');
+	expect(revealed).not.toHaveProperty('correctOptionIds');
 });

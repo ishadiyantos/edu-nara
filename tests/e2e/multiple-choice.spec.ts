@@ -69,25 +69,70 @@ test('quiz supports a question bank, multiple correct answers, and a game-show s
 			'true'
 		);
 		await student.getByRole('button', { name: /Kirim jawaban/ }).click();
-		await expect(student.getByRole('status')).toContainText('Jawaban tersimpan');
-		await expect(student.getByTestId('quiz-score')).toHaveText('0', { timeout: 3000 });
+		await expect(student.getByRole('status')).toHaveText('Jawaban tersimpan.');
+		await expect(student.getByText('Benar', { exact: true })).toHaveCount(0);
+		await expect(student.getByText('Hasil kelas', { exact: true })).toHaveCount(0);
 		await student.getByRole('button', { name: /Pertanyaan berikutnya/ }).click();
 		await expect(student.getByText('Ronde 2 dari 2')).toBeVisible();
 		await student.getByRole('button', { name: /4/ }).click();
 		await student.getByRole('button', { name: /Kirim jawaban/ }).click();
-		await expect(student.getByRole('status')).toContainText('Jawaban tersimpan');
-		await student.getByRole('button', { name: 'Lihat skor' }).click();
-		await expect(student.getByTestId('quiz-finished')).toContainText('0');
+		await expect(student.getByRole('status')).toHaveText('Jawaban tersimpan.');
+		await expect(student.getByText('Benar', { exact: true })).toHaveCount(0);
+		await expect(student.getByText('Hasil kelas', { exact: true })).toHaveCount(0);
+		await student.getByRole('button', { name: 'Selesai' }).click();
+		await expect(student.getByTestId('quiz-finished')).toContainText(
+			'Jawaban Anda sudah tersimpan.'
+		);
 
 		await page.keyboard.press('Escape');
-		// Dosen membuka hasil untuk soal pertama; mahasiswa refresh dan harus melihat skor + kunci.
+		// Legacy reveal must not disclose grades, keys or tallies to students.
 		await page.getByRole('button', { name: 'Soal 1: Apa ibu kota Indonesia?' }).click();
 		await page.getByRole('button', { name: 'Tampilkan hasil ke mahasiswa' }).click();
+		const ownedResult = await page.request.get(`/api/polls/${code}/results`);
+		expect(ownedResult.ok()).toBe(true);
+		const ownerData = await ownedResult.json();
+		expect(ownerData.correctOptionIds).toHaveLength(2);
+		expect((await student.request.get(`/api/polls/${code}/results`)).status()).toBe(403);
+		const answers = await (await student.request.get(`/api/polls/${code}/responses`)).json();
+		const [studentEvent] = await Promise.all([
+			student.evaluate(
+				(sessionId) =>
+					new Promise<Record<string, unknown>>((resolve, reject) => {
+						const source = new EventSource(`/api/sessions/${sessionId}/events`);
+						const timer = setTimeout(() => {
+							source.close();
+							reject(new Error('SSE snapshot timeout'));
+						}, 3000);
+						source.addEventListener('snapshot', (event) => {
+							clearTimeout(timer);
+							source.close();
+							resolve(JSON.parse((event as MessageEvent).data));
+						});
+					}),
+				answers.snapshot.id
+			),
+			student.waitForTimeout(100)
+		]);
+		expect(studentEvent).not.toHaveProperty('tally');
+		const answer = answers.responses.find(
+			(a: { questionId: string }) => a.questionId === ownerData.questionId
+		);
+		expect(answer).not.toHaveProperty('isCorrect');
+		expect(answer).not.toHaveProperty('points');
+		expect(answer).not.toHaveProperty('correctOptionIds');
+		const repeated = await student.request.post(`/api/polls/${code}/responses`, {
+			headers: { origin: 'http://127.0.0.1:4173' },
+			data: { questionId: answer.questionId, optionIds: answer.optionIds }
+		});
+		expect(repeated.ok()).toBe(true);
+		const payload = await repeated.json();
+		for (const key of ['isCorrect', 'points', 'correctOptionIds', 'tally'])
+			expect(payload).not.toHaveProperty(key);
 		await expect(student.getByTestId('quiz-finished')).toBeVisible();
 		await student.reload();
-		await expect(student.getByTestId('quiz-score')).toHaveText('1.000', { timeout: 5000 });
-		await expect(student.getByRole('status')).toContainText('Jawaban tersimpan');
+		await expect(student.getByRole('status')).toHaveText('Jawaban tersimpan.');
 		await expect(student.locator('.choices button.correct')).toHaveCount(0);
+		await expect(student.getByText('Hasil kelas', { exact: true })).toHaveCount(0);
 
 		const csv = await page.request.get(`/api/polls/${code}/export`);
 		expect(csv.ok()).toBe(true);

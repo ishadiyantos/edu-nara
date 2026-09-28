@@ -34,7 +34,8 @@
 		untrack(() =>
 			live.state === 'draft'
 				? 'join'
-				: data.activityType === 'choice' && data.snapshot.quizMode === 'self_paced'
+				: data.activityType === 'choice' &&
+					  (data.snapshot.state === 'ended' || data.snapshot.quizMode === 'self_paced')
 					? 'leaderboard'
 					: 'activity'
 		)
@@ -412,7 +413,11 @@
 		</section>
 	{:else if active}
 		{#if view === 'leaderboard'}
-			<QuizLeaderboard entries={leaderboard} />
+			<QuizLeaderboard
+				entries={leaderboard}
+				presentation={presenting}
+				autoScroll={live.state === 'ended'}
+			/>
 		{:else}<section class="slide" data-testid="presenter-stage">
 				<p class="text-sm text-cyan-300">
 					{data.activityType === 'wordcloud'

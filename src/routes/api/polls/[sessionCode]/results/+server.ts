@@ -43,8 +43,7 @@ export const GET: import('./$types').RequestHandler = (event) => {
 			.innerJoin(activities, eq(activities.id, sessions.activityId))
 			.where(eq(sessions.id, session.id))
 			.get()?.ownerId === admin.id;
-	if (!isOwner && !question.showResults)
-		return json({ ok: false, message: 'Hasil belum dibuka dosen.' }, { status: 403 });
+	if (!isOwner) return json({ ok: false, message: 'Hasil belum dibuka dosen.' }, { status: 403 });
 	return json(
 		{
 			ok: true,

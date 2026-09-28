@@ -2,12 +2,7 @@ import { json } from '@sveltejs/kit';
 import { database } from '$lib/server/db/client';
 import { body, message } from '$lib/server/http';
 import { choiceResponseSchema } from '$lib/poll/validation';
-import {
-	choiceTally,
-	getChoiceQuestion,
-	submitChoiceResponse,
-	participantChoiceResponses
-} from '$lib/server/poll/choice';
+import { submitChoiceResponse, participantChoiceResponses } from '$lib/server/poll/choice';
 import { events } from '$lib/server/events';
 import { sessionByCode, participantValid, snapshot } from '$lib/server/sessions';
 import { hashToken } from '$lib/server/auth';
@@ -52,28 +47,13 @@ export const POST: import('./$types').RequestHandler = async (event) => {
 			)
 			.get(question.id, hashToken(token));
 		const response = submitChoiceResponse(store, session.id, question.id, token, optionIds);
-		const currentQuestion = getChoiceQuestion(store, question.id)!;
-		const lastEventId = events.publish(session.id, 'poll.tally', {
-			questionId: question.id,
-			...(getChoiceQuestion(store, question.id)?.showResults
-				? { counts: choiceTally(store, session.id, question.id) }
-				: {})
-		});
-		const released = currentQuestion.showResults;
+		const lastEventId = events.publish(session.id, 'poll.tally', { questionId: question.id });
 		return json({
 			ok: true,
 			alreadySubmitted: !!before,
 			responseId: response.id,
 			optionIds: response.optionIds,
-			lastEventId,
-			showResults: released,
-			...(released
-				? {
-						isCorrect: response.isCorrect,
-						points: response.points,
-						tally: choiceTally(store, session.id, question.id)
-					}
-				: {})
+			lastEventId
 		});
 	} catch (err) {
 		return json({ ok: false, message: message(err) }, { status: 400 });

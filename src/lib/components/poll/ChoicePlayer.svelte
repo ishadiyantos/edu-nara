@@ -11,9 +11,6 @@
 	type Answer = {
 		questionId: string;
 		optionIds: string[];
-		isCorrect?: boolean | null;
-		points?: number;
-		correctOptionIds?: string[];
 	};
 	type Snapshot = {
 		state: string;
@@ -46,14 +43,12 @@
 	let finished = $state(false);
 	let now = $state(Date.now());
 	let offset = $state(untrack(() => snapshot.serverNow - Date.now()));
-	let tally = $state<Record<string, number> | null>(null);
-	let correctIds = $state<string[]>([]);
+
 	const guided = $derived(live.quizMode === 'guided');
 	const question = $derived(
 		guided ? questions.find((q) => q.id === live.activeQuestionId) : questions[current]
 	);
 	const answer = $derived(saved.find((a) => a.questionId === question?.id));
-	const score = $derived(saved.reduce((total, a) => total + (a.points ?? 0), 0));
 	const remaining = $derived(
 		Math.max(
 			0,
@@ -82,21 +77,8 @@
 			/* Reconnect retries authenticated snapshot. */
 		}
 	}
-	async function refreshResults(id: string) {
-		try {
-			const res = await fetch(`/api/polls/${sessionCode}/results?questionId=${id}`);
-			const data = await res.json();
-			if (question?.id !== id) return;
-			tally = res.ok ? data.counts : null;
-			correctIds = res.ok ? data.correctOptionIds : [];
-		} catch {
-			/* Keep saved answer on network failure. */
-		}
-	}
 	$effect(() => {
 		const id = question?.id;
-		tally = null;
-		correctIds = [];
 		const restored = answer?.optionIds;
 		selected = restored ? [...restored] : [];
 		error = '';
@@ -110,7 +92,6 @@
 				/* Private browsing may disable storage. */
 			}
 		}
-		void refreshResults(id);
 	});
 	onMount(() => {
 		const first = questions.findIndex((q) => !saved.some((a) => a.questionId === q.id));
@@ -120,18 +101,13 @@
 		source.onopen = () => {
 			connected = true;
 			void refreshAnswers();
-			if (question) void refreshResults(question.id);
 		};
 		source.onerror = () => (connected = false);
 		for (const name of ['snapshot', 'resync', 'session.question', 'session.state'])
 			source.addEventListener(name, (event) => {
 				applyLive(JSON.parse((event as MessageEvent).data));
 				void refreshAnswers();
-				if (question) void refreshResults(question.id);
 			});
-		source.addEventListener('poll.tally', () => {
-			if (question) void refreshResults(question.id);
-		});
 		return () => {
 			clearInterval(tick);
 			source.close();
@@ -163,9 +139,7 @@
 				...saved.filter((a) => a.questionId !== id),
 				{
 					questionId: id,
-					optionIds: data.optionIds,
-					isCorrect: data.showResults ? data.isCorrect : null,
-					points: data.showResults ? data.points : 0
+					optionIds: data.optionIds
 				}
 			];
 			try {
@@ -196,15 +170,9 @@
 					? 'Menunggu dosen membuka sesi'
 					: 'Sesi terbuka'}
 	</p>
-	<p>
-		Skor sementara: <strong data-testid="quiz-score">{score.toLocaleString('id-ID')}</strong>
-	</p>
 	{#if finished && !guided}<div data-testid="quiz-finished">
-			<h2>Jawaban tersimpan</h2>
-			<p>
-				Skor dibuka dosen: {score.toLocaleString('id-ID')}. Skor lain tampil setelah hasil dibuka
-				dosen.
-			</p>
+			<h2>Quiz selesai</h2>
+			<p>Jawaban Anda sudah tersimpan.</p>
 			<button onclick={() => (finished = false)}>Tinjau jawaban</button>
 		</div>
 	{:else if question}
@@ -224,7 +192,6 @@
 				<button
 					type="button"
 					class:selected={selected.includes(option.id)}
-					class:correct={correctIds.includes(option.id)}
 					aria-pressed={selected.includes(option.id)}
 					disabled={!!answer || loading || blocked}
 					onclick={() => toggle(option.id)}
@@ -232,13 +199,7 @@
 				>
 			{/each}
 		</div>
-		{#if answer}<p class="status" role="status">
-				Jawaban tersimpan! {answer.isCorrect == null
-					? 'Menunggu dosen membuka hasil.'
-					: answer.isCorrect
-						? 'Benar'
-						: 'Salah'}
-			</p>
+		{#if answer}<p class="status" role="status">Jawaban tersimpan.</p>
 		{:else}<button class="submit" disabled={!selected.length || loading || blocked} onclick={submit}
 				>{loading ? 'Mengirim…' : 'Kirim jawaban'}</button
 			>{/if}
@@ -248,16 +209,9 @@
 				><button
 					disabled={loading}
 					onclick={() => (current < questions.length - 1 ? current++ : (finished = true))}
-					>{current < questions.length - 1 ? 'Pertanyaan berikutnya' : 'Lihat skor'}</button
+					>{current < questions.length - 1 ? 'Pertanyaan berikutnya' : 'Selesai'}</button
 				>
-			</nav>{:else}<p class="status">Perpindahan soal mengikuti dosen.</p>{/if}
-		{#if tally}<aside aria-label="Hasil kelas">
-				<h3>Hasil kelas</h3>
-				{#each question.options as option}<p>
-						{String.fromCharCode(65 + option.position)}. {option.label}: {tally[option.id] ??
-							0}{correctIds.includes(option.id) ? ' · Benar' : ''}
-					</p>{/each}
-			</aside>{/if}
+			</nav>{/if}
 	{:else}<h2>Menunggu dosen membuka soal.</h2>{/if}
 </section>
 
@@ -317,9 +271,6 @@
 		outline: 3px solid #fbbf24;
 		outline-offset: 2px;
 	}
-	.choices button.correct {
-		border: 3px solid #6ee7b7;
-	}
 	button:disabled {
 		opacity: 0.65;
 		cursor: not-allowed;
@@ -341,8 +292,7 @@
 	}
 	.status,
 	.round,
-	nav,
-	aside {
+	nav {
 		margin-top: 1rem;
 	}
 	[role='alert'] {

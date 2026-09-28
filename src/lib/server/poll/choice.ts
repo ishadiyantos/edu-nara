@@ -361,12 +361,6 @@ export function participantChoiceResponses(store: Store, sessionId: string, toke
 		.where(eq(pollResponses.participantId, auth.participant.id))
 		.all()
 		.map(({ questionId, responseId }) => {
-			const question = getChoiceQuestion(store, questionId);
-			const response = store.db
-				.select({ isCorrect: pollResponses.isCorrect, points: pollResponses.points })
-				.from(pollResponses)
-				.where(eq(pollResponses.id, responseId))
-				.get();
 			return {
 				questionId,
 				optionIds: store.db
@@ -374,11 +368,7 @@ export function participantChoiceResponses(store: Store, sessionId: string, toke
 					.from(pollResponseOptions)
 					.where(eq(pollResponseOptions.responseId, responseId))
 					.all()
-					.map(({ optionId }) => optionId),
-				// Do not reveal correctness or points before the admin releases results.
-				isCorrect: question?.showResults ? !!response?.isCorrect : null,
-				points: question?.showResults ? Number(response?.points ?? 0) : 0,
-				correctOptionIds: []
+					.map(({ optionId }) => optionId)
 			};
 		});
 }

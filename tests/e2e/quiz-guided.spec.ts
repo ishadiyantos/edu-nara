@@ -160,9 +160,51 @@ test('guided quiz syncs presenter question and timer state across two participan
 		await expect(first.getByTestId('quiz-timer')).not.toContainText('Tanpa timer');
 		await first.reload();
 		await expect(first.getByText('Soal terpandu dua')).toBeVisible();
+		await expect(first.getByText('Perpindahan soal mengikuti dosen.')).toHaveCount(0);
 		await presenter.keyboard.press('Escape');
+		const guests = await browser.newContext();
+		try {
+			for (let i = 0; i < 12; i++) {
+				await guests.clearCookies();
+				const joined = await guests.request.post('http://127.0.0.1:4173/api/join', {
+					headers: { origin: 'http://127.0.0.1:4173' },
+					data: { code, displayName: `Peserta ${i + 1}` }
+				});
+				expect(joined.ok()).toBe(true);
+			}
+		} finally {
+			await guests.close();
+		}
 		await presenter.getByRole('button', { name: 'Akhiri sesi', exact: true }).click();
 		await expect(presenter.getByTestId('quiz-leaderboard')).toBeVisible();
+		const sheet = presenter.getByTestId('quiz-leaderboard-scroll');
+		await expect(sheet).toBeVisible();
+		await presenter.getByTestId('fullscreen-button').click();
+		await presenter.mouse.move(1, 1);
+		await expect
+			.poll(() => sheet.evaluate((el) => el.scrollHeight - el.clientHeight))
+			.toBeGreaterThan(100);
+		await expect.poll(() => sheet.evaluate((el) => el.scrollTop)).toBeGreaterThan(5);
+		const box = (await sheet.boundingBox())!;
+		const dockBox = (await presenter.getByTestId('session-controls').boundingBox())!;
+		expect(box.y + box.height).toBeLessThan(dockBox.y);
+		await presenter.getByRole('button', { name: 'Jeda gulir', exact: true }).click();
+		const stopped = await sheet.evaluate((el) => el.scrollTop);
+		await presenter.waitForTimeout(200);
+		expect(await sheet.evaluate((el) => el.scrollTop)).toBe(stopped);
+		await sheet.evaluate((el) => {
+			el.scrollTop = el.scrollHeight - el.clientHeight;
+		});
+		await presenter.getByRole('button', { name: 'Lanjutkan gulir', exact: true }).click();
+		await expect.poll(() => sheet.evaluate((el) => el.scrollTop), { timeout: 4000 }).toBe(0);
+		await expect.poll(() => sheet.evaluate((el) => el.scrollTop)).toBeGreaterThan(5);
+		await presenter.emulateMedia({ reducedMotion: 'reduce' });
+		await expect(
+			presenter.getByRole('button', { name: 'Lanjutkan gulir', exact: true })
+		).toBeVisible();
+		await presenter.screenshot({ path: 'test-results/leaderboard-ended.png' });
+		await presenter.keyboard.press('Escape');
+		await expect.poll(() => sheet.evaluate((el) => getComputedStyle(el).overflowY)).toBe('auto');
 		await expect(first.getByTestId('session-state')).toHaveText('Sesi selesai');
 		await presenter.getByRole('button', { name: 'Soal 1: Soal terpandu satu' }).click();
 		await expect(first.getByText('Soal terpandu satu')).toBeVisible();

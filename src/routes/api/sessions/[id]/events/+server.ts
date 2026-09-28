@@ -43,7 +43,7 @@ export const GET: import('./$types').RequestHandler = (event) => {
 			};
 		if (isOwner)
 			return { ...base, question, tally: question ? choiceTally(store, id, question.id) : null };
-		if (question?.showResults) return { ...base, tally: choiceTally(store, id, question.id) };
+		// Participants never receive tallies or answer keys over SSE; owner-only.
 		return base;
 	};
 	try {

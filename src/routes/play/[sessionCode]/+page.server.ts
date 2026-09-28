@@ -63,6 +63,6 @@ export const load: import('./$types').PageServerLoad = ({ params, cookies, local
 		quizMode: current.quizMode,
 		questions,
 		responses,
-		initialScore: responses.reduce((total, response) => total + (response.points ?? 0), 0)
+		initialScore: 0
 	};
 };
