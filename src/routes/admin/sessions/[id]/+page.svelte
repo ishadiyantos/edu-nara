@@ -308,8 +308,8 @@
 		role="group"
 		aria-label="Kontrol sesi"
 	>
-		<a class="floating-control" href="/admin" aria-label="Workspace" title="Workspace"
-			><Icon name="arrow-left" /> <span>Workspace</span></a
+		<a class="floating-control" href="/admin" aria-label="Dashboard admin" title="Dashboard admin"
+			><Icon name="home" /> <span>Dashboard admin</span></a
 		>
 		{#each statusControls as control}
 			<form
@@ -336,6 +336,24 @@
 				>
 			</form>
 		{/each}
+		{#if guided && timerUsed && live.state !== 'ended'}
+			<button
+				type="button"
+				class="floating-control"
+				disabled={live.state !== 'open'}
+				onclick={() => setTimer(false)}
+				aria-label="Stop timer"
+				title="Stop timer"><Icon name="pause" /> <span>Stop timer</span></button
+			>
+			<button
+				type="button"
+				class="floating-control"
+				disabled={live.state !== 'open'}
+				onclick={() => setTimer(true, true)}
+				aria-label="Reset timer"
+				title="Reset timer"><Icon name="timer" /> <span>Reset timer</span></button
+			>
+		{/if}
 		{#if !presenting}<button
 				type="button"
 				class="floating-control"
@@ -490,18 +508,8 @@
 				{#if data.activityType === 'wordcloud'}
 					<WordcloudResults {words} presentation={presenting} />
 				{:else}
-					{#if (!presenting || guided) && live.state !== 'ended'}
+					{#if !presenting && live.state !== 'ended'}
 						<div class="stage-actions">
-							{#if guided && timerUsed}<button
-									class="control"
-									disabled={live.state !== 'open'}
-									onclick={() => setTimer(false)}>Stop timer</button
-								>{/if}
-							{#if guided && timerUsed}<button
-									class="control"
-									disabled={live.state !== 'open'}
-									onclick={() => setTimer(true, true)}>Reset timer</button
-								>{/if}
 							<form method="POST" use:enhance>
 								<input type="hidden" name="action" value="results" /><input
 									type="hidden"
@@ -573,6 +581,9 @@
 <style>
 	.session-screen {
 		min-height: 100dvh;
+		width: 100%;
+		max-width: 100dvw;
+		overflow-x: hidden;
 		padding: clamp(1rem, 3vw, 3rem);
 		background: #0b1120;
 		color: white;
@@ -580,6 +591,7 @@
 	}
 	.session-screen:not(.presentation) {
 		width: 100%;
+		max-width: 100dvw;
 		padding-bottom: 6rem;
 	}
 	.presentation {
@@ -587,13 +599,13 @@
 		inset: 0;
 		z-index: 100;
 		width: 100%;
+		max-width: 100dvw;
 		height: 100dvh;
 		display: flex;
 		flex-direction: column;
 		gap: clamp(0.5rem, 2vh, 1.25rem);
 		padding: clamp(0.75rem, 2vw, 2rem);
-		padding-bottom: 12rem;
-		overflow: auto;
+		overflow: hidden;
 	}
 	.slide {
 		margin-top: 2rem;
@@ -686,7 +698,7 @@
 		transition: opacity 0.25s ease;
 	}
 	.presentation .session-toolbar {
-		bottom: 4.75rem;
+		bottom: max(0.75rem, env(safe-area-inset-bottom));
 		background: rgba(241, 245, 249, 0.92);
 		border-color: rgba(15, 23, 42, 0.12);
 	}
@@ -761,26 +773,21 @@
 	.floating-control:focus-visible::after {
 		opacity: 1;
 	}
-	@media (min-width: 1100px) {
-		.session-screen:not(.presentation) .floating-control span {
-			display: inline;
-		}
-	}
 	@media (max-width: 640px) {
 		.session-screen:not(.presentation) {
 			padding-bottom: 2rem;
 		}
 
 		.session-screen:not(.presentation) .session-toolbar {
-			position: sticky;
-			top: 0.5rem;
-			left: auto;
+			position: fixed;
+			top: auto;
+			left: 50%;
 			right: auto;
-			bottom: auto;
-			width: 100%;
-			max-width: none;
-			transform: none;
-			margin: 0.75rem 0 1rem;
+			bottom: 0.5rem;
+			width: max-content;
+			max-width: calc(100vw - 1rem);
+			transform: translateX(-50%);
+			margin: 0;
 			border-radius: 999px;
 		}
 	}
@@ -808,6 +815,10 @@
 		flex: 1;
 		min-height: 0;
 		margin-top: 0;
+		overflow: hidden;
+	}
+	.presentation .stage-grid {
+		transform: perspective(500px) rotateX(58deg) scale(1.02);
 	}
 	.joining-panel h1 {
 		font-size: clamp(1.35rem, 3vw, 3rem);
@@ -853,7 +864,7 @@
 	}
 	.stage-beams,
 	.stage-grid {
-		position: absolute;
+		position: fixed;
 		inset: 0;
 		pointer-events: none;
 		z-index: -1;

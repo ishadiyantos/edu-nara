@@ -15,7 +15,15 @@ export class RateLimiter {
 	}
 }
 export const limits = new RateLimiter();
-export const sameOrigin = (origin: string | null, expected: string) => origin === expected;
+export const sameOrigin = (
+	origin: string | null,
+	expected: string,
+	configured = process.env.ORIGIN
+) => {
+	if (!origin) return false;
+	if (origin === expected) return true;
+	return configured != null && configured !== '' && origin === configured;
+};
 export function cookieOptions(url: URL, setting = process.env.COOKIE_SECURE) {
 	return {
 		path: '/',

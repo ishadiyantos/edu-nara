@@ -52,7 +52,7 @@ test('admin auth, activity, two guests, rejoin, live lifecycle and access isolat
 		await expect(guest.getByTestId('session-state')).toHaveText('Sesi ditutup');
 		await page.getByRole('button', { name: 'Akhiri sesi' }).click();
 		await expect(guest2.getByTestId('session-state')).toHaveText('Sesi selesai');
-		await page.getByRole('link', { name: 'Workspace', exact: true }).click();
+		await page.getByRole('link', { name: 'Dashboard admin', exact: true }).click();
 		await page.getByRole('button', { name: 'Keluar', exact: true }).click();
 		await expect(page).toHaveURL(/admin\/login/);
 		expect((await page.request.get(`/admin/sessions/${id}`, { maxRedirects: 0 })).status()).toBe(

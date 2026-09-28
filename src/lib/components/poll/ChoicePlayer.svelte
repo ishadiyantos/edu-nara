@@ -431,6 +431,8 @@
 	}
 	.choices button {
 		position: relative;
+		--choice-a: rgb(14 165 233 / 0.92);
+		--choice-b: rgb(37 99 235 / 0.86);
 		display: grid;
 		grid-template-columns: auto 1fr auto;
 		align-items: center;
@@ -438,7 +440,7 @@
 		min-height: 4.25rem;
 		overflow: hidden;
 		border: 1px solid rgb(255 255 255 / 0.16);
-		background: linear-gradient(135deg, rgb(67 56 202 / 0.9), rgb(14 165 233 / 0.72));
+		background: linear-gradient(135deg, var(--choice-a), var(--choice-b));
 		color: white;
 		text-align: left;
 		box-shadow: 0 14px 34px rgb(2 6 23 / 0.28);
@@ -448,11 +450,17 @@
 			border-color 180ms ease;
 		animation: cardIn 420ms cubic-bezier(0.2, 0.85, 0.2, 1) both;
 	}
-	.choices button:nth-child(2n) {
-		background: linear-gradient(135deg, rgb(168 85 247 / 0.88), rgb(236 72 153 / 0.74));
+	.choices button:nth-child(2) {
+		--choice-a: rgb(168 85 247 / 0.92);
+		--choice-b: rgb(236 72 153 / 0.8);
 	}
-	.choices button:nth-child(3n) {
-		background: linear-gradient(135deg, rgb(8 145 178 / 0.9), rgb(20 184 166 / 0.72));
+	.choices button:nth-child(3) {
+		--choice-a: rgb(16 185 129 / 0.9);
+		--choice-b: rgb(20 184 166 / 0.76);
+	}
+	.choices button:nth-child(4) {
+		--choice-a: rgb(245 158 11 / 0.92);
+		--choice-b: rgb(249 115 22 / 0.78);
 	}
 	.choices button::before {
 		content: '';

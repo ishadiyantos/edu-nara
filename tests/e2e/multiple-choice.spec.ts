@@ -56,6 +56,7 @@ test('quiz supports a question bank, multiple correct answers, and a game-show s
 		await student.getByLabel('Nama tampilan').fill('Ayu');
 		await student.getByRole('button', { name: 'Bergabung' }).click();
 		await expect(student.getByTestId('choice-player')).toBeVisible();
+		await expect(student.getByTestId('student-floating-name')).toHaveText('👤Ayu');
 		await expect(student.getByText('Ronde 1 dari 2')).toBeVisible();
 		await expect
 			.poll(() =>

@@ -122,6 +122,22 @@ export function participantValid(store: Store, id: string, token?: string, now =
 		)
 		.get();
 }
+export function participantDisplayName(store: Store, id: string, token?: string, now = Date.now()) {
+	if (!token || token.length > 100) return null;
+	return (
+		store.db
+			.select({ displayName: participants.displayName })
+			.from(participants)
+			.where(
+				and(
+					eq(participants.sessionId, id),
+					eq(participants.tokenHash, hashToken(token)),
+					gt(participants.expiresAt, now)
+				)
+			)
+			.get()?.displayName ?? null
+	);
+}
 export function authorizeSession(
 	store: Store,
 	id: string,

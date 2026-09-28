@@ -68,7 +68,7 @@ test('launch opens presenter in new tab with joining instructions first', async 
 	await presenter.keyboard.press('Escape');
 	await presenter.reload();
 	await expect(presenter.getByTestId('joining-instructions')).toBeVisible();
-	await expect(presenter.getByRole('link', { name: 'Workspace', exact: true })).toBeVisible();
+	await expect(presenter.getByRole('link', { name: 'Dashboard admin', exact: true })).toBeVisible();
 	await expect(presenter.getByRole('button', { name: 'Buka sesi', exact: true })).toBeVisible();
 	await expect(
 		presenter.getByRole('button', { name: 'Mode layar penuh', exact: true })

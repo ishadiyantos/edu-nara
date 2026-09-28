@@ -1,6 +1,11 @@
 import { error } from '@sveltejs/kit';
 import { database } from '$lib/server/db/client';
-import { authorizeSession, sessionByCode, snapshot } from '$lib/server/sessions';
+import {
+	authorizeSession,
+	participantDisplayName,
+	sessionByCode,
+	snapshot
+} from '$lib/server/sessions';
 import { activities } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { getChoiceQuestionsByActivity, participantChoiceResponses } from '$lib/server/poll/choice';
@@ -23,6 +28,7 @@ export const load: import('./$types').PageServerLoad = ({ params, cookies, local
 		.where(eq(activities.id, session.activityId))
 		.get()!.type;
 	const token = cookies.get(`edu_p_${session.id}`);
+	const participantName = participantDisplayName(store, session.id, token);
 	if (session.state === 'draft')
 		return {
 			snapshot: current,
@@ -30,7 +36,8 @@ export const load: import('./$types').PageServerLoad = ({ params, cookies, local
 			quizMode: current.quizMode,
 			questions: [],
 			responses: [],
-			initialScore: 0
+			initialScore: 0,
+			participantName
 		};
 	if (activityType === 'wordcloud') {
 		const questions = getWordcloudQuestionsByActivity(store, session.activityId).map(
@@ -44,7 +51,14 @@ export const load: import('./$types').PageServerLoad = ({ params, cookies, local
 			})
 		);
 		const responses = token ? participantWordcloudResponses(store, session.id, token) : [];
-		return { snapshot: current, activityType, questions, responses, initialScore: 0 };
+		return {
+			snapshot: current,
+			activityType,
+			questions,
+			responses,
+			initialScore: 0,
+			participantName
+		};
 	}
 	const questions = getChoiceQuestionsByActivity(store, session.activityId).map(
 		({ id, prompt, position, showResults, timeLimit, options }) => ({
@@ -63,6 +77,7 @@ export const load: import('./$types').PageServerLoad = ({ params, cookies, local
 		quizMode: current.quizMode,
 		questions,
 		responses,
-		initialScore: 0
+		initialScore: 0,
+		participantName
 	};
 };

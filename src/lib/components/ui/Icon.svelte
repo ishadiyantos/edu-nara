@@ -9,6 +9,9 @@
 		| 'stop'
 		| 'qr'
 		| 'eye-off'
+		| 'eye'
+		| 'home'
+		| 'pause'
 		| 'timer'
 		| 'help';
 	let { name, size = 20 }: { name: Name; size?: number } = $props();
@@ -40,6 +43,11 @@
 	{:else if name === 'eye-off'}<path
 			d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 4.2A10.8 10.8 0 0 1 12 4c5 0 8.5 4 9.5 6a11.8 11.8 0 0 1-3.1 3.7M6.6 6.6C4.5 8 3.1 9.8 2.5 10.9c1 2 4.5 6 9.5 6 1 0 1.9-.2 2.7-.5"
 		/>
+	{:else if name === 'eye'}<path
+			d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"
+		/><circle cx="12" cy="12" r="3" />
+	{:else if name === 'home'}<path d="M3 11.5 12 4l9 7.5" /><path d="M5 10.5V20h5v-5h4v5h5v-9.5" />
+	{:else if name === 'pause'}<path d="M8 5v14M16 5v14" />
 	{:else if name === 'timer'}<circle cx="12" cy="13" r="8" /><path d="M12 9v4l3 2M9 3h6M12 3v2" />
 	{:else if name === 'help'}<circle cx="12" cy="12" r="9" /><path
 			d="M9.7 9a2.4 2.4 0 1 1 4.1 1.7c-1 .8-1.8 1.2-1.8 2.8M12 17h.01"

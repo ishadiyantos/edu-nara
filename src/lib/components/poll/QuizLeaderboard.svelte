@@ -163,6 +163,7 @@
 	.leaderboard.presentation {
 		flex: 1;
 		margin-top: 0;
+		margin-bottom: 5rem;
 		max-height: none;
 	}
 	.quiz-leaderboard-scroll {

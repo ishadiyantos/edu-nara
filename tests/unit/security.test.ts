@@ -11,8 +11,11 @@ test('rate windows bounded; overflow fails closed with retry, expiry frees memor
 });
 test('origin exact match required for mutations, HTTPS cookies secure even with LAN override', () => {
 	expect(sameOrigin('https://example.test', 'https://example.test')).toBe(true);
+	expect(
+		sameOrigin('https://edu.ishaalim.dev', 'http://10.200.10.5:3000', 'https://edu.ishaalim.dev')
+	).toBe(true);
 	for (const origin of [null, 'null', 'https://evil.test', 'https://example.test.evil'])
-		expect(sameOrigin(origin, 'https://example.test')).toBe(false);
+		expect(sameOrigin(origin, 'https://example.test', 'https://edu.ishaalim.dev')).toBe(false);
 	expect(cookieOptions(new URL('https://example.test'), 'false')).toMatchObject({
 		httpOnly: true,
 		sameSite: 'lax',
