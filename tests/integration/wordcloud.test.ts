@@ -106,7 +106,7 @@ test('owner advances the active question and participants follow the same one', 
 	expect(advanceActiveQuestion(store, admin.id, session.id, -1)).toBe(first.id);
 	expect(advanceActiveQuestion(store, admin.id, session.id, -1)).toBe(first.id);
 });
-test('launch selects first question, isolates sessions, allows ended review but rejects inactive and ended submissions', async () => {
+test('opening selects first question, isolates sessions, allows ended review but rejects inactive and ended submissions', async () => {
 	const { store, admin, activity, session, ana } = await fixture();
 	const first = createWordcloudQuestion(store, admin.id, activity.id, {
 		prompt: 'Pertama?',
@@ -119,7 +119,9 @@ test('launch selects first question, isolates sessions, allows ended review but 
 		moderationEnabled: false
 	});
 	const other = launchSession(store, admin.id, activity.id);
-	expect(other.activeQuestionId).toBe(first.id);
+	expect(other.activeQuestionId).toBeNull();
+	changeState(store, admin.id, other.id, 'open');
+	expect(activeQuestionId(store, other.id)).toBe(first.id);
 	expect(() => submitWordcloudResponse(store, session.id, second.id, ana.token, 'belum')).toThrow(
 		/aktif/
 	);

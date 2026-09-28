@@ -345,6 +345,39 @@
 			aria-label="Tautan bergabung"
 			title="Tautan bergabung"><Icon name="link" /> <span>Tautan bergabung</span></a
 		>
+		<nav
+			class:visible={controls}
+			class="presenter-navigation"
+			aria-label="Kontrol presentasi"
+			data-testid="presenter-navigation"
+		>
+			{#if presenting}
+				<button
+					class="floating-control"
+					aria-label="Sebelumnya"
+					title="Sebelumnya (←)"
+					disabled={showJoin || switching || activeIndex === 0}
+					onclick={() => select(activeIndex - 1, -1)}
+					><Icon name="arrow-left" /><span>Sebelumnya</span></button
+				>
+				<button
+					class="floating-control"
+					aria-label="Berikutnya"
+					title="Berikutnya (→)"
+					disabled={showJoin || switching || activeIndex >= questions.length - 1}
+					onclick={() => select(activeIndex + 1, 1)}
+					><Icon name="arrow-right" /><span>Berikutnya</span></button
+				>
+				<button
+					class="floating-control"
+					aria-label="Keluar presentasi (Esc)"
+					title="Keluar presentasi (Esc)"
+					onclick={exit}
+					data-testid="exit-fullscreen"
+					><Icon name="close" /><span>Keluar presentasi (Esc)</span></button
+				>
+			{/if}
+		</nav>
 	</div>
 	{#if form?.message}<p role="status">{form.message}</p>{/if}
 	{#if errorMessage}<p role="alert">{errorMessage}</p>{/if}
@@ -413,11 +446,10 @@
 					</div>
 					{#if !presenting || guided}
 						<div class="mt-6 flex flex-wrap gap-3">
-							{#if guided}<button
+							{#if guided && timerUsed}<button
 									class="control"
-									disabled={live.state !== 'open' || (timerUsed && timerSeconds === 0)}
-									onclick={() => setTimer(!timerRunning)}
-									>{timerRunning ? 'Jeda' : timerUsed ? 'Lanjutkan timer' : 'Mulai timer'}</button
+									disabled={live.state !== 'open'}
+									onclick={() => setTimer(false)}>Stop timer</button
 								>{/if}
 							{#if guided && timerUsed}<button
 									class="control"
@@ -481,39 +513,6 @@
 					onclick={() => select(i)}>Soal {i + 1}: {question.prompt}</button
 				>{/each}
 		</nav>{/if}
-	{#if presenting}
-		<nav
-			class:visible={controls}
-			class="presenter-controls"
-			aria-label="Kontrol presentasi"
-			data-testid="presenter-navigation"
-		>
-			<button
-				class="floating-control"
-				aria-label="Sebelumnya"
-				title="Sebelumnya (←)"
-				disabled={showJoin || switching || activeIndex === 0}
-				onclick={() => select(activeIndex - 1, -1)}
-				><Icon name="arrow-left" /><span>Sebelumnya</span></button
-			>
-			<button
-				class="floating-control"
-				aria-label="Berikutnya"
-				title="Berikutnya (→)"
-				disabled={showJoin || switching || activeIndex >= questions.length - 1}
-				onclick={() => select(activeIndex + 1, 1)}
-				><Icon name="arrow-right" /><span>Berikutnya</span></button
-			>
-			<button
-				class="floating-control"
-				aria-label="Keluar presentasi (Esc)"
-				title="Keluar presentasi (Esc)"
-				onclick={exit}
-				data-testid="exit-fullscreen"
-				><Icon name="close" /><span>Keluar presentasi (Esc)</span></button
-			>
-		</nav>
-	{/if}
 </main>
 
 <style>
@@ -587,29 +586,8 @@
 		outline: 3px solid #67e8f9;
 		outline-offset: 3px;
 	}
-	.presenter-controls {
-		position: fixed;
-		bottom: 1rem;
-		left: 50%;
-		transform: translateX(-50%);
-		display: flex;
-		gap: 0.5rem;
-		max-width: 95vw;
-		width: max-content;
-		border-radius: 999px;
-		padding: 0.3rem;
-		background: rgba(241, 245, 249, 0.92);
-		border: 1px solid rgba(15, 23, 42, 0.12);
-		backdrop-filter: blur(10px);
-		box-shadow: 0 12px 30px rgba(2, 6, 23, 0.55);
-		z-index: 61;
-		opacity: 0;
-		pointer-events: none;
-	}
-	.presenter-controls.visible,
-	.presenter-controls:focus-within {
-		opacity: 1;
-		pointer-events: auto;
+	.presenter-navigation {
+		display: contents;
 	}
 	/* Floating control dock, Mentimeter-style: pill row, icon-first, label on hover. */
 	.session-toolbar {

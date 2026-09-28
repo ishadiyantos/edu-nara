@@ -49,9 +49,9 @@ satu worker, viewport 360/768/1440. Untuk standalone production:
 ## Alur
 
 1. Login `/admin/login`; buat aktivitas kosong, pilih jenis untuk fase selanjutnya.
-2. Luncurkan sesi; kode enam karakter, status awal draft. Klik **Buka sesi**.
-3. Bagikan tautan `/join?code=...` atau kode; peserta mengisi nama 2–24 karakter.
-4. Admin dan peserta mendapat snapshot serta perubahan status/jumlah melalui SSE.
+2. Luncurkan sesi; kode enam karakter, status awal draft/lobby. Peserta sudah boleh join, tetapi aktivitas belum tampil.
+3. Bagikan tautan `/join?code=...` atau kode; peserta mengisi nama 2–24 karakter dan menunggu dosen.
+4. Klik **Buka sesi** untuk menampilkan soal/aktivitas pertama; admin dan peserta mendapat snapshot serta perubahan status/jumlah melalui SSE.
 5. **Tutup sesi** menolak peserta baru (rejoin lama tetap bisa); bisa buka kembali.
    **Akhiri sesi** permanen. Cookie hilang berarti identitas baru, bukan pulih lewat nama.
 
@@ -81,8 +81,8 @@ satu worker, viewport 360/768/1440. Untuk standalone production:
 
 ## Mode kuis dan presentasi
 
-Quiz launch memilih **Terpandu presenter** (default UI baru) atau **Mandiri tanpa timer**. Mode terpandu membuka satu soal server-side, menerima jawaban hanya untuk soal aktif, dan timer memakai deadline server bersama; jeda menyimpan sisa waktu, soal baru mereset timer, dan timer kedaluwarsa tidak hidup lagi tanpa reset. Mode mandiri membolehkan mahasiswa mengerjakan soal mana pun tanpa timer global.
+Quiz launch memilih **Terpandu presenter** (default UI baru) atau **Mandiri tanpa timer**. Sesi dimulai sebagai lobby: peserta join dan menunggu, soal belum tampil sampai dosen menekan **Buka sesi**. Setelah dibuka, mode terpandu langsung mengaktifkan soal pertama server-side; timer **mulai otomatis** dari `timeLimit` soal, memakai deadline server bersama, dan dosen hanya punya **Stop timer** serta **Reset timer**. Soal aktif hanya menerima jawaban untuk soal itu, dan timer habis menolak submit. Mode mandiri membolehkan mahasiswa mengerjakan soal mana pun tanpa timer global.
 
-Presenter memakai dock navigasi terpisah dari toolbar sesi. Kontrol sebelumnya/berikutnya tetap bisa dipakai lewat keyboard, sentuh, dan fullscreen. Tally, jawaban benar, skor, dan leaderboard tetap owner-only sampai dosen membuka hasil.
+Presenter memakai satu toolbar bawah: navigasi sebelumnya/berikutnya/keluar presentasi duduk sebaris dengan kontrol sesi lain. Kontrol navigasi tetap bisa dipakai lewat keyboard, sentuh, dan fullscreen. Tally, jawaban benar, skor, dan leaderboard tetap owner-only; kunci jawaban tidak pernah dikirim ke browser peserta, termasuk setelah dosen membuka hasil.
 
 Deploy, backup, restore: [docs/DEPLOY.md](docs/DEPLOY.md).

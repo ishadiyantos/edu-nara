@@ -64,7 +64,6 @@ test('guided quiz syncs presenter question and timer state across two participan
 	const presenter = await popup;
 	await presenter.waitForLoadState();
 	const code = (await presenter.getByTestId('session-code').textContent())!.trim();
-	await presenter.getByRole('button', { name: 'Buka sesi', exact: true }).click();
 
 	const context = await browser.newContext();
 	const secondContext = await browser.newContext();
@@ -78,8 +77,16 @@ test('guided quiz syncs presenter question and timer state across two participan
 			await student.goto(`/join?code=${code}`);
 			await student.getByLabel('Nama tampilan').fill(name);
 			await student.getByRole('button', { name: 'Bergabung' }).click();
+			await expect(student.getByTestId('session-state')).toHaveText('Menunggu dosen membuka sesi');
+			await expect(student.getByTestId('choice-player')).toHaveCount(0);
+			await expect(student.getByText('Soal terpandu satu')).toHaveCount(0);
+		}
+		await presenter.getByRole('button', { name: 'Buka sesi', exact: true }).click();
+		for (const student of [first, second]) {
 			await expect(student.getByTestId('choice-player')).toBeVisible();
 			await expect(student.getByText('Soal terpandu satu')).toBeVisible();
+			await expect(student.getByTestId('quiz-timer')).not.toContainText('Tanpa timer');
+			await expect(student.getByRole('button', { name: 'Kirim jawaban' })).toBeVisible();
 		}
 		const id = presenter.url().split('/').pop()!;
 		const q1 = (await readSnapshot(presenter, id)).question!;
@@ -90,9 +97,7 @@ test('guided quiz syncs presenter question and timer state across two participan
 		expect((await first.request.get(`/api/polls/${code}/results?leaderboard=true`)).status()).toBe(
 			403
 		);
-		await presenter.getByRole('button', { name: 'Mulai timer' }).click();
-		await expect(first.getByTestId('quiz-timer')).not.toContainText('Tanpa timer');
-		await presenter.getByRole('button', { name: 'Jeda' }).click();
+		await presenter.getByRole('button', { name: 'Stop timer' }).click();
 		await expect(first.getByTestId('quiz-timer')).toContainText('Timer dijeda');
 		expect(
 			(
@@ -108,7 +113,8 @@ test('guided quiz syncs presenter question and timer state across two participan
 		});
 		await first.reload();
 		await expect(first.getByTestId('quiz-timer')).toContainText('Timer dijeda');
-		await presenter.getByRole('button', { name: 'Lanjutkan timer' }).click();
+		await presenter.getByRole('button', { name: 'Stop timer' }).click();
+		await presenter.getByRole('button', { name: 'Reset timer' }).click();
 		await expect(first.getByTestId('quiz-timer')).not.toContainText('Timer dijeda');
 		const expire = await presenter.request.post(presenter.url(), {
 			headers: { origin: 'http://127.0.0.1:4173', 'x-sveltekit-action': 'true' },
@@ -126,17 +132,13 @@ test('guided quiz syncs presenter question and timer state across two participan
 		).toBe(400);
 		await presenter.getByTestId('fullscreen-button').click();
 		await presenter.mouse.move(20, 20);
-		const nav = presenter.getByTestId('presenter-navigation');
-		await expect(nav).toBeVisible();
-		await expect(nav).toHaveCSS('position', 'fixed');
-		await expect(nav).toHaveCSS('border-radius', '999px');
 		const dock = presenter.getByTestId('session-controls');
-		expect(await nav.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(
-			await dock.evaluate((el) => getComputedStyle(el).backgroundColor)
-		);
-		const a = (await nav.boundingBox())!,
-			b = (await dock.boundingBox())!;
-		expect(b.y + b.height).toBeLessThanOrEqual(a.y);
+		const nav = dock.getByTestId('presenter-navigation');
+		await expect(nav).toHaveCount(1);
+		await expect(nav.getByRole('button', { name: 'Sebelumnya' })).toBeVisible();
+		await expect(nav.getByRole('button', { name: 'Berikutnya' })).toBeVisible();
+		await expect(nav.getByTestId('exit-fullscreen')).toBeVisible();
+		const a = (await dock.boundingBox())!;
 		expect(a.x).toBeGreaterThanOrEqual(0);
 		expect(a.x + a.width).toBeLessThanOrEqual(presenter.viewportSize()!.width);
 		await secondContext.setOffline(true);
@@ -154,8 +156,8 @@ test('guided quiz syncs presenter question and timer state across two participan
 		).toBe(400);
 		const refreshed = await readSnapshot(first, id);
 		expect(refreshed.activeQuestionId).not.toBe(q1.id);
-		expect(refreshed.timerDeadline).toBeNull();
-		await expect(first.getByTestId('quiz-timer')).toContainText('Tanpa timer');
+		expect(refreshed.timerDeadline).toBeGreaterThan(Date.now());
+		await expect(first.getByTestId('quiz-timer')).not.toContainText('Tanpa timer');
 		await first.reload();
 		await expect(first.getByText('Soal terpandu dua')).toBeVisible();
 		await presenter.keyboard.press('Escape');

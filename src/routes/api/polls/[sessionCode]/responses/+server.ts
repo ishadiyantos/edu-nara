@@ -71,9 +71,6 @@ export const POST: import('./$types').RequestHandler = async (event) => {
 				? {
 						isCorrect: response.isCorrect,
 						points: response.points,
-						correctOptionIds: currentQuestion.options
-							.filter((option) => option.isCorrect)
-							.map((option) => option.id),
 						tally: choiceTally(store, session.id, question.id)
 					}
 				: {})

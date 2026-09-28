@@ -68,13 +68,13 @@ test('quiz supports a question bank, multiple correct answers, and a game-show s
 			'aria-pressed',
 			'true'
 		);
-		await student.getByRole('button', { name: /Kunci jawaban/ }).click();
+		await student.getByRole('button', { name: /Kirim jawaban/ }).click();
 		await expect(student.getByRole('status')).toContainText('Jawaban tersimpan');
 		await expect(student.getByTestId('quiz-score')).toHaveText('0', { timeout: 3000 });
 		await student.getByRole('button', { name: /Pertanyaan berikutnya/ }).click();
 		await expect(student.getByText('Ronde 2 dari 2')).toBeVisible();
 		await student.getByRole('button', { name: /4/ }).click();
-		await student.getByRole('button', { name: /Kunci jawaban/ }).click();
+		await student.getByRole('button', { name: /Kirim jawaban/ }).click();
 		await expect(student.getByRole('status')).toContainText('Jawaban tersimpan');
 		await student.getByRole('button', { name: 'Lihat skor' }).click();
 		await expect(student.getByTestId('quiz-finished')).toContainText('0');
@@ -87,6 +87,7 @@ test('quiz supports a question bank, multiple correct answers, and a game-show s
 		await student.reload();
 		await expect(student.getByTestId('quiz-score')).toHaveText('1.000', { timeout: 5000 });
 		await expect(student.getByRole('status')).toContainText('Jawaban tersimpan');
+		await expect(student.locator('.choices button.correct')).toHaveCount(0);
 
 		const csv = await page.request.get(`/api/polls/${code}/export`);
 		expect(csv.ok()).toBe(true);

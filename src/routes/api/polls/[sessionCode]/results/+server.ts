@@ -50,9 +50,9 @@ export const GET: import('./$types').RequestHandler = (event) => {
 			ok: true,
 			questionId: question.id,
 			counts: choiceTally(store, session.id, question.id),
-			correctOptionIds: question.options
-				.filter((option) => option.isCorrect)
-				.map((option) => option.id)
+			correctOptionIds: isOwner
+				? question.options.filter((option) => option.isCorrect).map((option) => option.id)
+				: []
 		},
 		{ headers: { 'Cache-Control': 'no-store' } }
 	);

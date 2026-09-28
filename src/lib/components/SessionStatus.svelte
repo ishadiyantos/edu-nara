@@ -14,7 +14,9 @@
 	onMount(() => {
 		const stream = new EventSource(`/api/sessions/${snapshot.id}/events`);
 		const full = (event: MessageEvent) => {
-			live = JSON.parse(event.data);
+			const next = JSON.parse(event.data);
+			if (snapshot.state !== 'open' && next.state === 'open') window.location.reload();
+			live = next;
 		};
 		stream.addEventListener('snapshot', full);
 		stream.addEventListener('resync', full);
@@ -22,7 +24,9 @@
 			live = { ...live, count: JSON.parse(event.data).count };
 		});
 		stream.addEventListener('session.state', (event) => {
-			live = { ...live, state: JSON.parse(event.data).state };
+			const next = JSON.parse(event.data).state;
+			if (snapshot.state !== 'open' && next === 'open') window.location.reload();
+			live = { ...live, state: next };
 		});
 		stream.onopen = () => (connection = 'Terhubung');
 		stream.onerror = () => (connection = 'Koneksi terputus. Menghubungkan ulang…');

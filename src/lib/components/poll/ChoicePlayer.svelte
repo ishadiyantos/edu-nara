@@ -197,7 +197,7 @@
 					: 'Sesi terbuka'}
 	</p>
 	<p>
-		Skor dibuka dosen: <strong data-testid="quiz-score">{score.toLocaleString('id-ID')}</strong>
+		Skor sementara: <strong data-testid="quiz-score">{score.toLocaleString('id-ID')}</strong>
 	</p>
 	{#if finished && !guided}<div data-testid="quiz-finished">
 			<h2>Jawaban tersimpan</h2>
@@ -240,7 +240,7 @@
 						: 'Salah'}
 			</p>
 		{:else}<button class="submit" disabled={!selected.length || loading || blocked} onclick={submit}
-				>{loading ? 'Mengirim…' : 'Kunci jawaban'}</button
+				>{loading ? 'Mengirim…' : 'Kirim jawaban'}</button
 			>{/if}
 		{#if error}<p role="alert">{error}</p>{/if}
 		{#if !guided}<nav aria-label="Navigasi soal">

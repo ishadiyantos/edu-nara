@@ -115,12 +115,22 @@ export function setActiveChoiceQuestion(
 	const question = getChoiceQuestion(store, questionId);
 	if (!question || question.activityId !== session.activityId)
 		throw new UserError('Pertanyaan tidak tersedia untuk sesi ini.');
-	if (session.activeQuestionId !== questionId)
+	if (
+		session.activeQuestionId !== questionId ||
+		(session.timerDeadline == null && session.timerDuration === 0)
+	) {
+		const autoDuration =
+			session.quizMode === 'guided' && session.state === 'open' ? question.timeLimit * 1000 : 0;
 		store.db
 			.update(sessions)
-			.set({ activeQuestionId: questionId, timerDeadline: null, timerDuration: 0 })
+			.set({
+				activeQuestionId: questionId,
+				timerDeadline: autoDuration ? Date.now() + autoDuration : null,
+				timerDuration: autoDuration
+			})
 			.where(eq(sessions.id, sessionId))
 			.run();
+	}
 	return questionId;
 }
 
@@ -368,9 +378,7 @@ export function participantChoiceResponses(store: Store, sessionId: string, toke
 				// Do not reveal correctness or points before the admin releases results.
 				isCorrect: question?.showResults ? !!response?.isCorrect : null,
 				points: question?.showResults ? Number(response?.points ?? 0) : 0,
-				correctOptionIds: question?.showResults
-					? question.options.filter((option) => option.isCorrect).map((option) => option.id)
-					: []
+				correctOptionIds: []
 			};
 		});
 }

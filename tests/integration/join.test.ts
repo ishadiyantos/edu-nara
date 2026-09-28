@@ -48,9 +48,8 @@ test('owner launches unique draft, controls lifecycle, and cannot reopen ended s
 test('join token hashed, rejoin idempotent, cookie scoped, counts aggregate, closed denies new join', async () => {
 	const { a, activity } = await fixture();
 	const session = launchSession(s, a.id, activity.id);
-	expect(() => joinSession(s, { code: session.code, displayName: 'Ana' })).toThrow();
-	changeState(s, a.id, session.id, 'open');
 	const p = joinSession(s, { code: session.code, displayName: 'Ana' });
+	changeState(s, a.id, session.id, 'open');
 	const again = joinSession(s, { code: session.code, displayName: 'Different' }, p.token);
 	expect(again.token).toBe(p.token);
 	expect(snapshot(s, session.id).count).toBe(1);

@@ -121,5 +121,5 @@ test('hasil tetap privat sampai dibuka lalu skor peserta pulih', async () => {
 	const revealed = participantChoiceResponses(store, session.id, ana.token)[0];
 	expect(revealed.isCorrect).toBe(true);
 	expect(revealed.points).toBe(1000);
-	expect(revealed.correctOptionIds).toEqual([question.options[0].id, question.options[2].id]);
+	expect(revealed.correctOptionIds).toEqual([]);
 });

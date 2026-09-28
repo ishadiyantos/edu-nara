@@ -23,6 +23,15 @@ export const load: import('./$types').PageServerLoad = ({ params, cookies, local
 		.where(eq(activities.id, session.activityId))
 		.get()!.type;
 	const token = cookies.get(`edu_p_${session.id}`);
+	if (session.state === 'draft')
+		return {
+			snapshot: current,
+			activityType,
+			quizMode: current.quizMode,
+			questions: [],
+			responses: [],
+			initialScore: 0
+		};
 	if (activityType === 'wordcloud') {
 		const questions = getWordcloudQuestionsByActivity(store, session.activityId).map(
 			({ id, prompt, position, showResults, timeLimit, wordLimit }) => ({

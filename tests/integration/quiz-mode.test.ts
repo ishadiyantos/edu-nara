@@ -113,8 +113,29 @@ test('switching the active question clears the timer for the new question', asyn
 	const row = store.sqlite
 		.prepare('SELECT timer_deadline, timer_duration FROM live_sessions WHERE id = ?')
 		.get(session.id) as { timer_deadline: number | null; timer_duration: number };
-	expect(row.timer_deadline).toBeNull();
-	expect(row.timer_duration).toBe(0);
+	expect(row.timer_deadline).toBeGreaterThan(Date.now());
+	expect(row.timer_duration).toBe(second.timeLimit * 1000);
+});
+
+test('opening guided lobby starts timer for question selected while still draft', async () => {
+	const store = openDatabase(':memory:');
+	stores.push(store);
+	const admin = await seedAdmin(store, {
+		email: 'quiz-mode-draft-selection@example.test',
+		password: 'test-quiz-password-long'
+	});
+	const activity = createActivity(store, admin.id, { title: 'Draft selection', type: 'choice' });
+	const first = createChoiceQuestion(store, admin.id, activity.id, {
+		prompt: 'Soal satu',
+		options: ['A', 'B'],
+		correctOptions: [0]
+	});
+	const session = launchSession(store, admin.id, activity.id, undefined, 'guided');
+	expect(setActiveChoiceQuestion(store, admin.id, session.id, first.id)).toBe(first.id);
+	const opened = changeState(store, admin.id, session.id, 'open');
+	expect(opened.activeQuestionId).toBe(first.id);
+	expect(opened.timerDuration).toBe(first.timeLimit * 1000);
+	expect(opened.timerDeadline).toBeGreaterThan(Date.now());
 });
 
 test('pause retains remaining time, expired timer rejects responses until explicit reset', async () => {

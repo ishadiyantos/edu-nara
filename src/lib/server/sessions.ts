@@ -57,21 +57,7 @@ export function launchSession(
 			.onConflictDoNothing({ target: sessions.code })
 			.returning()
 			.get();
-		if (inserted) {
-			const first = store.db
-				.select({ id: pollQuestions.id })
-				.from(pollQuestions)
-				.where(eq(pollQuestions.activityId, activityId))
-				.orderBy(asc(pollQuestions.position))
-				.get();
-			if (first)
-				store.db
-					.update(sessions)
-					.set({ activeQuestionId: first.id })
-					.where(eq(sessions.id, inserted.id))
-					.run();
-			return { ...inserted, activeQuestionId: first?.id ?? null };
-		}
+		if (inserted) return { ...inserted, activeQuestionId: null };
 	}
 	throw new UserError('Kode sesi tidak tersedia.');
 }
@@ -80,14 +66,40 @@ export function changeState(store: Store, adminId: string, id: string, input: un
 	const current = ownedSession(store, adminId, id);
 	if (current.state === 'ended' || (current.state === 'draft' && state === 'closed'))
 		throw new UserError('Perubahan status tidak diizinkan.');
+	const now = Date.now();
+	let activeQuestionId = current.activeQuestionId;
+	let timerDeadline = current.timerDeadline;
+	let timerDuration = current.timerDuration;
+	if (state === 'open' && current.state === 'draft') {
+		activeQuestionId ??=
+			store.db
+				.select({ id: pollQuestions.id })
+				.from(pollQuestions)
+				.where(eq(pollQuestions.activityId, current.activityId))
+				.orderBy(asc(pollQuestions.position))
+				.get()?.id ?? null;
+		if (activeQuestionId && current.quizMode === 'guided') {
+			const question = store.db
+				.select({ timeLimit: pollQuestions.timeLimit })
+				.from(pollQuestions)
+				.where(eq(pollQuestions.id, activeQuestionId))
+				.get();
+			timerDuration = (question?.timeLimit ?? 20) * 1000;
+			timerDeadline = now + timerDuration;
+		}
+	}
+	if (state !== 'open' && timerDeadline && timerDeadline > now) {
+		timerDuration = timerDeadline - now;
+		timerDeadline = null;
+	}
 	return store.db
 		.update(sessions)
 		.set({
 			state,
-			endedAt: state === 'ended' ? Date.now() : null,
-			...(state !== 'open' && current.timerDeadline && current.timerDeadline > Date.now()
-				? { timerDuration: current.timerDeadline - Date.now(), timerDeadline: null }
-				: {})
+			activeQuestionId,
+			timerDeadline,
+			timerDuration,
+			endedAt: state === 'ended' ? now : null
 		})
 		.where(eq(sessions.id, id))
 		.returning()
@@ -136,7 +148,8 @@ export function joinSession(store: Store, input: unknown, existing?: string, now
 		if (!session) throw new UserError('Sesi tidak tersedia.');
 		if (participantValid(scoped, session.id, existing, now))
 			return { sessionId: session.id, code: session.code, token: existing!, created: false };
-		if (session.state !== 'open') throw new UserError('Sesi belum dibuka atau sudah ditutup.');
+		if (session.state === 'closed' || session.state === 'ended')
+			throw new UserError('Sesi belum dibuka atau sudah ditutup.');
 		const token = newToken();
 		store.db
 			.insert(participants)
@@ -173,7 +186,7 @@ export function snapshot(store: Store, id: string) {
 	if (!row) throw new UserError('Sesi tidak ditemukan.');
 	const activeQuestionId =
 		row.activeQuestionId ??
-		(row.activityType === 'choice'
+		(row.state !== 'draft'
 			? (store.db
 					.select({ id: pollQuestions.id })
 					.from(pollQuestions)
