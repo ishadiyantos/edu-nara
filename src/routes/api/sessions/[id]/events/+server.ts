@@ -1,13 +1,13 @@
 import { error } from '@sveltejs/kit';
 import { database } from '$lib/server/db/client';
-import { authorizeSession, snapshot } from '$lib/server/sessions';
+import { authorizeSession } from '$lib/server/sessions';
 import { authenticate } from '$lib/server/auth';
 import { events } from '$lib/server/events';
 import { limits } from '$lib/server/security';
 import { activities, sessions } from '$lib/server/db/schema';
-import { choiceTally, getChoiceQuestion } from '$lib/server/poll/choice';
+import { sessionEventSnapshot } from '$lib/server/session-events';
 import { eq } from 'drizzle-orm';
-import { getWordcloudQuestionsByActivity, wordcloudSnapshot } from '$lib/server/poll/wordcloud';
+
 export const GET: import('./$types').RequestHandler = (event) => {
 	const store = database(),
 		id = event.params.id,
@@ -30,22 +30,8 @@ export const GET: import('./$types').RequestHandler = (event) => {
 		.get();
 	if (!joined) error(404, 'Sesi tidak ditemukan.');
 	const isOwner = !!admin && joined.activity.ownerId === admin.id;
-	const streamSnapshot = () => {
-		const base = snapshot(store, id);
-		const question = base.activeQuestionId ? getChoiceQuestion(store, base.activeQuestionId) : null;
-		if (joined.activity.type === 'wordcloud')
-			return {
-				...base,
-				wordcloud: getWordcloudQuestionsByActivity(store, joined.session.activityId).map((q) => ({
-					questionId: q.id,
-					words: wordcloudSnapshot(store, id, q.id)
-				}))
-			};
-		if (isOwner)
-			return { ...base, question, tally: question ? choiceTally(store, id, question.id) : null };
-		// Participants never receive tallies or answer keys over SSE; owner-only.
-		return base;
-	};
+	const streamSnapshot = () =>
+		sessionEventSnapshot(store, id, joined.activity.type, joined.session.activityId, isOwner);
 	try {
 		return new Response(
 			events.subscribe(
