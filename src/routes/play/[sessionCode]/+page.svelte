@@ -33,7 +33,7 @@
 			← Exit session <span class="sr-only">Keluar dari sesi</span>
 		</a>
 
-		{#if data.snapshot.state === 'open' && data.questions.length}
+		{#if (data.activityType === 'choice' || data.snapshot.state === 'open') && data.questions.length}
 			<div class="mb-5 flex items-end justify-between gap-4">
 				<div>
 					<p class="text-xs font-black uppercase tracking-[0.22em] text-[#38bdf8]">
@@ -63,7 +63,7 @@
 					sessionId={data.snapshot.id}
 					questions={data.questions}
 					responses={data.responses}
-					initialScore={data.initialScore}
+					snapshot={data.snapshot}
 				/>
 			{/if}
 		{:else}

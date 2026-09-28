@@ -64,6 +64,13 @@
 			"when": 1790522000000,
 			"tag": "0008_active_question",
 			"breakpoints": true
+		},
+		{
+			"idx": 9,
+			"version": "6",
+			"when": 1790523000000,
+			"tag": "0009_quiz_modes",
+			"breakpoints": true
 		}
 	]
 }

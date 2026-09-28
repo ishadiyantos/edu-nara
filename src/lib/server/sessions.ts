@@ -1,4 +1,5 @@
 import { UserError } from './errors';
+import { z } from 'zod';
 import { randomInt, randomUUID } from 'node:crypto';
 import { and, asc, count, eq, gt } from 'drizzle-orm';
 import type { Store } from './db/client';
@@ -29,7 +30,8 @@ export function launchSession(
 	store: Store,
 	adminId: string,
 	activityId: string,
-	generate = generateSessionCode
+	generate = generateSessionCode,
+	mode: unknown = 'self_paced'
 ) {
 	if (
 		!store.db
@@ -39,12 +41,14 @@ export function launchSession(
 			.get()
 	)
 		throw new UserError('Aktivitas tidak ditemukan.');
+	const quizMode = z.enum(['guided', 'self_paced']).parse(mode);
 	for (let attempt = 0; attempt < 10; attempt++) {
 		const row = {
 			id: randomUUID(),
 			activityId,
 			code: generate(),
 			state: 'draft' as const,
+			quizMode,
 			createdAt: Date.now()
 		};
 		const inserted = store.db
@@ -78,7 +82,13 @@ export function changeState(store: Store, adminId: string, id: string, input: un
 		throw new UserError('Perubahan status tidak diizinkan.');
 	return store.db
 		.update(sessions)
-		.set({ state, endedAt: state === 'ended' ? Date.now() : null })
+		.set({
+			state,
+			endedAt: state === 'ended' ? Date.now() : null,
+			...(state !== 'open' && current.timerDeadline && current.timerDeadline > Date.now()
+				? { timerDuration: current.timerDeadline - Date.now(), timerDeadline: null }
+				: {})
+		})
 		.where(eq(sessions.id, id))
 		.returning()
 		.get()!;
@@ -148,7 +158,12 @@ export function snapshot(store: Store, id: string) {
 			id: sessions.id,
 			code: sessions.code,
 			activeQuestionId: sessions.activeQuestionId,
+			quizMode: sessions.quizMode,
+			timerDeadline: sessions.timerDeadline,
+			timerDuration: sessions.timerDuration,
 			state: sessions.state,
+			activityId: sessions.activityId,
+			activityType: activities.type,
 			title: activities.title
 		})
 		.from(sessions)
@@ -156,8 +171,29 @@ export function snapshot(store: Store, id: string) {
 		.where(eq(sessions.id, id))
 		.get();
 	if (!row) throw new UserError('Sesi tidak ditemukan.');
+	const activeQuestionId =
+		row.activeQuestionId ??
+		(row.activityType === 'choice'
+			? (store.db
+					.select({ id: pollQuestions.id })
+					.from(pollQuestions)
+					.where(eq(pollQuestions.activityId, row.activityId))
+					.orderBy(asc(pollQuestions.position))
+					.get()?.id ?? null)
+			: null);
+	if (row.activeQuestionId == null && activeQuestionId != null)
+		store.db.update(sessions).set({ activeQuestionId }).where(eq(sessions.id, id)).run();
 	return {
-		...row,
+		id: row.id,
+		code: row.code,
+		title: row.title,
+		state: row.state,
+		quizMode: row.quizMode,
+		activeQuestionId,
+		timerDeadline: row.timerDeadline,
+		timerDuration: row.timerDuration,
+		serverNow: Date.now(),
+		timerRunning: row.timerDeadline != null && row.timerDeadline > Date.now(),
 		count: store.db
 			.select({ n: count() })
 			.from(participants)

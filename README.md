@@ -79,4 +79,10 @@ satu worker, viewport 360/768/1440. Untuk standalone production:
 - Activity Phase1 menyimpan owner/title/type/createdAt. Description/config/editor,
   archive/updatedAt, participant lastSeen belum diperlukan; tambah pada fase terkait.
 
+## Mode kuis dan presentasi
+
+Quiz launch memilih **Terpandu presenter** (default UI baru) atau **Mandiri tanpa timer**. Mode terpandu membuka satu soal server-side, menerima jawaban hanya untuk soal aktif, dan timer memakai deadline server bersama; jeda menyimpan sisa waktu, soal baru mereset timer, dan timer kedaluwarsa tidak hidup lagi tanpa reset. Mode mandiri membolehkan mahasiswa mengerjakan soal mana pun tanpa timer global.
+
+Presenter memakai dock navigasi terpisah dari toolbar sesi. Kontrol sebelumnya/berikutnya tetap bisa dipakai lewat keyboard, sentuh, dan fullscreen. Tally, jawaban benar, skor, dan leaderboard tetap owner-only sampai dosen membuka hasil.
+
 Deploy, backup, restore: [docs/DEPLOY.md](docs/DEPLOY.md).

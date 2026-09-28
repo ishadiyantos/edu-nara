@@ -6,36 +6,52 @@
 	import WordcloudResults from '$lib/components/poll/WordcloudResults.svelte';
 	import { Icon, QRCode } from '$components/ui';
 	let { data, form } = $props();
+	let live = $state(untrack(() => data.snapshot));
 	let localIndex = $state(0);
-	let syncedId = $state<string | null>(null);
 	let switching = $state(false);
+	const guided = $derived(data.activityType === 'choice' && live.quizMode === 'guided');
+	const questions = $derived(data.questions);
 	const activeIndex = $derived(
-		data.activityType === 'wordcloud'
+		data.activityType === 'wordcloud' || guided
 			? Math.max(
 					0,
-					data.questions.findIndex((q) => q.id === (syncedId ?? data.snapshot.activeQuestionId))
+					questions.findIndex((q) => q.id === live.activeQuestionId)
 				)
 			: localIndex
 	);
-	const questions = $derived(data.questions);
 	const active = $derived(questions[activeIndex]);
 	const choiceOptions = $derived(active && 'options' in active ? active.options : []);
 	let tally = $state<Record<string, number>>({});
 	let words = $state<{ word: string; weight: number }[]>([]);
 	let moderation = $state<{ id: string; word: string; status: string }[]>([]);
+	let leaderboard = $state(untrack(() => data.leaderboard));
 	let connected = $state(false);
-	let count = $state(0);
+	const count = $derived(live.count);
 	let errorMessage = $state('');
 	let presenting = $state(false);
 	let controls = $state(false);
-	let view = $state<'join' | 'activity'>(
-		untrack(() => (data.snapshot.state === 'draft' ? 'join' : 'activity'))
+	let view = $state<'join' | 'activity' | 'leaderboard'>(
+		untrack(() =>
+			live.state === 'draft'
+				? 'join'
+				: data.activityType === 'choice' && data.snapshot.quizMode === 'self_paced'
+					? 'leaderboard'
+					: 'activity'
+		)
 	);
 	let stage: HTMLElement;
 	let hideTimer: ReturnType<typeof setTimeout>;
-	let timerSeconds = $state(0);
-	let timerRunning = $state(false);
-	let timer: ReturnType<typeof setInterval> | undefined;
+	let now = $state(Date.now());
+	let offset = $state(untrack(() => data.snapshot.serverNow - Date.now()));
+	const timerDeadline = $derived(live.timerDeadline);
+	const timerSeconds = $derived(
+		Math.max(
+			0,
+			Math.ceil((timerDeadline == null ? live.timerDuration : timerDeadline - now - offset) / 1000)
+		)
+	);
+	const timerRunning = $derived(timerDeadline != null && timerSeconds > 0);
+	const timerUsed = $derived(timerDeadline != null || live.timerDuration > 0);
 	const total = $derived(Object.values(tally).reduce((sum, n) => sum + n, 0));
 	const showJoin = $derived(view === 'join');
 	const statusControls = [
@@ -43,6 +59,10 @@
 		{ state: 'closed', label: 'Tutup sesi', icon: 'eye-off' },
 		{ state: 'ended', label: 'Akhiri sesi', icon: 'stop' }
 	] as const;
+	function applyLive(value: Partial<typeof live>) {
+		live = { ...live, ...value };
+		if (value.serverNow != null) offset = value.serverNow - Date.now();
+	}
 	function reveal() {
 		controls = true;
 		clearTimeout(hideTimer);
@@ -51,11 +71,10 @@
 	function present() {
 		presenting = true;
 		controls = false;
-		// The element already exists: invoke native API synchronously in the click gesture.
 		try {
 			void stage.requestFullscreen?.().catch(() => {});
 		} catch {
-			/* CSS fallback remains usable. */
+			/* CSS fallback. */
 		}
 		stage.focus();
 	}
@@ -63,44 +82,75 @@
 		presenting = false;
 		if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
 	}
-	async function select(index: number) {
-		if (switching || index < 0 || index >= questions.length) return;
-		stopTimer();
-		view = 'activity';
-		if (data.activityType !== 'wordcloud') {
-			localIndex = index;
-			return;
-		}
-		switching = true;
+	async function action(values: Record<string, string>) {
 		errorMessage = '';
 		try {
 			const response = await fetch(window.location.pathname, {
 				method: 'POST',
 				headers: { 'x-sveltekit-action': 'true' },
-				body: new URLSearchParams({ action: 'question', questionId: questions[index].id })
+				body: new URLSearchParams(values)
 			});
 			const result = deserialize(await response.text());
-			if (result.type !== 'success') throw new Error('Perpindahan gagal. Coba lagi.');
-			syncedId = questions[index].id;
+			if (result.type !== 'success')
+				throw new Error(
+					result.type === 'failure' ? String(result.data?.message ?? 'Aksi gagal.') : 'Aksi gagal.'
+				);
 			await invalidateAll();
+			applyLive(data.snapshot);
 		} catch (err) {
-			errorMessage = err instanceof Error ? err.message : 'Perpindahan gagal.';
-		} finally {
-			switching = false;
+			errorMessage = err instanceof Error ? err.message : 'Aksi gagal. Coba lagi.';
 		}
 	}
-	function stopTimer() {
-		clearInterval(timer);
-		timerRunning = false;
+	async function select(index: number, direction?: number) {
+		if (switching || index < 0 || index >= questions.length) return;
+		view = 'activity';
+		if (data.activityType !== 'wordcloud' && !guided) {
+			localIndex = index;
+			return;
+		}
+		switching = true;
+		await action(
+			direction
+				? { action: 'question', direction: String(direction) }
+				: { action: 'question', questionId: questions[index].id }
+		);
+		switching = false;
 	}
-	function startTimer() {
-		stopTimer();
-		timerSeconds = 'timeLimit' in active ? active.timeLimit : 20;
-		timerRunning = true;
-		timer = setInterval(() => {
-			timerSeconds--;
-			if (timerSeconds <= 0) stopTimer();
-		}, 1000);
+	async function setTimer(running: boolean, reset = false) {
+		if (active && guided)
+			await action({
+				action: 'timer',
+				questionId: active.id,
+				running: String(running),
+				reset: String(reset)
+			});
+	}
+	async function refreshResults() {
+		const id = active?.id;
+		if (!id) return;
+		try {
+			const isCloud = data.activityType === 'wordcloud';
+			const res = await fetch(
+				isCloud
+					? `/api/wordcloud/${live.code}/responses?questionId=${id}`
+					: `/api/polls/${live.code}/results?questionId=${id}`
+			);
+			const result = await res.json();
+			if (!res.ok || id !== active?.id) return;
+			if (isCloud) words = result.words;
+			else tally = result.counts;
+		} catch {
+			/* Reconnect refreshes owner-only tally. */
+		}
+	}
+	async function refreshLeaderboard() {
+		if (data.activityType !== 'choice') return;
+		try {
+			const res = await fetch(`/api/polls/${live.code}/results?leaderboard=true`);
+			if (res.ok) leaderboard = (await res.json()).entries;
+		} catch {
+			/* Reconnect retries owner-only scores. */
+		}
 	}
 	function key(event: KeyboardEvent) {
 		if (event.target instanceof HTMLElement && event.target.closest('input,textarea,select'))
@@ -112,66 +162,60 @@
 		if (!presenting) return;
 		if (event.key === 'Escape') exit();
 		if (event.key === 'Tab') reveal();
-		if (!showJoin && event.key === 'ArrowRight') select(activeIndex + 1);
-		if (!showJoin && event.key === 'ArrowLeft') select(activeIndex - 1);
+		if (!showJoin && event.key === 'ArrowRight') {
+			event.preventDefault();
+			void select(activeIndex + 1, 1);
+		}
+		if (!showJoin && event.key === 'ArrowLeft') {
+			event.preventDefault();
+			void select(activeIndex - 1, -1);
+		}
 	}
 	onMount(() => {
-		count = data.snapshot.count;
-		words = data.words;
+		const tick = setInterval(() => (now = Date.now()), 250);
 		const onChange = () => {
 			if (!document.fullscreenElement) presenting = false;
 		};
 		document.addEventListener('fullscreenchange', onChange);
+		const source = new EventSource(`/api/sessions/${live.id}/events`);
+		source.onopen = () => {
+			connected = true;
+			void refreshResults();
+			void refreshLeaderboard();
+		};
+		source.onerror = () => (connected = false);
+		for (const name of [
+			'snapshot',
+			'resync',
+			'participant.count',
+			'session.question',
+			'session.state'
+		])
+			source.addEventListener(name, (event) => {
+				const next = JSON.parse((event as MessageEvent).data);
+				applyLive(next);
+				if (next.state === 'ended' && data.activityType === 'choice') view = 'leaderboard';
+				void refreshResults();
+				void refreshLeaderboard();
+			});
+		source.addEventListener('poll.tally', () => {
+			void refreshResults();
+			void refreshLeaderboard();
+		});
+		source.addEventListener('wordcloud.snapshot', () => void refreshResults());
 		return () => {
-			stopTimer();
+			clearInterval(tick);
 			clearTimeout(hideTimer);
+			source.close();
 			document.removeEventListener('fullscreenchange', onChange);
 		};
 	});
 	$effect(() => {
-		const id = active?.id;
-		const sessionId = data.snapshot.id;
-		const isCloud = data.activityType === 'wordcloud';
-		let disposed = false;
-		words = [];
-		const refresh = async () => {
-			if (!id) return;
-			try {
-				const url = isCloud
-					? `/api/wordcloud/${data.snapshot.code}/responses?questionId=${id}`
-					: `/api/polls/${data.snapshot.code}/results?questionId=${id}`;
-				const response = await fetch(url);
-				if (response.ok && !disposed) {
-					const result = await response.json();
-					if (disposed) return;
-					if (isCloud) words = result.words;
-					else tally = result.counts;
-				}
-			} catch {
-				/* EventSource reconnects. */
-			}
-		};
-		const source = new EventSource(`/api/sessions/${sessionId}/events`);
-		source.onopen = () => {
-			connected = true;
-			void refresh();
-		};
-		source.onerror = () => (connected = false);
-		for (const name of ['snapshot', 'resync', 'participant.count', 'session.question'])
-			source.addEventListener(name, (event) => {
-				const state = JSON.parse((event as MessageEvent).data);
-				if (state.count != null) count = state.count;
-				if (state.state === 'ended' || state.state === 'closed') view = 'activity';
-				if (isCloud && (state.activeQuestionId || state.questionId))
-					syncedId = state.activeQuestionId ?? state.questionId;
-			});
-		for (const name of ['snapshot', 'resync', 'poll.tally', 'session.state', 'wordcloud.snapshot'])
-			source.addEventListener(name, refresh);
-		void refresh();
-		return () => {
-			disposed = true;
-			source.close();
-		};
+		if (active?.id) {
+			tally = {};
+			words = [];
+			void refreshResults();
+		}
 	});
 	$effect(() => {
 		if (presenting || data.activityType !== 'wordcloud' || !active) return;
@@ -179,9 +223,7 @@
 		let disposed = false;
 		const refresh = async () => {
 			try {
-				const response = await fetch(
-					`/api/wordcloud/sessions/${data.snapshot.id}/moderation/${id}`
-				);
+				const response = await fetch(`/api/wordcloud/sessions/${live.id}/moderation/${id}`);
 				if (response.ok && !disposed) moderation = (await response.json()).responses;
 			} catch {
 				/* Next poll retries owner-only queue. */
@@ -206,12 +248,12 @@
 			if (!response.ok) throw new Error(result.message ?? 'Moderasi gagal.');
 			moderation = moderation.map((item) => (item.id === id ? { ...item, status } : item));
 		} catch (err) {
-			errorMessage = err instanceof Error ? err.message : 'Moderasi gagal. Coba lagi.';
+			errorMessage = err instanceof Error ? err.message : 'Moderasi gagal.';
 		}
 	}
 </script>
 
-<svelte:head><title>Sesi {data.snapshot.code} — Edu Nara</title></svelte:head>
+<svelte:head><title>Sesi {live.code} — Edu Nara</title></svelte:head>
 <svelte:window
 	onkeydown={key}
 	onpointermove={() => {
@@ -230,16 +272,16 @@
 >
 	<header class="flex flex-wrap items-center justify-between gap-3">
 		<div>
-			<p class="text-sm font-bold text-cyan-300">Edu Nara · {data.snapshot.title}</p>
+			<p class="text-sm font-bold text-cyan-300">Edu Nara · {live.title}</p>
 			<p class="font-mono text-3xl font-black tracking-widest" data-testid="session-code">
-				{data.snapshot.code}
+				{live.code}
 			</p>
 		</div>
 		<p class="text-sm">
 			<span data-testid="participant-count">{count}</span> peserta · {connected
 				? 'Live'
 				: 'Menghubungkan…'} ·
-			{data.snapshot.state}
+			{live.state}
 		</p>
 	</header>
 	<div
@@ -258,7 +300,11 @@
 				use:enhance={({ formData }) => {
 					return async ({ result, update }) => {
 						await update();
-						if (result.type === 'success' && formData.get('state') === 'open') view = 'activity';
+						if (result.type === 'success') {
+							applyLive(data.snapshot);
+							if (formData.get('state') === 'open')
+								view = data.activityType === 'choice' && !guided ? 'leaderboard' : 'activity';
+						}
 					};
 				}}
 			>
@@ -267,14 +313,15 @@
 					class="floating-control"
 					aria-label={control.label}
 					title={control.label}
-					disabled={data.snapshot.state === 'ended' ||
-						data.snapshot.state === control.state ||
-						(data.snapshot.state === 'draft' && control.state === 'closed')}
+					disabled={live.state === 'ended' ||
+						live.state === control.state ||
+						(live.state === 'draft' && control.state === 'closed')}
 					><Icon name={control.icon} /> <span>{control.label}</span></button
 				>
 			</form>
 		{/each}
 		{#if !presenting}<button
+				type="button"
 				class="floating-control"
 				onclick={present}
 				data-testid="fullscreen-button"
@@ -282,6 +329,7 @@
 				title="Mode layar penuh"><Icon name="fullscreen" /> <span>Mode layar penuh</span></button
 			>{/if}
 		<button
+			type="button"
 			class="floating-control"
 			onclick={() => (view = showJoin ? 'activity' : 'join')}
 			aria-label={showJoin ? 'Sembunyikan petunjuk bergabung' : 'Tampilkan petunjuk bergabung'}
@@ -310,19 +358,17 @@
 				<p class="mt-4 text-lg text-slate-300">
 					Kode sesi
 					<span class="ml-2 font-mono text-2xl font-black tracking-[0.3em] text-white"
-						>{data.snapshot.code}</span
+						>{live.code}</span
 					>
 				</p>
 				<p class="mt-2 text-sm text-slate-400">
-					{data.snapshot.title} · {count} peserta sudah bergabung
+					{live.title} · {count} peserta sudah bergabung
 				</p>
 				<div class="mt-6 flex flex-wrap gap-3">
 					<a class="control" href={data.joinUrl} target="_blank" rel="noopener"
 						>Buka halaman bergabung</a
 					>
-					{#if data.snapshot.state !== 'draft'}<button
-							class="control"
-							onclick={() => (view = 'activity')}
+					{#if live.state !== 'draft'}<button class="control" onclick={() => (view = 'activity')}
 							><Icon name="arrow-right" /> Kembali ke aktivitas</button
 						>{/if}
 				</div>
@@ -332,60 +378,71 @@
 			</div>
 		</section>
 	{:else if active}
-		{#if !presenting && data.snapshot.state === 'ended' && data.leaderboard.length}
-			<QuizLeaderboard entries={data.leaderboard} />
-		{/if}
-		<section class="slide" data-testid="presenter-stage">
-			<p class="text-sm text-cyan-300">
-				{data.activityType === 'wordcloud'
-					? `Word Cloud · ${activeIndex + 1} / ${questions.length}`
-					: `Soal ${activeIndex + 1} / ${questions.length}`}
-			</p>
-			<h1 class="my-5 text-3xl font-black leading-tight sm:text-5xl">{active.prompt}</h1>
-			{#if data.activityType === 'wordcloud'}
-				<WordcloudResults {words} presentation={presenting} />
-			{:else}
-				<div class="space-y-5" data-testid="presenter-tally">
-					<p class="text-slate-300">
-						{total} pilihan masuk {timerRunning ? `· ${timerSeconds}s` : ''}
-					</p>
-					{#each choiceOptions as option, i}
-						{@const value = tally[option.id] ?? 0}
-						<div>
-							<div class="flex justify-between gap-3 text-lg font-bold">
-								<span>{String.fromCharCode(65 + i)}. {option.label}</span><span>{value}</span>
+		{#if view === 'leaderboard'}
+			<QuizLeaderboard entries={leaderboard} />
+		{:else}<section class="slide" data-testid="presenter-stage">
+				<p class="text-sm text-cyan-300">
+					{data.activityType === 'wordcloud'
+						? `Word Cloud · ${activeIndex + 1} / ${questions.length}`
+						: `Soal ${activeIndex + 1} / ${questions.length}`}
+				</p>
+				<h1 class="my-5 text-3xl font-black leading-tight sm:text-5xl">{active.prompt}</h1>
+				{#if data.activityType === 'wordcloud'}
+					<WordcloudResults {words} presentation={presenting} />
+				{:else}
+					<div class="space-y-5" data-testid="presenter-tally">
+						<p class="text-slate-300">
+							{total} pilihan masuk {guided && timerUsed
+								? `· ${timerSeconds === 0 ? 'Waktu habis' : timerRunning ? timerSeconds + 's' : 'Dijeda · ' + timerSeconds + 's'}`
+								: ''}
+						</p>
+						{#each choiceOptions as option, i}
+							{@const value = tally[option.id] ?? 0}
+							<div>
+								<div class="flex justify-between gap-3 text-lg font-bold">
+									<span>{String.fromCharCode(65 + i)}. {option.label}</span><span>{value}</span>
+								</div>
+								<div class="mt-2 h-5 rounded-full bg-white/10">
+									<div
+										class="h-full rounded-full bg-cyan-400 transition-[width] duration-500 motion-reduce:transition-none"
+										style:width={`${total ? (value / total) * 100 : 0}%`}
+									></div>
+								</div>
 							</div>
-							<div class="mt-2 h-5 rounded-full bg-white/10">
-								<div
-									class="h-full rounded-full bg-cyan-400 transition-[width] duration-500 motion-reduce:transition-none"
-									style:width={`${total ? (value / total) * 100 : 0}%`}
-								></div>
-							</div>
-						</div>
-					{/each}
-				</div>
-				{#if !presenting}
-					<div class="mt-6 flex flex-wrap gap-3">
-						<button class="control" onclick={() => (timerRunning ? stopTimer() : startTimer())}
-							>{timerRunning ? 'Jeda' : 'Mulai timer'}</button
-						>
-						<form method="POST" use:enhance>
-							<input type="hidden" name="action" value="results" /><input
-								type="hidden"
-								name="questionId"
-								value={active.id}
-							/><input
-								type="hidden"
-								name="showResults"
-								value={String(!active.showResults)}
-							/><button class="control"
-								>{active.showResults ? 'Sembunyikan hasil' : 'Tampilkan hasil ke mahasiswa'}</button
-							>
-						</form>
+						{/each}
 					</div>
+					{#if !presenting || guided}
+						<div class="mt-6 flex flex-wrap gap-3">
+							{#if guided}<button
+									class="control"
+									disabled={live.state !== 'open' || (timerUsed && timerSeconds === 0)}
+									onclick={() => setTimer(!timerRunning)}
+									>{timerRunning ? 'Jeda' : timerUsed ? 'Lanjutkan timer' : 'Mulai timer'}</button
+								>{/if}
+							{#if guided && timerUsed}<button
+									class="control"
+									disabled={live.state !== 'open'}
+									onclick={() => setTimer(true, true)}>Reset timer</button
+								>{/if}
+							<form method="POST" use:enhance>
+								<input type="hidden" name="action" value="results" /><input
+									type="hidden"
+									name="questionId"
+									value={active.id}
+								/><input
+									type="hidden"
+									name="showResults"
+									value={String(!active.showResults)}
+								/><button class="control"
+									>{active.showResults
+										? 'Sembunyikan hasil'
+										: 'Tampilkan hasil ke mahasiswa'}</button
+								>
+							</form>
+						</div>
+					{/if}
 				{/if}
-			{/if}
-		</section>
+			</section>{/if}
 	{:else}<p class="my-10">Belum ada pertanyaan. Kembali ke workspace dan buka editor.</p>{/if}
 	{#if !presenting && !showJoin && data.activityType === 'wordcloud'}
 		<aside class="mt-8 rounded-2xl border border-white/20 p-5" aria-label="Antrean moderasi">
@@ -408,6 +465,11 @@
 				</div>{:else}<p class="mt-4">Belum ada kiriman.</p>{/each}
 		</aside>
 	{/if}
+	{#if !presenting && !showJoin && data.activityType === 'choice'}<button
+			class="control mt-4"
+			onclick={() => (view = view === 'leaderboard' ? 'activity' : 'leaderboard')}
+			>{view === 'leaderboard' ? 'Tinjau soal' : 'Leaderboard'}</button
+		>{/if}
 	{#if !presenting && !showJoin && questions.length > 1}<nav
 			class="mt-6 flex flex-wrap gap-2"
 			aria-label="Daftar soal"
@@ -420,20 +482,34 @@
 				>{/each}
 		</nav>{/if}
 	{#if presenting}
-		<nav class:visible={controls} class="presenter-controls" aria-label="Kontrol presentasi">
+		<nav
+			class:visible={controls}
+			class="presenter-controls"
+			aria-label="Kontrol presentasi"
+			data-testid="presenter-navigation"
+		>
 			<button
-				class="control"
+				class="floating-control"
+				aria-label="Sebelumnya"
+				title="Sebelumnya (←)"
 				disabled={showJoin || switching || activeIndex === 0}
-				onclick={() => select(activeIndex - 1)}
+				onclick={() => select(activeIndex - 1, -1)}
 				><Icon name="arrow-left" /><span>Sebelumnya</span></button
 			>
 			<button
-				class="control"
+				class="floating-control"
+				aria-label="Berikutnya"
+				title="Berikutnya (→)"
 				disabled={showJoin || switching || activeIndex >= questions.length - 1}
-				onclick={() => select(activeIndex + 1)}
+				onclick={() => select(activeIndex + 1, 1)}
 				><Icon name="arrow-right" /><span>Berikutnya</span></button
 			>
-			<button class="control" onclick={exit} data-testid="exit-fullscreen"
+			<button
+				class="floating-control"
+				aria-label="Keluar presentasi (Esc)"
+				title="Keluar presentasi (Esc)"
+				onclick={exit}
+				data-testid="exit-fullscreen"
 				><Icon name="close" /><span>Keluar presentasi (Esc)</span></button
 			>
 		</nav>
@@ -462,8 +538,8 @@
 		flex-direction: column;
 		gap: clamp(0.5rem, 2vh, 1.25rem);
 		padding: clamp(0.75rem, 2vw, 2rem);
-		padding-bottom: 9rem;
-		overflow: hidden;
+		padding-bottom: 12rem;
+		overflow: auto;
 	}
 	.slide {
 		margin-top: 2rem;
@@ -522,7 +598,11 @@
 		width: max-content;
 		border-radius: 999px;
 		padding: 0.3rem;
-		background: #e2e8f0;
+		background: rgba(241, 245, 249, 0.92);
+		border: 1px solid rgba(15, 23, 42, 0.12);
+		backdrop-filter: blur(10px);
+		box-shadow: 0 12px 30px rgba(2, 6, 23, 0.55);
+		z-index: 61;
 		opacity: 0;
 		pointer-events: none;
 	}
@@ -693,10 +773,6 @@
 		.joining-panel .mt-6 {
 			margin-top: 0.75rem;
 			justify-content: center;
-		}
-		.presenter-controls .control {
-			padding: 0.5rem;
-			font-size: 0.75rem;
 		}
 	}
 	@media (prefers-reduced-motion: reduce) {

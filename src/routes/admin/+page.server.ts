@@ -43,7 +43,13 @@ export const actions = {
 		let id;
 		try {
 			const data = await body(event);
-			id = launchSession(database(), owner, String(data.activityId)).id;
+			id = launchSession(
+				database(),
+				owner,
+				String(data.activityId),
+				undefined,
+				data.quizMode ?? 'guided'
+			).id;
 		} catch (err) {
 			return fail(400, { message: message(err) });
 		}

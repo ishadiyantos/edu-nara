@@ -35,6 +35,7 @@ test('quiz supports a question bank, multiple correct answers, and a game-show s
 	await expect(page.getByText('Pertanyaan 2 tersimpan.')).toBeVisible();
 	await expect(page.getByText('2 + 2 berapa?')).toBeVisible();
 
+	await page.getByLabel('Mode kuis').selectOption('self_paced');
 	const popupPromise = page.context().waitForEvent('page');
 	await page.getByRole('button', { name: /Luncurkan kuis/ }).click();
 	const presenter = await popupPromise;
@@ -80,6 +81,7 @@ test('quiz supports a question bank, multiple correct answers, and a game-show s
 
 		await page.keyboard.press('Escape');
 		// Dosen membuka hasil untuk soal pertama; mahasiswa refresh dan harus melihat skor + kunci.
+		await page.getByRole('button', { name: 'Soal 1: Apa ibu kota Indonesia?' }).click();
 		await page.getByRole('button', { name: 'Tampilkan hasil ke mahasiswa' }).click();
 		await expect(student.getByTestId('quiz-finished')).toBeVisible();
 		await student.reload();

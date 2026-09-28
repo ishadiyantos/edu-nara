@@ -218,6 +218,16 @@
 					</p>
 					<form method="POST" action="?/launch" target="_blank" rel="noopener" class="mt-5">
 						<input type="hidden" name="activityId" value={activity.id} />
+						{#if activity.type === 'choice'}<label
+								class="mb-3 grid gap-1 text-xs font-bold text-white/80"
+								>Mode kuis<select
+									name="quizMode"
+									class="rounded-xl border border-white/20 bg-slate-800 px-3 py-2 text-sm text-white"
+									><option value="guided">Terpandu presenter</option><option value="self_paced"
+										>Mandiri tanpa timer</option
+									></select
+								></label
+							>{/if}
 						{#if activity.type === 'choice' || activity.type === 'wordcloud'}
 							<div class="grid gap-2 sm:grid-cols-2">
 								<a

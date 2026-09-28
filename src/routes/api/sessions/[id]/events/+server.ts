@@ -5,7 +5,7 @@ import { authenticate } from '$lib/server/auth';
 import { events } from '$lib/server/events';
 import { limits } from '$lib/server/security';
 import { activities, sessions } from '$lib/server/db/schema';
-import { choiceTally, getChoiceQuestionByActivity } from '$lib/server/poll/choice';
+import { choiceTally, getChoiceQuestion } from '$lib/server/poll/choice';
 import { eq } from 'drizzle-orm';
 import { getWordcloudQuestionsByActivity, wordcloudSnapshot } from '$lib/server/poll/wordcloud';
 export const GET: import('./$types').RequestHandler = (event) => {
@@ -30,9 +30,9 @@ export const GET: import('./$types').RequestHandler = (event) => {
 		.get();
 	if (!joined) error(404, 'Sesi tidak ditemukan.');
 	const isOwner = !!admin && joined.activity.ownerId === admin.id;
-	const question = getChoiceQuestionByActivity(store, joined.session.activityId);
 	const streamSnapshot = () => {
 		const base = snapshot(store, id);
+		const question = base.activeQuestionId ? getChoiceQuestion(store, base.activeQuestionId) : null;
 		if (joined.activity.type === 'wordcloud')
 			return {
 				...base,

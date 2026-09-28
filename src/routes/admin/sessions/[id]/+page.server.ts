@@ -1,7 +1,7 @@
 import { error, fail } from '@sveltejs/kit';
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { database } from '$lib/server/db/client';
-import { activities, sessions } from '$lib/server/db/schema';
+import { activities, pollQuestions } from '$lib/server/db/schema';
 import { ownedSession, snapshot, changeState } from '$lib/server/sessions';
 import { body, message, requireAdmin } from '$lib/server/http';
 import { events } from '$lib/server/events';
@@ -50,6 +50,7 @@ export const load: import('./$types').PageServerLoad = (event) => {
 		return {
 			snapshot: current,
 			activityType: activity.type,
+			quizMode: current.quizMode,
 			questions: questions.map(({ id, prompt, position, timeLimit, showResults, options }) => ({
 				id,
 				prompt,
@@ -61,7 +62,7 @@ export const load: import('./$types').PageServerLoad = (event) => {
 			words: [],
 			moderation: [],
 			joinUrl: `${event.url.origin}/join?code=${current.code}`,
-			leaderboard: current.state === 'ended' ? quizLeaderboard(store, session.id) : []
+			leaderboard: quizLeaderboard(store, session.id)
 		};
 	} catch {
 		error(404, 'Sesi tidak ditemukan.');
@@ -74,37 +75,85 @@ export const actions = {
 		try {
 			const data = await body(event);
 			const store = database();
+			const session = ownedSession(store, owner, event.params.id);
+			const activity = store.db
+				.select()
+				.from(activities)
+				.where(eq(activities.id, session.activityId))
+				.get()!;
 			if (data.action === 'results') {
 				const questionId = String(data.questionId);
-				const activity = store.db
-					.select({ type: activities.type })
-					.from(activities)
-					.innerJoin(sessions, eq(sessions.activityId, activities.id))
-					.where(and(eq(sessions.id, event.params.id), eq(activities.ownerId, owner)))
+				const question = store.db
+					.select()
+					.from(pollQuestions)
+					.where(eq(pollQuestions.id, questionId))
 					.get();
+				if (!question || question.activityId !== session.activityId)
+					throw new Error('Pertanyaan bukan milik sesi ini.');
+				if (!['true', 'false'].includes(String(data.showResults)))
+					throw new Error('Status hasil tidak valid.');
 				const row =
 					activity?.type === 'wordcloud'
 						? setWordcloudResults(store, owner, questionId, String(data.showResults) === 'true')
 						: setChoiceResults(store, owner, questionId, String(data.showResults) === 'true');
-				const session = ownedSession(store, owner, event.params.id);
 				if (!row.showResults) events.clear(session.id);
 				return {
 					ok: true,
 					lastEventId: events.publish(session.id, 'session.state', {
+						...snapshot(store, session.id),
+						questionId,
 						showResults: row.showResults
 					}),
 					message: row.showResults ? 'Hasil dibuka.' : 'Hasil disembunyikan.'
 				};
 			}
 			if (data.action === 'question') {
+				const direction = Number(data.direction);
+				if (activity.type === 'choice') {
+					const { advanceActiveChoiceQuestion, setActiveChoiceQuestion } =
+						await import('$lib/server/poll/choice');
+					const questionId =
+						data.questionId != null && data.questionId !== ''
+							? setActiveChoiceQuestion(store, owner, event.params.id, String(data.questionId))
+							: advanceActiveChoiceQuestion(store, owner, event.params.id, direction);
+					const row = ownedSession(store, owner, event.params.id);
+					const lastEventId = events.publish(row.id, 'session.question', snapshot(store, row.id));
+					return {
+						ok: true,
+						lastEventId,
+						message: questionId ? undefined : 'Tidak ada pertanyaan lain.'
+					};
+				}
 				const { advanceActiveQuestion, setActiveQuestion } =
 					await import('$lib/server/poll/wordcloud');
-				const direction = Number(data.direction);
 				const questionId =
 					data.questionId != null && data.questionId !== ''
 						? setActiveQuestion(store, owner, event.params.id, String(data.questionId))
 						: advanceActiveQuestion(store, owner, event.params.id, direction);
 				return { ok: true, message: questionId ? undefined : 'Tidak ada pertanyaan lain.' };
+			}
+			if (data.action === 'timer') {
+				const { setChoiceTimer } = await import('$lib/server/poll/choice');
+				if (
+					!['true', 'false'].includes(String(data.running)) ||
+					(data.reset != null && !['true', 'false'].includes(String(data.reset)))
+				)
+					throw new Error('Timer tidak valid.');
+				const row = setChoiceTimer(store, owner, event.params.id, {
+					questionId: String(data.questionId ?? ''),
+					running: String(data.running) === 'true',
+					duration: data.duration ? Number(data.duration) : undefined,
+					reset: String(data.reset) === 'true'
+				});
+				return {
+					ok: true,
+					timer: row,
+					lastEventId: events.publish(
+						event.params.id,
+						'session.state',
+						snapshot(store, event.params.id)
+					)
+				};
 			}
 			if (data.action === 'moderate') {
 				const { moderateWordcloudResponse } = await import('$lib/server/poll/wordcloud');
@@ -119,7 +168,7 @@ export const actions = {
 			const row = changeState(store, owner, event.params.id, data.state);
 			return {
 				ok: true,
-				lastEventId: events.publish(row.id, 'session.state', { state: row.state })
+				lastEventId: events.publish(row.id, 'session.state', snapshot(store, row.id))
 			};
 		} catch (err) {
 			return fail(400, { message: message(err) });

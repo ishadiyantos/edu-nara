@@ -33,6 +33,12 @@ export const sessions = sqliteTable('live_sessions', {
 		.notNull()
 		.default('draft'),
 	activeQuestionId: text('active_question_id'),
+	quizMode: text('quiz_mode', { enum: ['guided', 'self_paced'] })
+		.notNull()
+		.default('self_paced'),
+	timerDeadline: integer('timer_deadline'),
+	// Milliseconds remaining when paused; zero with no deadline means untimed.
+	timerDuration: integer('timer_duration').notNull().default(0),
 	createdAt: integer('created_at').notNull(),
 	endedAt: integer('ended_at')
 });

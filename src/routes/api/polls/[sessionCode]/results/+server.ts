@@ -5,6 +5,7 @@ import { sessions, activities } from '$lib/server/db/schema';
 import { sessionByCode, authorizeSession } from '$lib/server/sessions';
 import {
 	choiceTally,
+	quizLeaderboard,
 	getChoiceQuestionByActivity,
 	getChoiceQuestionsByActivity
 } from '$lib/server/poll/choice';
@@ -17,6 +18,18 @@ export const GET: import('./$types').RequestHandler = (event) => {
 	const admin = authenticate(store, event.cookies.get('edu_admin'));
 	if (!authorizeSession(store, session.id, admin?.id, token))
 		return json({ ok: false }, { status: 401 });
+	if (event.url.searchParams.get('leaderboard') === 'true') {
+		const owner = store.db
+			.select()
+			.from(activities)
+			.where(eq(activities.id, session.activityId))
+			.get();
+		if (!admin || owner?.ownerId !== admin.id) return json({ ok: false }, { status: 403 });
+		return json(
+			{ entries: quizLeaderboard(store, session.id) },
+			{ headers: { 'Cache-Control': 'no-store' } }
+		);
+	}
 	const questionId = event.url.searchParams.get('questionId');
 	const question = questionId
 		? getChoiceQuestionsByActivity(store, session.activityId).find((q) => q.id === questionId)

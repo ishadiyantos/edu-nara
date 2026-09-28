@@ -207,10 +207,17 @@
 						target="_blank"
 						rel="noopener"
 					>
-						<input type="hidden" name="activityId" value={data.activity.id} /><Button
-							type="submit"
-							variant="ghost"
-							block>Luncurkan kuis <span aria-hidden="true">⚡</span></Button
+						<input type="hidden" name="activityId" value={data.activity.id} /><label
+							class="mb-3 grid gap-1 text-sm font-bold text-primary"
+							>Mode kuis<select
+								name="quizMode"
+								class="rounded-xl border border-border bg-white px-3 py-2 text-sm"
+								><option value="guided">Terpandu presenter</option><option value="self_paced"
+									>Mandiri tanpa timer</option
+								></select
+							></label
+						><Button type="submit" variant="ghost" block
+							>Luncurkan kuis <span aria-hidden="true">⚡</span></Button
 						>
 					</form>{/if}
 			</section>

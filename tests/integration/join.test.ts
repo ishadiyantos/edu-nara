@@ -71,7 +71,12 @@ test('join token hashed, rejoin idempotent, cookie scoped, counts aggregate, clo
 		'code',
 		'count',
 		'id',
+		'quizMode',
+		'serverNow',
 		'state',
+		'timerDeadline',
+		'timerDuration',
+		'timerRunning',
 		'title'
 	]);
 });
