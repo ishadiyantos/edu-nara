@@ -50,12 +50,13 @@
 
 <section
 	class:presentation
-	class="leaderboard mt-8 overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#111827] via-[#172554] to-[#312e81] p-5 text-white shadow-2xl sm:p-8"
+	class="leaderboard mt-8 overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#050816] via-[#172554] to-[#581c87] p-5 text-white shadow-2xl sm:p-8"
 	data-testid="quiz-leaderboard"
 >
+	<div class="leaderboard-glow" aria-hidden="true"></div>
 	<div class="text-center">
 		<p class="text-xs font-black uppercase tracking-[0.25em] text-amber-300">Quiz final</p>
-		<h2 class="mt-2 text-3xl font-black sm:text-4xl">Juara kelas</h2>
+		<h2 class="mt-2 text-3xl font-black sm:text-5xl">Juara kelas</h2>
 		<p class="mt-2 text-sm text-white/60">Papan peringkat lengkap sesi ini</p>
 	</div>
 	{#if entries.length}
@@ -73,16 +74,19 @@
 					{@const entry = entries[podiumIndex]}
 					{#if entry}
 						<div
-							class="flex min-w-0 flex-col items-center text-center"
+							class="podium-player flex min-w-0 flex-col items-center text-center"
 							class:order-first={podiumIndex === 1}
+							data-rank={entry.rank}
 						>
-							<span class="text-3xl sm:text-5xl" aria-hidden="true">{medals[podiumIndex]}</span>
+							<span class="podium-medal text-3xl sm:text-6xl" aria-hidden="true"
+								>{medals[podiumIndex]}</span
+							>
 							<p class="mt-2 w-full truncate text-sm font-black sm:text-lg">{entry.displayName}</p>
 							<p class="text-xs font-bold text-amber-200 sm:text-sm">
 								{entry.score.toLocaleString('id-ID')} poin
 							</p>
 							<div
-								class="mt-3 grid w-full place-items-center rounded-t-2xl border border-white/10 bg-white/10 font-black backdrop-blur {podiumIndex ===
+								class="podium-block mt-3 grid w-full place-items-center rounded-t-2xl border border-white/10 bg-white/10 font-black backdrop-blur {podiumIndex ===
 								0
 									? 'h-24 sm:h-32 text-3xl'
 									: podiumIndex === 1
@@ -147,11 +151,84 @@
 		max-height: none;
 	}
 	.quiz-leaderboard-scroll {
+		position: relative;
 		min-height: 0;
 		width: 100%;
 		flex: 1;
 		overflow-y: auto;
+		overflow-x: hidden;
 		overscroll-behavior: contain;
 		padding-bottom: 0.5rem;
+	}
+	.leaderboard {
+		position: relative;
+		isolation: isolate;
+		border: 1px solid rgb(168 85 247 / 0.28);
+		box-shadow:
+			0 24px 90px rgb(2 6 23 / 0.55),
+			inset 0 1px 0 rgb(255 255 255 / 0.12);
+	}
+	.leaderboard-glow {
+		position: absolute;
+		inset: -20% 15% auto;
+		height: 20rem;
+		z-index: -1;
+		border-radius: 999px;
+		background: radial-gradient(circle, rgb(168 85 247 / 0.25), transparent 68%);
+		filter: blur(12px);
+		animation: leaderboardGlow 3s ease-in-out infinite alternate;
+	}
+	.podium-player[data-rank='1'] .podium-medal {
+		filter: drop-shadow(0 0 18px rgb(251 191 36 / 0.85));
+		animation: championFloat 1.6s ease-in-out infinite alternate;
+	}
+	.podium-player[data-rank='2'] .podium-block {
+		background: linear-gradient(rgb(148 163 184 / 0.25), rgb(255 255 255 / 0.06));
+	}
+	.podium-player[data-rank='1'] .podium-block {
+		border-color: rgb(251 191 36 / 0.55);
+		background: linear-gradient(rgb(251 191 36 / 0.35), rgb(168 85 247 / 0.16));
+		box-shadow: 0 0 28px rgb(251 191 36 / 0.2);
+	}
+	.podium-player[data-rank='3'] .podium-block {
+		background: linear-gradient(rgb(180 83 9 / 0.3), rgb(255 255 255 / 0.06));
+	}
+	@keyframes leaderboardGlow {
+		from {
+			transform: scale(0.92);
+			opacity: 0.6;
+		}
+		to {
+			transform: scale(1.08);
+			opacity: 1;
+		}
+	}
+	@keyframes championFloat {
+		to {
+			transform: translateY(-6px) scale(1.06);
+		}
+	}
+	@media (max-width: 640px) {
+		.leaderboard {
+			margin-top: 1rem;
+			border-radius: 1.35rem;
+			padding: 1rem;
+		}
+		.quiz-leaderboard-scroll {
+			max-height: 58dvh;
+		}
+		.leaderboard table {
+			font-size: 0.78rem;
+		}
+		.leaderboard th,
+		.leaderboard td {
+			padding: 0.65rem 0.55rem;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.leaderboard-glow,
+		.podium-player[data-rank='1'] .podium-medal {
+			animation: none;
+		}
 	}
 </style>

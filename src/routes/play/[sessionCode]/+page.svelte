@@ -9,7 +9,8 @@
 <svelte:head><title>{data.snapshot.title} — Edu Nara</title></svelte:head>
 
 <main
-	class="min-h-dvh overflow-hidden bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#0f172a] py-6 sm:py-10 text-white relative"
+	class="relative min-h-dvh overflow-x-hidden bg-[#050816] py-4 text-white sm:py-10"
+	style="padding-top: max(1rem, env(safe-area-inset-top)); padding-bottom: max(1rem, env(safe-area-inset-bottom));"
 >
 	<!-- Dynamic game arena background glow elements -->
 	<div
@@ -25,21 +26,34 @@
 		aria-hidden="true"
 	></div>
 
-	<Container size="narrow" class="relative z-10">
+	<div
+		class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_12%,rgba(34,211,238,0.32),transparent_28%),radial-gradient(circle_at_88%_18%,rgba(244,114,182,0.24),transparent_30%),linear-gradient(135deg,rgba(15,23,42,0.2),rgba(49,46,129,0.72))]"
+		aria-hidden="true"
+	></div>
+	<div
+		class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-300 via-fuchsia-400 to-amber-300"
+		aria-hidden="true"
+	></div>
+
+	<Container size="app" class="relative z-10 max-w-5xl">
 		<a
-			class="mb-6 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-black text-white/80 backdrop-blur-md transition hover:bg-white/20 hover:text-white border border-white/10 shadow-sm"
+			class="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-white/10 px-4 py-2 text-sm font-black text-white/80 shadow-[0_0_24px_rgba(34,211,238,0.18)] backdrop-blur-md transition hover:bg-white/20 hover:text-white sm:mb-6"
 			href="/"
 		>
 			← Exit session <span class="sr-only">Keluar dari sesi</span>
 		</a>
 
 		{#if data.snapshot.state === 'open' && data.questions.length}
-			<div class="mb-5 flex items-end justify-between gap-4">
+			<div class="mb-4 flex flex-wrap items-end justify-between gap-3 sm:mb-5">
 				<div>
-					<p class="text-xs font-black uppercase tracking-[0.22em] text-[#38bdf8]">
+					<p
+						class="text-xs font-black uppercase tracking-[0.22em] text-[#67e8f9] drop-shadow-[0_0_12px_rgba(34,211,238,0.55)]"
+					>
 						{data.snapshot.code} · SESSION LIVE <span class="sr-only">sesi berlangsung</span>
 					</p>
-					<h1 class="mt-2 text-2xl font-black tracking-tight text-white sm:text-3xl drop-shadow-sm">
+					<h1
+						class="mt-2 text-2xl font-black tracking-[-0.04em] text-white drop-shadow-[0_0_24px_rgba(168,85,247,0.32)] sm:text-4xl"
+					>
 						{data.snapshot.title}
 					</h1>
 				</div>

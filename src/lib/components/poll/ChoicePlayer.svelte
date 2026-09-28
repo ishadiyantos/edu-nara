@@ -64,6 +64,20 @@
 	const blocked = $derived(
 		live.state !== 'open' || (timed && (live.timerDeadline == null || remaining === 0))
 	);
+	const questionProgress = $derived(
+		questions.length ? ((question?.position ?? current) + 1) / questions.length : 0
+	);
+	const timerTotal = $derived(Math.max(question?.timeLimit ?? live.timerDuration ?? 30, 1));
+	const timerProgress = $derived(timed ? Math.max(0, Math.min(1, remaining / timerTotal)) : 1);
+	const timerText = $derived(
+		!timed
+			? 'Tanpa timer · menunggu dosen memulai timer'
+			: remaining === 0
+				? 'Waktu habis'
+				: live.timerDeadline == null
+					? `Timer dijeda · ${remaining}s`
+					: `${remaining}s`
+	);
 	const draftKey = (id: string) => `edu_mc_${sessionCode}_${id}`;
 	function applyLive(value: Partial<Snapshot>) {
 		live = { ...live, ...value };
@@ -161,37 +175,58 @@
 </script>
 
 <section class="quiz" data-testid="choice-player">
-	<CelebrationBurst active={celebration} variant="neutral" label="Jawaban tersimpan" />
-	<header>
-		<p>{guided ? 'Terpandu presenter' : 'Mandiri · tanpa timer'}</p>
-		<span data-testid="connection">{connected ? 'Terhubung' : 'Menghubungkan…'}</span>
+	<CelebrationBurst
+		active={celebration}
+		variant="neutral"
+		label="Jawaban tersimpan"
+		emojis={['✨', '⚡', '🌟', '🎉', '💫', '🔥']}
+	/>
+	<div class="arena-lights" aria-hidden="true"></div>
+	<header class="hud">
+		<div>
+			<p class="mode-chip">{guided ? 'Terpandu presenter' : 'Mode mandiri'}</p>
+			<p class="status" data-testid="session-state">
+				{live.state === 'ended'
+					? 'Sesi selesai'
+					: live.state === 'closed'
+						? 'Sesi ditutup'
+						: live.state === 'draft'
+							? 'Menunggu dosen membuka sesi'
+							: 'Sesi terbuka'}
+			</p>
+		</div>
+		<span class="connection" data-testid="connection" data-live={connected}
+			><span aria-hidden="true"></span>{connected ? 'Terhubung' : 'Menghubungkan…'}</span
+		>
 	</header>
-	<p class="status" data-testid="session-state">
-		{live.state === 'ended'
-			? 'Sesi selesai'
-			: live.state === 'closed'
-				? 'Sesi ditutup'
-				: live.state === 'draft'
-					? 'Menunggu dosen membuka sesi'
-					: 'Sesi terbuka'}
-	</p>
-	{#if finished && !guided}<div data-testid="quiz-finished">
+	<div class="progress" aria-hidden="true">
+		<div style:width={`${questionProgress * 100}%`}></div>
+	</div>
+
+	{#if finished && !guided}
+		<div class="finish-card" data-testid="quiz-finished">
+			<p class="mode-chip">Final</p>
 			<h2>Quiz selesai</h2>
 			<p>Jawaban Anda sudah tersimpan.</p>
 			<button onclick={() => (finished = false)}>Tinjau jawaban</button>
 		</div>
 	{:else if question}
-		<p class="round">Ronde {question.position + 1} dari {questions.length}</p>
+		<div class="question-topline">
+			<p class="round">Ronde {question.position + 1} dari {questions.length}</p>
+			{#if guided}
+				<div
+					class="timer-ring"
+					data-testid="quiz-timer"
+					data-urgent={timed && remaining > 0 && remaining <= 5}
+					data-expired={timed && remaining === 0}
+					style:--timer-progress={timerProgress}
+				>
+					<span aria-hidden="true">{timed ? remaining : '∞'}</span>
+					<b>{timerText}</b>
+				</div>
+			{/if}
+		</div>
 		<h2>{question.prompt}</h2>
-		{#if guided}<p data-testid="quiz-timer">
-				{!timed
-					? 'Tanpa timer · menunggu dosen memulai timer'
-					: remaining === 0
-						? 'Waktu habis'
-						: live.timerDeadline == null
-							? `Timer dijeda · ${remaining}s`
-							: `${remaining}s`}
-			</p>{/if}
 		<div class="choices" role="group" aria-label="Pilihan jawaban; pilih semua jawaban yang benar">
 			{#each question.options as option}
 				<button
@@ -200,126 +235,384 @@
 					aria-pressed={selected.includes(option.id)}
 					disabled={!!answer || loading || blocked}
 					onclick={() => toggle(option.id)}
-					><span>{String.fromCharCode(65 + option.position)}</span>{option.label}</button
 				>
+					<span class="option-letter">{String.fromCharCode(65 + option.position)}</span>
+					<span class="option-label">{option.label}</span>
+					<span class="option-spark" aria-hidden="true">✦</span>
+				</button>
 			{/each}
 		</div>
-		{#if answer}<p class="status" role="status">Jawaban tersimpan.</p>
-		{:else}<button class="submit" disabled={!selected.length || loading || blocked} onclick={submit}
-				>{loading ? 'Mengirim…' : 'Kirim jawaban'}</button
-			>{/if}
-		{#if error}<p role="alert">{error}</p>{/if}
-		{#if !guided}<nav aria-label="Navigasi soal">
-				<button disabled={current === 0 || loading} onclick={() => current--}>Sebelumnya</button
-				><button
+		{#if answer}
+			<p class="answer-saved" role="status">Jawaban tersimpan.</p>
+		{:else}
+			<button class="submit" disabled={!selected.length || loading || blocked} onclick={submit}
+				>{loading ? 'Mengirim…' : 'Kirim jawaban'}<span aria-hidden="true">↗</span></button
+			>
+		{/if}
+		{#if error}<p class="error" role="alert">{error}</p>{/if}
+		{#if !guided}
+			<nav aria-label="Navigasi soal">
+				<button disabled={current === 0 || loading} onclick={() => current--}>Sebelumnya</button>
+				<button
 					disabled={loading}
 					onclick={() => (current < questions.length - 1 ? current++ : (finished = true))}
 					>{current < questions.length - 1 ? 'Pertanyaan berikutnya' : 'Selesai'}</button
 				>
-			</nav>{/if}
-	{:else}<h2>Menunggu dosen membuka soal.</h2>{/if}
+			</nav>
+		{/if}
+	{:else}
+		<div class="finish-card waiting">
+			<p class="mode-chip">Stand by</p>
+			<h2>Menunggu dosen membuka soal.</h2>
+			<p>Siapkan layar. Pertanyaan akan muncul otomatis.</p>
+		</div>
+	{/if}
 </section>
 
 <style>
 	.quiz {
-		border: 1px solid rgb(255 255 255 / 0.15);
+		position: relative;
+		overflow: hidden;
+		border: 1px solid rgb(34 211 238 / 0.28);
 		border-radius: 2rem;
-		background: #111827;
-		padding: clamp(1.25rem, 5vw, 2rem);
+		background:
+			linear-gradient(135deg, rgb(15 23 42 / 0.82), rgb(49 46 129 / 0.72)),
+			radial-gradient(circle at 12% 18%, rgb(34 211 238 / 0.28), transparent 34%),
+			radial-gradient(circle at 88% 8%, rgb(244 114 182 / 0.22), transparent 30%);
+		padding: clamp(1rem, 4vw, 2rem);
 		color: white;
+		box-shadow:
+			0 24px 90px rgb(2 6 23 / 0.5),
+			inset 0 1px 0 rgb(255 255 255 / 0.12);
+		isolation: isolate;
 	}
-	header,
-	nav {
+	.arena-lights {
+		position: absolute;
+		inset: -20%;
+		z-index: -1;
+		background:
+			conic-gradient(from 120deg, transparent, rgb(34 211 238 / 0.16), transparent 35%),
+			repeating-linear-gradient(115deg, rgb(255 255 255 / 0.06) 0 1px, transparent 1px 46px);
+		animation: arenaSpin 12s linear infinite;
+	}
+	.hud,
+	nav,
+	.question-topline {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.75rem;
 	}
-	header,
+	.mode-chip,
 	.round {
-		color: #7dd3fc;
+		margin: 0;
+		font-size: 0.72rem;
+		font-weight: 950;
+		letter-spacing: 0.22em;
+		text-transform: uppercase;
+		color: #67e8f9;
+		text-shadow: 0 0 14px rgb(34 211 238 / 0.55);
+	}
+	.status {
+		margin-top: 0.35rem;
+		color: rgb(226 232 240 / 0.82);
 		font-weight: 800;
 	}
+	.connection {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		border: 1px solid rgb(255 255 255 / 0.16);
+		border-radius: 999px;
+		background: rgb(255 255 255 / 0.1);
+		padding: 0.55rem 0.8rem;
+		font-size: 0.76rem;
+		font-weight: 950;
+		color: rgb(255 255 255 / 0.78);
+		backdrop-filter: blur(12px);
+	}
+	.connection span {
+		height: 0.6rem;
+		width: 0.6rem;
+		border-radius: 999px;
+		background: #fb7185;
+		box-shadow: 0 0 14px rgb(251 113 133 / 0.75);
+	}
+	.connection[data-live='true'] span {
+		background: #34d399;
+		box-shadow: 0 0 14px rgb(52 211 153 / 0.8);
+	}
+	.progress {
+		margin: 1rem 0 1.25rem;
+		height: 0.55rem;
+		overflow: hidden;
+		border-radius: 999px;
+		background: rgb(15 23 42 / 0.7);
+	}
+	.progress div {
+		height: 100%;
+		border-radius: inherit;
+		background: linear-gradient(90deg, #22d3ee, #a855f7, #fbbf24);
+		box-shadow: 0 0 22px rgb(34 211 238 / 0.5);
+		transition: width 300ms ease;
+	}
 	h2 {
-		margin: 1rem 0 1.5rem;
-		font-size: clamp(1.5rem, 5vw, 2.25rem);
-		font-weight: 900;
-		line-height: 1.2;
+		margin: 1rem 0 1.3rem;
+		font-size: clamp(1.85rem, 7vw, 3.4rem);
+		font-weight: 1000;
+		line-height: 0.98;
+		letter-spacing: -0.055em;
+		text-wrap: balance;
 		overflow-wrap: anywhere;
+		text-shadow: 0 0 30px rgb(168 85 247 / 0.36);
+		animation: questionPop 520ms cubic-bezier(0.2, 0.9, 0.2, 1);
+	}
+	.timer-ring {
+		--timer-progress: 1;
+		display: inline-grid;
+		grid-template-columns: auto 1fr;
+		align-items: center;
+		gap: 0.7rem;
+		max-width: 100%;
+		border: 1px solid rgb(251 191 36 / 0.35);
+		border-radius: 999px;
+		background: rgb(2 6 23 / 0.54);
+		padding: 0.45rem 0.8rem 0.45rem 0.45rem;
+		box-shadow: 0 0 24px rgb(251 191 36 / 0.2);
+	}
+	.timer-ring > span {
+		display: grid;
+		height: 3rem;
+		width: 3rem;
+		place-items: center;
+		border-radius: 999px;
+		background:
+			conic-gradient(#fbbf24 calc(var(--timer-progress) * 1turn), rgb(255 255 255 / 0.1) 0), #111827;
+		color: #fff7ed;
+		font-family:
+			ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+		font-size: 1.35rem;
+		font-weight: 1000;
+		line-height: 1;
+	}
+	.timer-ring b {
+		min-width: 0;
+		font-size: 0.78rem;
+		font-weight: 1000;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: #fde68a;
+	}
+	.timer-ring[data-urgent='true'] {
+		animation: dangerPulse 700ms ease-in-out infinite alternate;
+	}
+	.timer-ring[data-expired='true'] {
+		border-color: rgb(251 113 133 / 0.6);
+		box-shadow: 0 0 28px rgb(251 113 133 / 0.28);
 	}
 	.choices {
 		display: grid;
-		gap: 0.75rem;
+		gap: 0.85rem;
 		margin-top: 1rem;
 	}
 	button {
 		min-height: 48px;
-		border: 1px solid rgb(255 255 255 / 0.3);
+		border: 0;
 		border-radius: 1rem;
 		padding: 0.9rem 1rem;
-		color: white;
-		font-weight: 800;
-		text-align: left;
-		background: #1e293b;
+		font-weight: 900;
 	}
 	.choices button {
-		display: flex;
+		position: relative;
+		display: grid;
+		grid-template-columns: auto 1fr auto;
 		align-items: center;
-		gap: 0.75rem;
-		background: #4338ca;
-		transition: transform 0.15s ease, box-shadow 0.15s ease;
-	}
-	.choices button:hover:not(:disabled) {
-		transform: translateY(-2px);
-		box-shadow: 0 4px 14px rgb(0 0 0 / 0.35);
+		gap: 0.85rem;
+		min-height: 4.25rem;
+		overflow: hidden;
+		border: 1px solid rgb(255 255 255 / 0.16);
+		background: linear-gradient(135deg, rgb(67 56 202 / 0.9), rgb(14 165 233 / 0.72));
+		color: white;
+		text-align: left;
+		box-shadow: 0 14px 34px rgb(2 6 23 / 0.28);
+		transition:
+			transform 180ms ease,
+			box-shadow 180ms ease,
+			border-color 180ms ease;
+		animation: cardIn 420ms cubic-bezier(0.2, 0.85, 0.2, 1) both;
 	}
 	.choices button:nth-child(2n) {
-		background: #0369a1;
+		background: linear-gradient(135deg, rgb(168 85 247 / 0.88), rgb(236 72 153 / 0.74));
+	}
+	.choices button:nth-child(3n) {
+		background: linear-gradient(135deg, rgb(8 145 178 / 0.9), rgb(20 184 166 / 0.72));
+	}
+	.choices button::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(100deg, transparent, rgb(255 255 255 / 0.22), transparent);
+		transform: translateX(-120%);
+	}
+	.choices button:hover:not(:disabled),
+	.choices button:focus-visible:not(:disabled) {
+		transform: translateY(-3px) scale(1.01);
+		border-color: rgb(251 191 36 / 0.55);
+		box-shadow: 0 18px 42px rgb(34 211 238 / 0.2);
+	}
+	.choices button:hover:not(:disabled)::before,
+	.choices button:focus-visible:not(:disabled)::before {
+		animation: shine 850ms ease;
 	}
 	.choices button.selected {
-		outline: 3px solid #fbbf24;
-		outline-offset: 2px;
-		box-shadow: 0 0 16px rgb(251 191 36 / 0.4);
+		border-color: #fbbf24;
+		box-shadow:
+			0 0 0 3px rgb(251 191 36 / 0.2),
+			0 0 34px rgb(251 191 36 / 0.46),
+			0 18px 42px rgb(2 6 23 / 0.35);
+		transform: translateY(-2px) scale(1.015);
 	}
-	@media (prefers-reduced-motion: reduce) {
-		.choices button {
-			transition: none;
-		}
-		.choices button:hover:not(:disabled) {
-			transform: none;
-		}
-	}
-	button:disabled {
-		opacity: 0.65;
-		cursor: not-allowed;
-	}
-	.choices span {
-		display: inline-grid;
-		min-width: 2rem;
-		min-height: 2rem;
+	.option-letter {
+		display: grid;
+		min-width: 2.7rem;
+		min-height: 2.7rem;
 		place-items: center;
-		border-radius: 0.5rem;
-		background: rgb(0 0 0 / 0.2);
+		border-radius: 0.9rem;
+		background: rgb(2 6 23 / 0.34);
+		box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18);
+		font-size: 1.15rem;
+		font-weight: 1000;
+	}
+	.option-label {
+		min-width: 0;
+		font-size: clamp(1rem, 4.2vw, 1.22rem);
+		overflow-wrap: anywhere;
+	}
+	.option-spark {
+		color: #fde68a;
+		opacity: 0.85;
+		filter: drop-shadow(0 0 10px rgb(251 191 36 / 0.75));
+	}
+	.submit,
+	.finish-card button,
+	nav button {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.55rem;
+		border: 1px solid rgb(255 255 255 / 0.18);
+		background: linear-gradient(135deg, #fbbf24, #fb7185);
+		color: #111827;
+		box-shadow: 0 18px 40px rgb(251 191 36 / 0.25);
 	}
 	.submit {
 		width: 100%;
-		margin-top: 1.25rem;
-		text-align: center;
-		background: #fbbf24;
-		color: #172033;
+		margin-top: 1.2rem;
+		min-height: 3.6rem;
+		font-size: 1.02rem;
 	}
-	.status,
-	.round,
+	.answer-saved {
+		margin-top: 1.2rem;
+		border: 1px solid rgb(52 211 153 / 0.4);
+		border-radius: 1rem;
+		background: rgb(16 185 129 / 0.14);
+		padding: 0.9rem 1rem;
+		color: #bbf7d0;
+		font-weight: 1000;
+		text-align: center;
+		box-shadow: 0 0 24px rgb(52 211 153 / 0.18);
+	}
 	nav {
 		margin-top: 1rem;
 	}
-	[role='alert'] {
-		color: #fda4af;
+	nav button {
+		flex: 1 1 10rem;
+		background: rgb(255 255 255 / 0.12);
+		color: white;
+	}
+	.finish-card {
+		border: 1px solid rgb(255 255 255 / 0.15);
+		border-radius: 1.5rem;
+		background: rgb(2 6 23 / 0.35);
+		padding: clamp(1rem, 4vw, 2rem);
+		text-align: center;
+	}
+	.finish-card p:not(.mode-chip) {
+		color: rgb(226 232 240 / 0.8);
+		font-weight: 800;
+	}
+	.error {
 		margin-top: 1rem;
+		color: #fecdd3;
+		font-weight: 800;
+	}
+	button:disabled {
+		opacity: 0.55;
+		cursor: not-allowed;
 	}
 	button:focus-visible {
 		outline: 3px solid #67e8f9;
 		outline-offset: 3px;
+	}
+	@keyframes arenaSpin {
+		to {
+			transform: rotate(1turn);
+		}
+	}
+	@keyframes questionPop {
+		from {
+			opacity: 0;
+			transform: translateY(18px) scale(0.98);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0) scale(1);
+		}
+	}
+	@keyframes cardIn {
+		from {
+			opacity: 0;
+			transform: translateY(16px) scale(0.98);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0) scale(1);
+		}
+	}
+	@keyframes shine {
+		to {
+			transform: translateX(120%);
+		}
+	}
+	@keyframes dangerPulse {
+		from {
+			transform: scale(1);
+		}
+		to {
+			transform: scale(1.04);
+		}
+	}
+	@media (min-width: 640px) {
+		.choices {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.arena-lights,
+		h2,
+		.choices button,
+		.timer-ring[data-urgent='true'] {
+			animation: none;
+		}
+		.progress div,
+		.choices button {
+			transition: none;
+		}
+		.choices button:hover:not(:disabled),
+		.choices button:focus-visible:not(:disabled),
+		.choices button.selected {
+			transform: none;
+		}
 	}
 </style>

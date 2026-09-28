@@ -282,16 +282,18 @@
 	class:presentation={presenting}
 	class="session-screen"
 	data-testid="session-screen"
+	data-view={view}
 >
-	<header class="flex flex-wrap items-center justify-between gap-3">
+	<div class="stage-beams" aria-hidden="true"></div>
+	<div class="stage-grid" aria-hidden="true"></div>
+	<header class="stage-header">
 		<div>
-			<p class="text-sm font-bold text-cyan-300">Edu Nara · {live.title}</p>
-			<p class="font-mono text-3xl font-black tracking-widest" data-testid="session-code">
-				{live.code}
-			</p>
+			<p class="stage-kicker">Edu Nara · {live.title}</p>
+			<p class="stage-code" data-testid="session-code">{live.code}</p>
 		</div>
-		<p class="text-sm">
-			<span data-testid="participant-count">{count}</span> peserta · {connected
+		<p class="stage-status">
+			<span aria-hidden="true"></span>
+			<b data-testid="participant-count">{count}</b> peserta · {connected
 				? 'Live'
 				: 'Menghubungkan…'} ·
 			{live.state}
@@ -392,9 +394,30 @@
 			{/if}
 		</nav>
 	</div>
-	<CelebrationBurst active={celebration} label={celebrationLabel} variant={view === 'leaderboard' ? 'leaderboard' : 'correct'} />
+	<CelebrationBurst
+		active={celebration}
+		label={celebrationLabel}
+		variant={view === 'leaderboard' ? 'leaderboard' : 'correct'}
+	/>
 	{#if form?.message}<p role="status">{form.message}</p>{/if}
 	{#if errorMessage}<p role="alert">{errorMessage}</p>{/if}
+	{#if !presenting && !showJoin && data.activityType === 'choice'}
+		<div class="top-navigation">
+			<button
+				class="control"
+				onclick={() => (view = view === 'leaderboard' ? 'activity' : 'leaderboard')}
+				>{view === 'leaderboard' ? 'Tinjau soal' : 'Leaderboard'}</button
+			>
+			{#if questions.length > 1}<nav class="flex flex-wrap gap-2" aria-label="Daftar soal">
+					{#each questions as question, i}<button
+							class="control"
+							disabled={switching}
+							aria-current={i === activeIndex ? 'true' : undefined}
+							onclick={() => select(i)}>Soal {i + 1}: {question.prompt}</button
+						>{/each}
+				</nav>{/if}
+		</div>
+	{/if}
 	{#if showJoin}
 		<section class="joining-panel" data-testid="joining-instructions">
 			<div>
@@ -431,51 +454,43 @@
 				presentation={presenting}
 				autoScroll={live.state === 'ended'}
 			/>
-		{:else}<section class="slide" data-testid="presenter-stage">
-				<div class="flex flex-wrap items-center justify-between gap-3">
-					<div class="flex items-center gap-2">
-						<span class="inline-flex items-center gap-2 rounded-full border border-rose-400/50 bg-rose-500/15 px-3 py-1 text-xs font-black uppercase tracking-[0.2em] text-rose-200"><span class="h-2 w-2 animate-pulse rounded-full bg-rose-300" aria-hidden="true"></span>LIVE</span>
-						<span class="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-cyan-200">{data.activityType === 'wordcloud' ? 'Word Cloud' : `Ronde ${activeIndex + 1} / ${questions.length}`}</span>
+		{:else}<section class="slide game-stage" data-testid="presenter-stage">
+				<div class="stage-topline">
+					<div class="stage-badges">
+						<span class="live-badge"><span aria-hidden="true"></span>LIVE</span>
+						<span class="round-badge"
+							>{data.activityType === 'wordcloud'
+								? 'Word Cloud'
+								: `Ronde ${activeIndex + 1} / ${questions.length}`}</span
+						>
 					</div>
-					<span class="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/70">{count} peserta</span>
+					<div class="audience-meter">
+						<span>{count}</span>
+						peserta online
+					</div>
 				</div>
-				<h1 class="my-5 animate-slide-in text-3xl font-black leading-tight sm:text-5xl">{active.prompt}</h1>
-				{#if guided && timerUsed}<GameShowTimer seconds={timerSeconds} totalSeconds={'timeLimit' in active ? active.timeLimit : 30} running={timerRunning} paused={!timerRunning && timerSeconds > 0} expired={timerSeconds === 0} />{/if}
+				<div class="prompt-deck">
+					<div>
+						<p class="prompt-label">Pertanyaan sekarang</p>
+						<h1>{active.prompt}</h1>
+					</div>
+					{#if guided && timerUsed}
+						<GameShowTimer
+							seconds={timerSeconds}
+							totalSeconds={(active && 'timeLimit' in active ? active.timeLimit : null) ??
+								live.timerDuration ??
+								30}
+							running={timerRunning}
+							paused={!timerRunning && timerSeconds > 0}
+							expired={timerSeconds === 0}
+						/>
+					{/if}
+				</div>
 				{#if data.activityType === 'wordcloud'}
 					<WordcloudResults {words} presentation={presenting} />
 				{:else}
-					<div class="space-y-5" data-testid="presenter-tally">
-						<div class="flex flex-wrap items-center justify-between gap-4">
-							<p class="text-slate-300">
-								{total} pilihan masuk
-							</p>
-							{#if guided && timerUsed}
-								<GameShowTimer
-									seconds={timerSeconds}
-									totalSeconds={(active && 'timeLimit' in active ? active.timeLimit : null) ?? live.timerDuration ?? 30}
-									running={timerRunning}
-									paused={!timerRunning && timerSeconds > 0}
-									expired={timerSeconds === 0}
-								/>
-							{/if}
-						</div>
-						{#each choiceOptions as option, i}
-							{@const value = tally[option.id] ?? 0}
-							<div>
-								<div class="flex justify-between gap-3 text-lg font-bold">
-									<span>{String.fromCharCode(65 + i)}. {option.label}</span><span>{value}</span>
-								</div>
-								<div class="mt-2 h-5 rounded-full bg-white/10">
-									<div
-										class="h-full rounded-full bg-cyan-400 transition-[width] duration-500 motion-reduce:transition-none"
-										style:width={`${total ? (value / total) * 100 : 0}%`}
-									></div>
-								</div>
-							</div>
-						{/each}
-					</div>
 					{#if !presenting || guided}
-						<div class="mt-6 flex flex-wrap gap-3">
+						<div class="stage-actions">
 							{#if guided && timerUsed}<button
 									class="control"
 									disabled={live.state !== 'open'}
@@ -503,6 +518,31 @@
 							</form>
 						</div>
 					{/if}
+					<div class="tally-stage" data-testid="presenter-tally">
+						<div class="tally-header">
+							<div>
+								<p class="prompt-label">Live answers</p>
+								<h2>{total} pilihan masuk</h2>
+							</div>
+							<div class="answer-orb" aria-hidden="true">{total}</div>
+						</div>
+						<div class="answer-bars">
+							{#each choiceOptions as option, i}
+								{@const value = tally[option.id] ?? 0}
+								{@const percent = total ? Math.max(4, (value / total) * 100) : 4}
+								<div class="answer-bar-card">
+									<div class="answer-row">
+										<span class="answer-letter">{String.fromCharCode(65 + i)}</span>
+										<span class="answer-label">{option.label}</span>
+										<strong>{value}</strong>
+									</div>
+									<div class="answer-track" aria-hidden="true">
+										<div class="answer-fill" style:width={`${percent}%`}></div>
+									</div>
+								</div>
+							{/each}
+						</div>
+					</div>
 				{/if}
 			</section>{/if}
 	{:else}<p class="my-10">Belum ada pertanyaan. Kembali ke workspace dan buka editor.</p>{/if}
@@ -527,22 +567,6 @@
 				</div>{:else}<p class="mt-4">Belum ada kiriman.</p>{/each}
 		</aside>
 	{/if}
-	{#if !presenting && !showJoin && data.activityType === 'choice'}<button
-			class="control mt-4"
-			onclick={() => (view = view === 'leaderboard' ? 'activity' : 'leaderboard')}
-			>{view === 'leaderboard' ? 'Tinjau soal' : 'Leaderboard'}</button
-		>{/if}
-	{#if !presenting && !showJoin && questions.length > 1}<nav
-			class="mt-6 flex flex-wrap gap-2"
-			aria-label="Daftar soal"
-		>
-			{#each questions as question, i}<button
-					class="control"
-					disabled={switching}
-					aria-current={i === activeIndex ? 'true' : undefined}
-					onclick={() => select(i)}>Soal {i + 1}: {question.prompt}</button
-				>{/each}
-		</nav>{/if}
 </main>
 
 <style>
@@ -616,6 +640,23 @@
 		outline: 3px solid #67e8f9;
 		outline-offset: 3px;
 	}
+	.top-navigation {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.65rem;
+		margin: 1rem 0 0.5rem;
+		padding: 0.65rem;
+		border: 1px solid rgb(34 211 238 / 0.22);
+		border-radius: 1rem;
+		background: rgb(5 8 22 / 0.72);
+		box-shadow: 0 14px 32px rgb(2 6 23 / 0.28);
+	}
+	.top-navigation nav {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
 	.presenter-navigation {
 		display: contents;
 	}
@@ -626,7 +667,7 @@
 		bottom: 0.75rem;
 		transform: translateX(-50%);
 		width: max-content;
-		z-index: 60;
+		z-index: 1000;
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
@@ -726,9 +767,19 @@
 	}
 	@media (max-width: 640px) {
 		.session-screen:not(.presentation) {
-			padding-bottom: 11rem;
+			padding-bottom: 2rem;
 		}
-		.session-toolbar {
+
+		.session-screen:not(.presentation) .session-toolbar {
+			position: sticky;
+			top: 0.5rem;
+			left: auto;
+			right: auto;
+			bottom: auto;
+			width: 100%;
+			max-width: none;
+			transform: none;
+			margin: 0.75rem 0 1rem;
 			border-radius: 999px;
 		}
 	}
@@ -786,6 +837,367 @@
 	@media (prefers-reduced-motion: reduce) {
 		.session-toolbar,
 		.floating-control {
+			transition: none;
+		}
+	}
+
+	/* Game-show stage layer: loud on projector, calm under reduced motion. */
+	.session-screen {
+		position: relative;
+		isolation: isolate;
+		background:
+			radial-gradient(circle at 15% 8%, rgb(34 211 238 / 0.2), transparent 25%),
+			radial-gradient(circle at 86% 12%, rgb(244 114 182 / 0.18), transparent 28%),
+			linear-gradient(135deg, #050816 0%, #11153b 52%, #190d32 100%);
+	}
+	.stage-beams,
+	.stage-grid {
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		z-index: -1;
+	}
+	.stage-beams {
+		background:
+			conic-gradient(
+				from 210deg at 15% 0%,
+				transparent 0 11%,
+				rgb(34 211 238 / 0.15) 14%,
+				transparent 23%
+			),
+			conic-gradient(
+				from 130deg at 85% 0%,
+				transparent 0 13%,
+				rgb(244 114 182 / 0.14) 17%,
+				transparent 27%
+			);
+		filter: blur(2px);
+		animation: beamSweep 10s ease-in-out infinite alternate;
+	}
+	.stage-grid {
+		inset: auto 0 0;
+		height: 42%;
+		background:
+			linear-gradient(rgb(34 211 238 / 0.08) 1px, transparent 1px),
+			linear-gradient(90deg, rgb(34 211 238 / 0.08) 1px, transparent 1px);
+		background-size: 42px 42px;
+		mask-image: linear-gradient(to top, black, transparent);
+		transform: perspective(500px) rotateX(58deg) scale(1.35);
+		transform-origin: bottom;
+		animation: gridDrift 9s linear infinite;
+	}
+	.stage-header {
+		position: relative;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		border-bottom: 1px solid rgb(255 255 255 / 0.12);
+		padding-bottom: 1rem;
+	}
+	.stage-kicker,
+	.prompt-label {
+		margin: 0;
+		color: #67e8f9;
+		font-size: 0.7rem;
+		font-weight: 1000;
+		letter-spacing: 0.22em;
+		text-transform: uppercase;
+		text-shadow: 0 0 15px rgb(34 211 238 / 0.55);
+	}
+	.stage-code {
+		margin: 0.25rem 0 0;
+		font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+		font-size: clamp(1.8rem, 5vw, 3.2rem);
+		font-weight: 1000;
+		letter-spacing: 0.2em;
+		line-height: 1;
+		color: white;
+		text-shadow: 0 0 26px rgb(168 85 247 / 0.55);
+	}
+	.stage-status {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45rem;
+		margin: 0;
+		border: 1px solid rgb(255 255 255 / 0.14);
+		border-radius: 999px;
+		background: rgb(255 255 255 / 0.08);
+		padding: 0.65rem 0.9rem;
+		color: rgb(226 232 240 / 0.8);
+		font-size: 0.78rem;
+		font-weight: 800;
+		backdrop-filter: blur(12px);
+	}
+	.stage-status span,
+	.live-badge span {
+		height: 0.55rem;
+		width: 0.55rem;
+		border-radius: 999px;
+		background: #34d399;
+		box-shadow: 0 0 14px rgb(52 211 153 / 0.9);
+	}
+	.game-stage {
+		position: relative;
+		border: 1px solid rgb(103 232 249 / 0.22);
+		background: linear-gradient(145deg, rgb(15 23 42 / 0.88), rgb(49 46 129 / 0.68));
+		box-shadow:
+			0 24px 80px rgb(2 6 23 / 0.5),
+			inset 0 1px 0 rgb(255 255 255 / 0.1);
+	}
+	.stage-topline,
+	.stage-badges,
+	.answer-row,
+	.tally-header,
+	.prompt-deck,
+	.stage-actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+	}
+	.live-badge,
+	.round-badge,
+	.audience-meter {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		border-radius: 999px;
+		padding: 0.5rem 0.75rem;
+		font-size: 0.7rem;
+		font-weight: 1000;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+	}
+	.live-badge {
+		border: 1px solid rgb(251 113 133 / 0.55);
+		background: rgb(244 63 94 / 0.18);
+		color: #fecdd3;
+	}
+	.live-badge span {
+		background: #fb7185;
+		box-shadow: 0 0 15px rgb(251 113 133 / 0.9);
+		animation: liveBlink 900ms ease-in-out infinite alternate;
+	}
+	.round-badge {
+		border: 1px solid rgb(34 211 238 / 0.25);
+		background: rgb(34 211 238 / 0.12);
+		color: #a5f3fc;
+	}
+	.audience-meter {
+		border: 1px solid rgb(251 191 36 / 0.25);
+		background: rgb(251 191 36 / 0.12);
+		color: #fde68a;
+		letter-spacing: 0.04em;
+	}
+	.audience-meter span {
+		font-size: 1.25rem;
+		line-height: 1;
+	}
+	.prompt-deck {
+		align-items: flex-end;
+		margin-top: clamp(1.25rem, 4vh, 3rem);
+		gap: 1.25rem;
+	}
+	.prompt-deck > div:first-child {
+		min-width: 0;
+		flex: 1 1 28rem;
+	}
+	.prompt-deck h1 {
+		margin: 0.65rem 0 0;
+		max-width: 56rem;
+		font-size: clamp(2rem, 5vw, 5rem);
+		font-weight: 1000;
+		letter-spacing: -0.06em;
+		line-height: 0.95;
+		text-wrap: balance;
+		text-shadow: 0 0 35px rgb(168 85 247 / 0.42);
+		animation: promptEnter 650ms cubic-bezier(0.2, 0.85, 0.2, 1);
+	}
+	.tally-stage {
+		margin-top: clamp(1.25rem, 4vh, 2.5rem);
+		border-top: 1px solid rgb(255 255 255 / 0.12);
+		padding-top: 1.25rem;
+	}
+	.tally-header h2 {
+		margin: 0.25rem 0 0;
+		font-size: clamp(1.4rem, 3vw, 2.2rem);
+		font-weight: 1000;
+		letter-spacing: -0.04em;
+	}
+	.answer-orb {
+		display: grid;
+		height: 4.2rem;
+		width: 4.2rem;
+		place-items: center;
+		border: 1px solid rgb(251 191 36 / 0.5);
+		border-radius: 999px;
+		background: radial-gradient(
+			circle,
+			rgb(251 191 36 / 0.35),
+			rgb(168 85 247 / 0.18) 65%,
+			transparent 66%
+		);
+		color: #fef3c7;
+		font-size: 1.5rem;
+		font-weight: 1000;
+		box-shadow: 0 0 30px rgb(251 191 36 / 0.25);
+		animation: orbPulse 1.6s ease-in-out infinite alternate;
+	}
+	.answer-bars {
+		display: grid;
+		gap: 0.8rem;
+		margin-top: 1.25rem;
+		pointer-events: none;
+	}
+	.answer-bar-card {
+		border: 1px solid rgb(255 255 255 / 0.1);
+		border-radius: 1rem;
+		background: rgb(2 6 23 / 0.3);
+		padding: 0.75rem;
+		animation: barEnter 500ms ease both;
+	}
+	.answer-row {
+		justify-content: flex-start;
+		font-size: clamp(0.95rem, 2vw, 1.2rem);
+		font-weight: 900;
+	}
+	.answer-letter {
+		display: grid;
+		height: 2.25rem;
+		width: 2.25rem;
+		flex: 0 0 auto;
+		place-items: center;
+		border-radius: 0.7rem;
+		background: linear-gradient(135deg, #22d3ee, #a855f7);
+		color: white;
+		font-weight: 1000;
+		box-shadow: 0 0 18px rgb(34 211 238 / 0.3);
+	}
+	.answer-label {
+		min-width: 0;
+		flex: 1;
+		overflow-wrap: anywhere;
+	}
+	.answer-row strong {
+		color: #fde68a;
+	}
+	.answer-track {
+		height: 0.8rem;
+		margin-top: 0.65rem;
+		overflow: hidden;
+		border-radius: 999px;
+		background: rgb(255 255 255 / 0.09);
+	}
+	.answer-fill {
+		height: 100%;
+		border-radius: inherit;
+		background: linear-gradient(90deg, #22d3ee, #a855f7, #fbbf24);
+		box-shadow: 0 0 20px rgb(34 211 238 / 0.65);
+		transition: width 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+	}
+	.stage-actions {
+		position: relative;
+		z-index: 5;
+		justify-content: flex-start;
+		margin-top: 1.25rem;
+	}
+	@keyframes beamSweep {
+		from {
+			transform: translateX(-3%) rotate(-2deg) scale(1.03);
+		}
+		to {
+			transform: translateX(3%) rotate(2deg) scale(1.08);
+		}
+	}
+	@keyframes gridDrift {
+		to {
+			background-position:
+				0 42px,
+				42px 0;
+		}
+	}
+	@keyframes liveBlink {
+		from {
+			opacity: 0.45;
+			transform: scale(0.85);
+		}
+		to {
+			opacity: 1;
+			transform: scale(1.15);
+		}
+	}
+	@keyframes promptEnter {
+		from {
+			opacity: 0;
+			transform: translateY(24px) scale(0.97);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0) scale(1);
+		}
+	}
+	@keyframes orbPulse {
+		to {
+			transform: scale(1.08);
+		}
+	}
+	@keyframes barEnter {
+		from {
+			opacity: 0;
+			transform: translateX(-16px);
+		}
+		to {
+			opacity: 1;
+			transform: translateX(0);
+		}
+	}
+	@media (max-width: 640px) {
+		.session-screen {
+			padding: 0.8rem 0.75rem 8.5rem;
+		}
+		.stage-header {
+			align-items: flex-start;
+			padding-bottom: 0.75rem;
+		}
+		.stage-status {
+			width: 100%;
+			justify-content: center;
+		}
+		.game-stage {
+			border-radius: 1.35rem;
+			padding: 1rem;
+		}
+		.prompt-deck {
+			align-items: stretch;
+		}
+		.prompt-deck h1 {
+			font-size: clamp(1.85rem, 9vw, 3rem);
+		}
+		.prompt-deck :global(.timer) {
+			align-self: flex-start;
+		}
+		.answer-orb {
+			height: 3.2rem;
+			width: 3.2rem;
+			font-size: 1.1rem;
+		}
+		.stage-actions .control {
+			flex: 1 1 100%;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.stage-beams,
+		.stage-grid,
+		.live-badge span,
+		.answer-orb,
+		.prompt-deck h1,
+		.answer-bar-card {
+			animation: none;
+		}
+		.answer-fill {
 			transition: none;
 		}
 	}
