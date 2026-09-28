@@ -26,6 +26,17 @@
 	--motion-base: 200ms;
 	--motion-slow: 320ms;
 	--motion-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+	/* Gamifikasi Game-Show Tokens */
+	--game-bg: #0b1329;
+	--game-cyan: #22d3ee;
+	--game-violet: #a855f7;
+	--game-amber: #fbbf24;
+	--game-pink: #f472b6;
+	--glow-cyan: 0 0 20px rgb(34 211 238 / 0.4);
+	--glow-violet: 0 0 20px rgb(168 85 247 / 0.4);
+	--glow-amber: 0 0 20px rgb(251 191 36 / 0.4);
+	--motion-celebration: 600ms;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
+	import CelebrationBurst from '$lib/components/gamification/CelebrationBurst.svelte';
+
+	let celebration = $state(false);
 	type Question = {
 		id: string;
 		prompt: string;
@@ -147,6 +150,7 @@
 			} catch {
 				/* Optional draft only. */
 			}
+			celebration = true;
 			await refreshAnswers();
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Jawaban gagal dikirim.';
@@ -157,6 +161,7 @@
 </script>
 
 <section class="quiz" data-testid="choice-player">
+	<CelebrationBurst active={celebration} variant="neutral" label="Jawaban tersimpan" />
 	<header>
 		<p>{guided ? 'Terpandu presenter' : 'Mandiri · tanpa timer'}</p>
 		<span data-testid="connection">{connected ? 'Terhubung' : 'Menghubungkan…'}</span>
@@ -263,6 +268,11 @@
 		align-items: center;
 		gap: 0.75rem;
 		background: #4338ca;
+		transition: transform 0.15s ease, box-shadow 0.15s ease;
+	}
+	.choices button:hover:not(:disabled) {
+		transform: translateY(-2px);
+		box-shadow: 0 4px 14px rgb(0 0 0 / 0.35);
 	}
 	.choices button:nth-child(2n) {
 		background: #0369a1;
@@ -270,6 +280,15 @@
 	.choices button.selected {
 		outline: 3px solid #fbbf24;
 		outline-offset: 2px;
+		box-shadow: 0 0 16px rgb(251 191 36 / 0.4);
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.choices button {
+			transition: none;
+		}
+		.choices button:hover:not(:disabled) {
+			transform: none;
+		}
 	}
 	button:disabled {
 		opacity: 0.65;

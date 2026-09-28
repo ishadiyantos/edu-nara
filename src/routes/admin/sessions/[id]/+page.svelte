@@ -4,6 +4,8 @@
 	import { onMount, untrack } from 'svelte';
 	import QuizLeaderboard from '$lib/components/poll/QuizLeaderboard.svelte';
 	import WordcloudResults from '$lib/components/poll/WordcloudResults.svelte';
+	import CelebrationBurst from '$lib/components/gamification/CelebrationBurst.svelte';
+	import GameShowTimer from '$lib/components/gamification/GameShowTimer.svelte';
 	import { Icon, QRCode } from '$components/ui';
 	let { data, form } = $props();
 	let live = $state(untrack(() => data.snapshot));
@@ -26,6 +28,16 @@
 	let moderation = $state<{ id: string; word: string; status: string }[]>([]);
 	let leaderboard = $state(untrack(() => data.leaderboard));
 	let connected = $state(false);
+	let celebration = $state(false);
+	let celebrationLabel = $state('');
+	let celebrationTimer: ReturnType<typeof setTimeout> | undefined;
+	function celebrate(label: string) {
+		celebration = false;
+		celebrationLabel = label;
+		if (celebrationTimer) clearTimeout(celebrationTimer);
+		celebrationTimer = setTimeout(() => (celebration = true), 20);
+		setTimeout(() => (celebration = false), 1700);
+	}
 	const count = $derived(live.count);
 	let errorMessage = $state('');
 	let presenting = $state(false);
@@ -380,6 +392,7 @@
 			{/if}
 		</nav>
 	</div>
+	<CelebrationBurst active={celebration} label={celebrationLabel} variant={view === 'leaderboard' ? 'leaderboard' : 'correct'} />
 	{#if form?.message}<p role="status">{form.message}</p>{/if}
 	{#if errorMessage}<p role="alert">{errorMessage}</p>{/if}
 	{#if showJoin}
@@ -419,21 +432,33 @@
 				autoScroll={live.state === 'ended'}
 			/>
 		{:else}<section class="slide" data-testid="presenter-stage">
-				<p class="text-sm text-cyan-300">
-					{data.activityType === 'wordcloud'
-						? `Word Cloud · ${activeIndex + 1} / ${questions.length}`
-						: `Soal ${activeIndex + 1} / ${questions.length}`}
-				</p>
-				<h1 class="my-5 text-3xl font-black leading-tight sm:text-5xl">{active.prompt}</h1>
+				<div class="flex flex-wrap items-center justify-between gap-3">
+					<div class="flex items-center gap-2">
+						<span class="inline-flex items-center gap-2 rounded-full border border-rose-400/50 bg-rose-500/15 px-3 py-1 text-xs font-black uppercase tracking-[0.2em] text-rose-200"><span class="h-2 w-2 animate-pulse rounded-full bg-rose-300" aria-hidden="true"></span>LIVE</span>
+						<span class="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-cyan-200">{data.activityType === 'wordcloud' ? 'Word Cloud' : `Ronde ${activeIndex + 1} / ${questions.length}`}</span>
+					</div>
+					<span class="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/70">{count} peserta</span>
+				</div>
+				<h1 class="my-5 animate-slide-in text-3xl font-black leading-tight sm:text-5xl">{active.prompt}</h1>
+				{#if guided && timerUsed}<GameShowTimer seconds={timerSeconds} totalSeconds={'timeLimit' in active ? active.timeLimit : 30} running={timerRunning} paused={!timerRunning && timerSeconds > 0} expired={timerSeconds === 0} />{/if}
 				{#if data.activityType === 'wordcloud'}
 					<WordcloudResults {words} presentation={presenting} />
 				{:else}
 					<div class="space-y-5" data-testid="presenter-tally">
-						<p class="text-slate-300">
-							{total} pilihan masuk {guided && timerUsed
-								? `· ${timerSeconds === 0 ? 'Waktu habis' : timerRunning ? timerSeconds + 's' : 'Dijeda · ' + timerSeconds + 's'}`
-								: ''}
-						</p>
+						<div class="flex flex-wrap items-center justify-between gap-4">
+							<p class="text-slate-300">
+								{total} pilihan masuk
+							</p>
+							{#if guided && timerUsed}
+								<GameShowTimer
+									seconds={timerSeconds}
+									totalSeconds={(active && 'timeLimit' in active ? active.timeLimit : null) ?? live.timerDuration ?? 30}
+									running={timerRunning}
+									paused={!timerRunning && timerSeconds > 0}
+									expired={timerSeconds === 0}
+								/>
+							{/if}
+						</div>
 						{#each choiceOptions as option, i}
 							{@const value = tally[option.id] ?? 0}
 							<div>
