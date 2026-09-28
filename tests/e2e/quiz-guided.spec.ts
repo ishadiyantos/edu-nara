@@ -84,6 +84,9 @@ test('guided quiz syncs presenter question and timer state across two participan
 		await expect(presenter.getByTestId('post-session-review-nav')).toHaveCount(0);
 		await expect(presenter.getByRole('button', { name: 'Tinjau soal' })).toHaveCount(0);
 		await presenter.getByRole('button', { name: 'Buka sesi', exact: true }).click();
+		await expect(presenter.getByTestId('presenter-tally')).toHaveCount(0);
+		await expect(presenter.getByTestId('presenter-options')).toBeVisible();
+		await expect(presenter.getByTestId('presenter-option')).toHaveCount(2);
 		for (const student of [first, second]) {
 			await expect(student.getByTestId('choice-player')).toBeVisible();
 			await expect(student.getByText('Soal terpandu satu')).toBeVisible();
@@ -179,6 +182,11 @@ test('guided quiz syncs presenter question and timer state across two participan
 		}
 		await presenter.getByRole('button', { name: 'Akhiri sesi', exact: true }).click();
 		await expect(presenter.getByTestId('quiz-leaderboard')).toBeVisible();
+		await presenter.getByRole('button', { name: 'Tinjau soal', exact: true }).click();
+		await expect(presenter.getByRole('button', { name: 'Leaderboard', exact: true })).toBeVisible();
+		await expect(presenter.getByTestId('presenter-stage')).toBeVisible();
+		await presenter.getByRole('button', { name: 'Leaderboard', exact: true }).click();
+		await expect(presenter.getByTestId('quiz-leaderboard')).toBeVisible();
 		await expect(presenter.getByTestId('leaderboard-starfall')).toBeVisible();
 		await expect(
 			presenter.getByRole('button', { name: 'Tampilkan hasil ke mahasiswa' })
@@ -214,11 +222,11 @@ test('guided quiz syncs presenter question and timer state across two participan
 		await expect(first.getByTestId('session-state')).toHaveText('Sesi selesai');
 		await expect(presenter.getByTestId('post-session-review-nav')).toBeVisible();
 		await presenter.getByRole('button', { name: 'Tinjau soal' }).click();
-		await presenter.getByRole('button', { name: 'Soal 1: Soal terpandu satu' }).click();
 		await expect(presenter.getByTestId('presenter-stage')).toBeVisible();
+		await presenter.getByRole('button', { name: 'Soal 1: Soal terpandu satu' }).click();
 		await presenter.waitForTimeout(300);
 		await expect(presenter.getByTestId('quiz-leaderboard')).toHaveCount(0);
-		await expect(first.getByText('Soal terpandu satu')).toBeVisible();
+		await expect(first.getByText('Soal terpandu dua')).toBeVisible();
 		expect(
 			(
 				await first.request.post(`/api/polls/${code}/responses`, {

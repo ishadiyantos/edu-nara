@@ -67,6 +67,7 @@
 	const timerUsed = $derived(timerDeadline != null || live.timerDuration > 0);
 	const total = $derived(Object.values(tally).reduce((sum, n) => sum + n, 0));
 	const showJoin = $derived(view === 'join');
+	const showTally = $derived(data.activityType === 'choice' && live.state === 'ended');
 	const statusControls = [
 		{ state: 'open', label: 'Buka sesi', icon: 'play' },
 		{ state: 'closed', label: 'Tutup sesi', icon: 'eye-off' },
@@ -117,7 +118,7 @@
 	async function select(index: number, direction?: number) {
 		if (switching || index < 0 || index >= questions.length) return;
 		view = 'activity';
-		if (data.activityType !== 'wordcloud' && !guided) {
+		if (data.activityType !== 'wordcloud' && (!guided || live.state === 'ended')) {
 			localIndex = index;
 			return;
 		}
@@ -483,9 +484,15 @@
 								: `Ronde ${activeIndex + 1} / ${questions.length}`}</span
 						>
 					</div>
-					<div class="audience-meter">
-						<span>{count}</span>
-						peserta online
+					<div class="stage-metrics">
+						<div class="audience-meter">
+							<span>{count}</span>
+							peserta online
+						</div>
+						{#if showTally}<div class="audience-meter answer-meter" data-testid="answer-total">
+								<span>{total}</span>
+								pilihan masuk
+							</div>{/if}
 					</div>
 				</div>
 				<div class="prompt-deck">
@@ -527,31 +534,51 @@
 							</form>
 						</div>
 					{/if}
-					<div class="tally-stage" data-testid="presenter-tally">
-						<div class="tally-header">
-							<div>
-								<p class="prompt-label">Live answers</p>
-								<h2>{total} pilihan masuk</h2>
-							</div>
-							<div class="answer-orb" aria-hidden="true">{total}</div>
-						</div>
-						<div class="answer-bars">
-							{#each choiceOptions as option, i}
-								{@const value = tally[option.id] ?? 0}
-								{@const percent = total ? Math.max(4, (value / total) * 100) : 4}
-								<div class="answer-bar-card">
-									<div class="answer-row">
-										<span class="answer-letter">{String.fromCharCode(65 + i)}</span>
-										<span class="answer-label">{option.label}</span>
-										<strong>{value}</strong>
-									</div>
-									<div class="answer-track" aria-hidden="true">
-										<div class="answer-fill" style:width={`${percent}%`}></div>
-									</div>
+					{#if showTally}
+						<div class="tally-stage" data-testid="presenter-tally">
+							<div class="tally-header">
+								<div>
+									<p class="prompt-label">Live answers</p>
+									<h2>{total} pilihan masuk</h2>
 								</div>
-							{/each}
+								<div class="answer-orb" aria-hidden="true">{total}</div>
+							</div>
+							<div class="answer-bars">
+								{#each choiceOptions as option, i}
+									{@const value = tally[option.id] ?? 0}
+									{@const percent = total ? Math.max(4, (value / total) * 100) : 4}
+									<div class="answer-bar-card">
+										<div class="answer-row">
+											<span class="answer-letter">{String.fromCharCode(65 + i)}</span>
+											<span class="answer-label">{option.label}</span>
+											<strong>{value}</strong>
+										</div>
+										<div class="answer-track" aria-hidden="true">
+											<div class="answer-fill" style:width={`${percent}%`}></div>
+										</div>
+									</div>
+								{/each}
+							</div>
 						</div>
-					</div>
+					{:else}
+						<div class="stage-options" data-testid="presenter-options">
+							<p class="prompt-label">Pilihan jawaban</p>
+							<div class="option-grid">
+								{#each choiceOptions as option, i}
+									{@const picked = tally[option.id] ?? 0}
+									<div
+										class="option-card"
+										data-testid="presenter-option"
+										data-index={i}
+										data-picked={picked > 0}
+									>
+										<span class="option-letter">{String.fromCharCode(65 + i)}</span>
+										<span class="option-text">{option.label}</span>
+									</div>
+								{/each}
+							</div>
+						</div>
+					{/if}
 				{/if}
 			</section>{/if}
 	{:else}<p class="my-10">Belum ada pertanyaan. Kembali ke workspace dan buka editor.</p>{/if}
@@ -1028,10 +1055,103 @@
 		text-shadow: 0 0 35px rgb(168 85 247 / 0.42);
 		animation: promptEnter 650ms cubic-bezier(0.2, 0.85, 0.2, 1);
 	}
+	.stage-metrics {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 0.5rem;
+	}
+	.answer-meter span {
+		color: #fde68a;
+	}
+	.stage-options {
+		margin-top: clamp(1.25rem, 3vh, 2.5rem);
+	}
+	.option-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: clamp(0.75rem, 2vw, 1.25rem);
+		margin-top: 0.9rem;
+	}
+	.option-card {
+		--option-a: rgb(14 165 233 / 0.94);
+		--option-b: rgb(37 99 235 / 0.88);
+		display: grid;
+		min-height: clamp(6.5rem, 15vh, 10rem);
+		grid-template-columns: auto 1fr;
+		align-items: center;
+		gap: clamp(0.8rem, 2vw, 1.5rem);
+		border: 1px solid rgb(255 255 255 / 0.2);
+		border-radius: 1.35rem;
+		background: linear-gradient(135deg, var(--option-a), var(--option-b));
+		padding: clamp(1rem, 2.5vw, 2rem);
+		box-shadow:
+			0 18px 42px rgb(2 6 23 / 0.35),
+			inset 0 1px 0 rgb(255 255 255 / 0.2);
+	}
+	.option-card:nth-child(2) {
+		--option-a: rgb(168 85 247 / 0.94);
+		--option-b: rgb(236 72 153 / 0.84);
+	}
+	.option-card:nth-child(3) {
+		--option-a: rgb(16 185 129 / 0.92);
+		--option-b: rgb(20 184 166 / 0.8);
+	}
+	.option-card:nth-child(4) {
+		--option-a: rgb(245 158 11 / 0.94);
+		--option-b: rgb(249 115 22 / 0.82);
+	}
+	.option-letter,
+	.answer-letter {
+		display: grid;
+		height: clamp(2.7rem, 6vw, 4rem);
+		width: clamp(2.7rem, 6vw, 4rem);
+		place-items: center;
+		border: 1px solid rgb(255 255 255 / 0.3);
+		border-radius: 1rem;
+		background: rgb(2 6 23 / 0.22);
+		color: white;
+		font-size: clamp(1.25rem, 3vw, 2rem);
+		font-weight: 1000;
+		box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2);
+	}
+	.option-text {
+		min-width: 0;
+		font-size: clamp(1.2rem, 3vw, 2.4rem);
+		font-weight: 1000;
+		line-height: 1.05;
+		overflow-wrap: anywhere;
+		text-shadow: 0 2px 12px rgb(2 6 23 / 0.25);
+	}
 	.tally-stage {
 		margin-top: clamp(1.25rem, 4vh, 2.5rem);
 		border-top: 1px solid rgb(255 255 255 / 0.12);
 		padding-top: 1.25rem;
+	}
+	.answer-bar-card {
+		--option-a: rgb(14 165 233 / 0.92);
+		--option-b: rgb(37 99 235 / 0.86);
+		background: linear-gradient(135deg, rgb(15 23 42 / 0.92), rgb(15 23 42 / 0.68));
+	}
+	.answer-bar-card:nth-child(2) {
+		--option-a: rgb(168 85 247 / 0.92);
+		--option-b: rgb(236 72 153 / 0.8);
+	}
+	.answer-bar-card:nth-child(3) {
+		--option-a: rgb(16 185 129 / 0.9);
+		--option-b: rgb(20 184 166 / 0.76);
+	}
+	.answer-bar-card:nth-child(4) {
+		--option-a: rgb(245 158 11 / 0.92);
+		--option-b: rgb(249 115 22 / 0.78);
+	}
+	.answer-bar-card .answer-letter {
+		background: linear-gradient(135deg, var(--option-a), var(--option-b));
+	}
+	.answer-bar-card .answer-fill {
+		background: linear-gradient(90deg, var(--option-a), var(--option-b));
+		box-shadow: 0 0 20px var(--option-a);
 	}
 	.tally-header h2 {
 		margin: 0.25rem 0 0;
@@ -1078,16 +1198,7 @@
 		font-weight: 900;
 	}
 	.answer-letter {
-		display: grid;
-		height: 2.25rem;
-		width: 2.25rem;
 		flex: 0 0 auto;
-		place-items: center;
-		border-radius: 0.7rem;
-		background: linear-gradient(135deg, #22d3ee, #a855f7);
-		color: white;
-		font-weight: 1000;
-		box-shadow: 0 0 18px rgb(34 211 238 / 0.3);
 	}
 	.answer-label {
 		min-width: 0;
