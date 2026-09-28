@@ -227,7 +227,12 @@
 			{/if}
 		</div>
 		<h2>{question.prompt}</h2>
-		<div class="choices" role="group" aria-label="Pilihan jawaban; pilih semua jawaban yang benar">
+		<div
+			class="choices"
+			data-testid="answer-grid"
+			role="group"
+			aria-label="Pilihan jawaban; pilih semua jawaban yang benar"
+		>
 			{#each question.options as option}
 				<button
 					type="button"
@@ -413,6 +418,7 @@
 	}
 	.choices {
 		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: 0.85rem;
 		margin-top: 1rem;
 	}
@@ -593,9 +599,21 @@
 			transform: scale(1.04);
 		}
 	}
-	@media (min-width: 640px) {
+	@media (max-width: 420px) {
 		.choices {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 0.65rem;
+		}
+		.choices button {
+			grid-template-columns: auto 1fr;
+			min-height: 4.7rem;
+			padding: 0.75rem;
+		}
+		.option-spark {
+			display: none;
+		}
+		.option-letter {
+			min-width: 2.35rem;
+			min-height: 2.35rem;
 		}
 	}
 	@media (prefers-reduced-motion: reduce) {

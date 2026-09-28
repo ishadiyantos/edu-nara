@@ -17,6 +17,13 @@
 	}>();
 	const medals = ['🥇', '🥈', '🥉'];
 	const podiumOrder = [1, 0, 2];
+	const celebrationStars = Array.from({ length: 28 }, (_, index) => ({
+		left: (index * 41) % 100,
+		delay: ((index * 13) % 24) / 10,
+		duration: 4.8 + ((index * 7) % 22) / 10,
+		drift: ((index * 23) % 80) - 40,
+		icon: ['✦', '✧', '★', '✹'][index % 4]
+	}));
 	let sheet = $state<HTMLElement>();
 	let paused = $state(false);
 
@@ -54,6 +61,14 @@
 	data-testid="quiz-leaderboard"
 >
 	<div class="leaderboard-glow" aria-hidden="true"></div>
+	<div class="starfall" data-testid="leaderboard-starfall" aria-hidden="true">
+		{#each celebrationStars as star}
+			<span
+				style={`--left:${star.left}%;--delay:${star.delay}s;--duration:${star.duration}s;--drift:${star.drift}px`}
+				>{star.icon}</span
+			>
+		{/each}
+	</div>
 	<div class="text-center">
 		<p class="text-xs font-black uppercase tracking-[0.25em] text-amber-300">Quiz final</p>
 		<h2 class="mt-2 text-3xl font-black sm:text-5xl">Juara kelas</h2>
@@ -178,6 +193,27 @@
 		filter: blur(12px);
 		animation: leaderboardGlow 3s ease-in-out infinite alternate;
 	}
+	.starfall {
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		overflow: hidden;
+		pointer-events: none;
+	}
+	.leaderboard > :not(.leaderboard-glow):not(.starfall) {
+		position: relative;
+		z-index: 2;
+	}
+	.starfall span {
+		position: absolute;
+		left: var(--left);
+		top: -2rem;
+		color: #fde68a;
+		font-size: clamp(1rem, 2vw, 1.65rem);
+		text-shadow: 0 0 18px rgb(251 191 36 / 0.85);
+		animation: starDrop var(--duration) linear infinite;
+		animation-delay: var(--delay);
+	}
 	.podium-player[data-rank='1'] .podium-medal {
 		filter: drop-shadow(0 0 18px rgb(251 191 36 / 0.85));
 		animation: championFloat 1.6s ease-in-out infinite alternate;
@@ -208,6 +244,19 @@
 			transform: translateY(-6px) scale(1.06);
 		}
 	}
+	@keyframes starDrop {
+		from {
+			opacity: 0;
+			transform: translate3d(0, -2rem, 0) rotate(0deg) scale(0.75);
+		}
+		10% {
+			opacity: 1;
+		}
+		to {
+			opacity: 0;
+			transform: translate3d(var(--drift), 110dvh, 0) rotate(260deg) scale(1.15);
+		}
+	}
 	@media (max-width: 640px) {
 		.leaderboard {
 			margin-top: 1rem;
@@ -227,8 +276,12 @@
 	}
 	@media (prefers-reduced-motion: reduce) {
 		.leaderboard-glow,
-		.podium-player[data-rank='1'] .podium-medal {
+		.podium-player[data-rank='1'] .podium-medal,
+		.starfall span {
 			animation: none;
+		}
+		.starfall {
+			display: none;
 		}
 	}
 </style>

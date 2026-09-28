@@ -78,9 +78,11 @@ test('guided quiz syncs presenter question and timer state across two participan
 			await student.getByLabel('Nama tampilan').fill(name);
 			await student.getByRole('button', { name: 'Bergabung' }).click();
 			await expect(student.getByTestId('session-state')).toHaveText('Menunggu dosen membuka sesi');
-			await expect(student.getByTestId('choice-player')).toHaveCount(0);
+			await expect(student.getByTestId('waiting-room')).toBeVisible();
 			await expect(student.getByText('Soal terpandu satu')).toHaveCount(0);
 		}
+		await expect(presenter.getByTestId('post-session-review-nav')).toHaveCount(0);
+		await expect(presenter.getByRole('button', { name: 'Tinjau soal' })).toHaveCount(0);
 		await presenter.getByRole('button', { name: 'Buka sesi', exact: true }).click();
 		for (const student of [first, second]) {
 			await expect(student.getByTestId('choice-player')).toBeVisible();
@@ -177,6 +179,10 @@ test('guided quiz syncs presenter question and timer state across two participan
 		}
 		await presenter.getByRole('button', { name: 'Akhiri sesi', exact: true }).click();
 		await expect(presenter.getByTestId('quiz-leaderboard')).toBeVisible();
+		await expect(presenter.getByTestId('leaderboard-starfall')).toBeVisible();
+		await expect(
+			presenter.getByRole('button', { name: 'Tampilkan hasil ke mahasiswa' })
+		).toHaveCount(0);
 		const sheet = presenter.getByTestId('quiz-leaderboard-scroll');
 		await expect(sheet).toBeVisible();
 		await presenter.getByTestId('fullscreen-button').click();
@@ -206,7 +212,12 @@ test('guided quiz syncs presenter question and timer state across two participan
 		await presenter.keyboard.press('Escape');
 		await expect.poll(() => sheet.evaluate((el) => getComputedStyle(el).overflowY)).toBe('auto');
 		await expect(first.getByTestId('session-state')).toHaveText('Sesi selesai');
+		await expect(presenter.getByTestId('post-session-review-nav')).toBeVisible();
+		await presenter.getByRole('button', { name: 'Tinjau soal' }).click();
 		await presenter.getByRole('button', { name: 'Soal 1: Soal terpandu satu' }).click();
+		await expect(presenter.getByTestId('presenter-stage')).toBeVisible();
+		await presenter.waitForTimeout(300);
+		await expect(presenter.getByTestId('quiz-leaderboard')).toHaveCount(0);
 		await expect(first.getByText('Soal terpandu satu')).toBeVisible();
 		expect(
 			(

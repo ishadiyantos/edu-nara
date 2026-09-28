@@ -31,6 +31,7 @@
 	let celebration = $state(false);
 	let celebrationLabel = $state('');
 	let celebrationTimer: ReturnType<typeof setTimeout> | undefined;
+
 	function celebrate(label: string) {
 		celebration = false;
 		celebrationLabel = label;
@@ -46,8 +47,7 @@
 		untrack(() =>
 			live.state === 'draft'
 				? 'join'
-				: data.activityType === 'choice' &&
-					  (data.snapshot.state === 'ended' || data.snapshot.quizMode === 'self_paced')
+				: data.activityType === 'choice' && data.snapshot.state === 'ended'
 					? 'leaderboard'
 					: 'activity'
 		)
@@ -206,8 +206,10 @@
 		])
 			source.addEventListener(name, (event) => {
 				const next = JSON.parse((event as MessageEvent).data);
+				const wasEnded = live.state === 'ended';
 				applyLive(next);
-				if (next.state === 'ended' && data.activityType === 'choice') view = 'leaderboard';
+				if (!wasEnded && next.state === 'ended' && data.activityType === 'choice')
+					view = 'leaderboard';
 				void refreshResults();
 				void refreshLeaderboard();
 			});
@@ -317,8 +319,7 @@
 						await update();
 						if (result.type === 'success') {
 							applyLive(data.snapshot);
-							if (formData.get('state') === 'open')
-								view = data.activityType === 'choice' && !guided ? 'leaderboard' : 'activity';
+							if (formData.get('state') === 'open') view = 'activity';
 						}
 					};
 				}}
@@ -401,8 +402,8 @@
 	/>
 	{#if form?.message}<p role="status">{form.message}</p>{/if}
 	{#if errorMessage}<p role="alert">{errorMessage}</p>{/if}
-	{#if !presenting && !showJoin && data.activityType === 'choice'}
-		<div class="top-navigation">
+	{#if !presenting && !showJoin && data.activityType === 'choice' && live.state === 'ended'}
+		<div class="top-navigation" data-testid="post-session-review-nav">
 			<button
 				class="control"
 				onclick={() => (view = view === 'leaderboard' ? 'activity' : 'leaderboard')}
@@ -489,7 +490,7 @@
 				{#if data.activityType === 'wordcloud'}
 					<WordcloudResults {words} presentation={presenting} />
 				{:else}
-					{#if !presenting || guided}
+					{#if (!presenting || guided) && live.state !== 'ended'}
 						<div class="stage-actions">
 							{#if guided && timerUsed}<button
 									class="control"
@@ -1048,6 +1049,7 @@
 	}
 	.answer-bars {
 		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: 0.8rem;
 		margin-top: 1.25rem;
 		pointer-events: none;
@@ -1183,6 +1185,9 @@
 			height: 3.2rem;
 			width: 3.2rem;
 			font-size: 1.1rem;
+		}
+		.answer-bars {
+			grid-template-columns: 1fr;
 		}
 		.stage-actions .control {
 			flex: 1 1 100%;

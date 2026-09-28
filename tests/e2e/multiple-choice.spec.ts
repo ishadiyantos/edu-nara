@@ -57,6 +57,13 @@ test('quiz supports a question bank, multiple correct answers, and a game-show s
 		await student.getByRole('button', { name: 'Bergabung' }).click();
 		await expect(student.getByTestId('choice-player')).toBeVisible();
 		await expect(student.getByText('Ronde 1 dari 2')).toBeVisible();
+		await expect
+			.poll(() =>
+				student
+					.getByTestId('answer-grid')
+					.evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length)
+			)
+			.toBe(2);
 		await student.getByRole('button', { name: /Jakarta/ }).click();
 		await student.getByRole('button', { name: /Surabaya/ }).click();
 		await student.reload();
@@ -85,9 +92,7 @@ test('quiz supports a question bank, multiple correct answers, and a game-show s
 		);
 
 		await page.keyboard.press('Escape');
-		// Legacy reveal must not disclose grades, keys or tallies to students.
-		await page.getByRole('button', { name: 'Soal 1: Apa ibu kota Indonesia?' }).click();
-		await page.getByRole('button', { name: 'Tampilkan hasil ke mahasiswa' }).click();
+		// Owner results stay private from students even if presenter previews them.
 		const ownedResult = await page.request.get(`/api/polls/${code}/results`);
 		expect(ownedResult.ok()).toBe(true);
 		const ownerData = await ownedResult.json();
@@ -144,6 +149,11 @@ test('quiz supports a question bank, multiple correct answers, and a game-show s
 	}
 	await page.getByRole('button', { name: 'Akhiri sesi', exact: true }).click();
 	await expect(page.getByTestId('quiz-leaderboard')).toBeVisible();
+	await expect(page.getByTestId('leaderboard-starfall')).toBeVisible();
 	await expect(page.getByText('Juara kelas')).toBeVisible();
 	await expect(page.getByRole('cell', { name: 'Ayu' })).toBeVisible();
+	await page.getByRole('button', { name: 'Tinjau soal' }).click();
+	await page.getByRole('button', { name: 'Soal 1: Apa ibu kota Indonesia?' }).click();
+	await expect(page.getByTestId('presenter-stage')).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Tampilkan hasil ke mahasiswa' })).toHaveCount(0);
 });
