@@ -355,6 +355,17 @@
 				title="Reset timer"><Icon name="timer" /> <span>Reset timer</span></button
 			>
 		{/if}
+		{#if !presenting && data.activityType === 'choice' && live.state === 'ended'}
+			<button
+				type="button"
+				class="floating-control"
+				onclick={() => (view = view === 'leaderboard' ? 'activity' : 'leaderboard')}
+				aria-label={view === 'leaderboard' ? 'Tinjau soal' : 'Leaderboard'}
+				title={view === 'leaderboard' ? 'Tinjau soal' : 'Leaderboard'}
+				><Icon name="eye" />
+				<span>{view === 'leaderboard' ? 'Tinjau soal' : 'Leaderboard'}</span></button
+			>
+		{/if}
 		{#if !presenting}<button
 				type="button"
 				class="floating-control"
@@ -423,11 +434,6 @@
 	{#if errorMessage}<p role="alert">{errorMessage}</p>{/if}
 	{#if !presenting && !showJoin && data.activityType === 'choice' && live.state === 'ended'}
 		<div class="top-navigation" data-testid="post-session-review-nav">
-			<button
-				class="control"
-				onclick={() => (view = view === 'leaderboard' ? 'activity' : 'leaderboard')}
-				>{view === 'leaderboard' ? 'Tinjau soal' : 'Leaderboard'}</button
-			>
 			{#if questions.length > 1}<nav class="flex flex-wrap gap-2" aria-label="Daftar soal">
 					{#each questions as question, i}<button
 							class="control"

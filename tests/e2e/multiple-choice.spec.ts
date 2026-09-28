@@ -49,7 +49,7 @@ test('quiz supports a question bank, multiple correct answers, and a game-show s
 	const code = (await page.getByTestId('session-code').textContent())!.trim();
 	await page.getByRole('button', { name: 'Buka sesi', exact: true }).click();
 
-	const context = await browser.newContext();
+	const context = await browser.newContext({ viewport: { width: 360, height: 780 } });
 	try {
 		const student = await context.newPage();
 		await student.goto(`/join?code=${code}`);
@@ -64,7 +64,7 @@ test('quiz supports a question bank, multiple correct answers, and a game-show s
 					.getByTestId('answer-grid')
 					.evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length)
 			)
-			.toBe(2);
+			.toBe(1);
 		await student.getByRole('button', { name: /Jakarta/ }).click();
 		await student.getByRole('button', { name: /Surabaya/ }).click();
 		await student.reload();

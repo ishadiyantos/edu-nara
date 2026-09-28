@@ -607,8 +607,9 @@
 			transform: scale(1.04);
 		}
 	}
-	@media (max-width: 420px) {
+	@media (max-width: 640px) {
 		.choices {
+			grid-template-columns: minmax(0, 1fr);
 			gap: 0.65rem;
 		}
 		.choices button {

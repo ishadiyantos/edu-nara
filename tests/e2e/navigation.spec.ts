@@ -10,8 +10,24 @@ test('landing tetap satu layar tanpa scroll pada ponsel', async ({ page }) => {
 	await page.goto('/');
 	await expect(page.getByTestId('join-shell')).toBeVisible();
 	await expect(page.getByTestId('game-show-landing')).toBeVisible();
-	await expect(page.evaluate(() => document.documentElement.scrollHeight)).resolves.toBeLessThanOrEqual(780);
+	await expect(
+		page.evaluate(() => document.documentElement.scrollHeight)
+	).resolves.toBeLessThanOrEqual(780);
 	await expect(page.getByText('Masukkan kode sesi dari dosenmu')).toBeVisible();
+	const card = page.getByTestId('activity-preview');
+	const cardBox = await card.boundingBox();
+	expect(cardBox!.x).toBeGreaterThanOrEqual(16);
+	expect(cardBox!.x + cardBox!.width).toBeLessThanOrEqual(376);
+});
+
+test('landing join card stays centered at narrow width', async ({ page }) => {
+	await page.setViewportSize({ width: 320, height: 780 });
+	await page.goto('/');
+	const card = page.getByTestId('activity-preview');
+	await expect(card).toBeVisible();
+	const box = await card.boundingBox();
+	expect(box!.x).toBeGreaterThanOrEqual(12);
+	expect(box!.x + box!.width).toBeLessThanOrEqual(308);
 });
 test('join validates short name', async ({ page }) => {
 	await page.goto('/join?code=TEST99');

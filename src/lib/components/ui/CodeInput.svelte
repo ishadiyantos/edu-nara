@@ -65,9 +65,9 @@
 	}
 </script>
 
-<fieldset class="flex flex-col gap-2">
+<fieldset class="flex min-w-0 flex-col gap-2">
 	<legend class="text-sm font-medium text-text">{label}</legend>
-	<div class="flex justify-between gap-2" role="group" aria-label={label}>
+	<div class="grid min-w-0 grid-cols-6 gap-1.5 sm:gap-2" role="group" aria-label={label}>
 		{#each cells as ch, i}
 			<input
 				bind:this={refs[i]}
@@ -78,8 +78,8 @@
 				maxlength="1"
 				value={ch}
 				aria-label={`Karakter ${i + 1} dari ${length}`}
-				class="h-14 w-11 rounded-xl border-2 border-border bg-surface text-center font-mono
-				       text-2xl font-bold uppercase tracking-widest
+				class="h-12 min-w-0 rounded-xl border-2 border-border bg-surface text-center font-mono
+				       text-xl font-bold uppercase tracking-widest sm:h-14 sm:text-2xl
 				       focus:border-primary focus:ring-4 focus:ring-primary/15 focus:outline-none"
 				oninput={(e) => handleInput(i, e)}
 				onkeydown={(e) => handleKeydown(i, e)}

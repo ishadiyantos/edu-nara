@@ -66,17 +66,19 @@
 			</header>
 
 			<section class="flex flex-1 items-center justify-center py-3" data-testid="landing-hero">
-				<div class="grid w-full items-center gap-6 lg:grid-cols-[1fr_28rem]">
+				<div class="grid w-full items-center gap-6 px-4 lg:grid-cols-[1fr_minmax(0,28rem)] lg:px-0">
 					<div class="text-center lg:text-left">
 						<p
-							class="mx-auto inline-flex items-center gap-2 rounded-full border border-cyan-200/30 bg-white/10 px-3 py-1 text-[0.68rem] font-black uppercase tracking-[0.22em] text-cyan-100 lg:mx-0"
+							class="mx-auto inline-flex max-w-full items-center gap-2 rounded-full border border-cyan-200/30 bg-white/10 px-3 py-1 text-[0.68rem] font-black uppercase tracking-[0.22em] text-cyan-100 lg:mx-0"
 						>
-							<span class="h-2 w-2 animate-pulse rounded-full bg-rose-300" aria-hidden="true"
+							<span
+								class="h-2 w-2 shrink-0 animate-pulse rounded-full bg-rose-300"
+								aria-hidden="true"
 							></span>
-							Live classroom game-show
+							<span class="truncate">Live classroom game-show</span>
 						</p>
 						<h1
-							class="mx-auto mt-4 max-w-2xl text-4xl font-black leading-[0.95] tracking-[-0.055em] text-white sm:text-6xl lg:mx-0 lg:text-7xl"
+							class="mx-auto mt-4 max-w-2xl text-3xl font-black leading-[1.05] tracking-[-0.04em] text-white sm:text-5xl lg:mx-0 lg:text-7xl"
 						>
 							Masuk ke kelasmu.
 						</h1>
@@ -84,7 +86,9 @@
 							Masukkan kode sesi dari dosenmu untuk mulai. Ikuti kuis, word cloud, dan aktivitas
 							kelas dengan tampilan baru yang lebih ramai.
 						</p>
-						<div class="mt-5 hidden grid-cols-3 gap-3 text-center text-xs font-bold sm:grid">
+						<div
+							class="mx-auto mt-5 hidden max-w-full grid-cols-3 gap-3 text-center text-xs font-bold sm:grid lg:mx-0"
+						>
 							<div
 								class="rounded-2xl border border-white/10 bg-white/10 p-3 shadow-[0_0_18px_rgba(34,211,238,0.18)]"
 							>
@@ -104,18 +108,18 @@
 					</div>
 
 					<div
-						class="mx-auto w-full max-w-md rounded-[2rem] border border-white/15 bg-white/10 p-4 text-left shadow-[0_24px_80px_rgba(0,0,0,0.34)] backdrop-blur sm:p-6"
+						class="mx-auto w-full min-w-0 max-w-md rounded-[2rem] border border-white/15 bg-white/10 p-4 text-left shadow-[0_24px_80px_rgba(0,0,0,0.34)] backdrop-blur sm:p-6"
 						data-testid="activity-preview"
 					>
 						<div class="mb-4 flex items-center justify-between gap-3">
-							<div>
+							<div class="min-w-0">
 								<p class="text-xs font-black uppercase tracking-[0.18em] text-amber-200">
 									Student pass
 								</p>
 								<p class="mt-1 text-sm text-white/70">Siap masuk kelas</p>
 							</div>
 							<span
-								class="rounded-full bg-emerald-300/15 px-3 py-1 text-xs font-black text-emerald-100"
+								class="shrink-0 rounded-full bg-emerald-300/15 px-3 py-1 text-xs font-black text-emerald-100"
 								>ONLINE</span
 							>
 						</div>
@@ -128,7 +132,7 @@
 							novalidate
 						>
 							<div
-								class="rounded-2xl bg-white p-4 text-slate-900 shadow-[0_0_30px_rgba(34,211,238,0.18)]"
+								class="min-w-0 rounded-2xl bg-white p-3 text-slate-900 shadow-[0_0_30px_rgba(34,211,238,0.18)] sm:p-4"
 							>
 								<CodeInput bind:value={code} label="Kode sesi" />
 							</div>
