@@ -113,8 +113,9 @@
 		display: none;
 	}
 	.student-board :global(.board-container) {
-		width: 100%;
+		width: 100vw;
 		max-width: none;
+		margin-left: calc(50% - 50vw);
 		padding-inline: clamp(0.25rem, 0.8vw, 0.75rem);
 	}
 	.student-board :global(.live-board) {
