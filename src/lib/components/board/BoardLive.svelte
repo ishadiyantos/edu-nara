@@ -27,9 +27,7 @@
 		title?: string;
 	} = $props();
 	let board = $state(untrack(() => initial));
-	let connected = $state(false);
 	let error = $state('');
-	let notice = $state('');
 	let saving = $state(false);
 	let mounted = false;
 	let disposed = false;
@@ -85,45 +83,35 @@
 		for (const key of ['columnId', 'body', 'title', 'linkUrl', 'requestId'] as const)
 			body.set(key, payload[key]);
 		if (payload.image) body.set('image', payload.image);
-		const result = await request(`/api/boards/${sessionCode}/posts`, body);
-		notice =
-			result.status === 'approved'
-				? 'Kartu terkirim dan tampil di papan.'
-				: 'Kartu terkirim. Menunggu moderasi dosen.';
+		await request(`/api/boards/${sessionCode}/posts`, body);
 	}
 	async function moderate(payload: { postId: string; status: PostStatus }) {
 		await request(`/api/boards/posts/${payload.postId}/moderate`, { status: payload.status });
-		notice = 'Moderasi tersimpan.';
 	}
 	async function reorder(payload: { columnId: string; posts: BoardPost[] }) {
 		await request(`/api/boards/${sessionCode}/columns/${payload.columnId}/order`, {
 			ids: payload.posts.map((p) => p.id)
 		});
-		notice = 'Urutan kartu tersimpan.';
 	}
 	async function move(payload: { postId: string; targetColumnId: string; targetPosition: number }) {
 		await request(`/api/boards/${sessionCode}/posts/${payload.postId}/move`, {
 			columnId: payload.targetColumnId,
 			position: payload.targetPosition
 		});
-		notice = 'Kartu dipindahkan.';
 	}
 	async function renameColumn(payload: { columnId: string; title: string }) {
 		await request(`/api/boards/${sessionCode}/columns/${payload.columnId}`, {
 			title: payload.title
 		});
-		notice = 'Judul kolom tersimpan.';
 	}
 	async function createColumn(title: string) {
 		await request(`/api/boards/${sessionCode}/columns`, { title });
-		notice = 'Kolom baru ditambahkan.';
 	}
 	async function shareBoard() {
 		try {
 			const canShare = 'share' in navigator && typeof navigator.share === 'function';
 			if (canShare) await navigator.share({ title, url: window.location.href });
 			else await navigator.clipboard.writeText(window.location.href);
-			notice = canShare ? 'Papan siap dibagikan.' : 'Tautan papan disalin.';
 		} catch {
 			/* User cancelled native share. */
 		}
@@ -136,7 +124,6 @@
 			await request(`/api/boards/${sessionCode}/settings`, {
 				moderationEnabled: !board.moderationEnabled
 			});
-			notice = 'Pengaturan tersimpan. Status kartu lama tidak berubah.';
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Pengaturan gagal disimpan.';
 		} finally {
@@ -149,11 +136,10 @@
 		const source = admin ? null : new EventSource(`/api/sessions/${sessionId}/events`);
 		if (source) {
 			source.onopen = () => {
-				connected = true;
 				void refresh();
 			};
 			source.onerror = () => {
-				connected = false;
+				/* EventSource reconnects automatically. */
 			};
 			for (const name of [
 				'snapshot',
@@ -183,27 +169,6 @@
 
 <section class="live-board" aria-label="Papan kolaborasi">
 	{#if title}<h1>{title}</h1>{/if}
-	<div class="board-info">
-		<p>
-			{admin ? 'Panel dosen' : connected ? 'Terhubung langsung' : 'Menghubungkan ulang…'} · {board.moderationEnabled
-				? 'Moderasi aktif'
-				: 'Moderasi nonaktif'}
-		</p>
-		{#if admin && !presentation}<button
-				onclick={toggle}
-				disabled={saving}
-				aria-pressed={board.moderationEnabled}
-				>{saving
-					? 'Menyimpan…'
-					: board.moderationEnabled
-						? 'Nonaktifkan moderasi'
-						: 'Aktifkan moderasi'}</button
-			>{/if}
-	</div>
-	{#if admin && !presentation}<p class="hint">
-			Pengaturan berlaku untuk seluruh sesi papan. Menonaktifkan moderasi tidak menyetujui antrean
-			lama.
-		</p>{/if}
 	{#if board.state !== 'open'}<p role="status" class="hint">
 			{board.state === 'draft'
 				? 'Menunggu dosen membuka sesi.'
@@ -211,7 +176,6 @@
 					? 'Sesi selesai. Papan tetap dapat dibaca.'
 					: 'Kiriman ditutup sementara.'}
 		</p>{/if}
-	{#if notice}<p role="status" class="hint">{notice}</p>{/if}
 	{#if error}<div role="alert" class="error">
 			{error} <button onclick={() => void refresh()}>Muat ulang</button>
 		</div>{/if}
@@ -229,6 +193,9 @@
 		onrenamecolumn={admin ? renameColumn : undefined}
 		onaddcolumn={admin ? createColumn : undefined}
 		onshare={shareBoard}
+		moderationEnabled={board.moderationEnabled}
+		ontogglemoderation={admin && !presentation ? toggle : undefined}
+		{saving}
 	/>
 </section>
 
@@ -243,15 +210,6 @@
 		font-weight: 900;
 		margin-bottom: 1rem;
 		overflow-wrap: anywhere;
-	}
-	.board-info {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem;
-		flex-wrap: wrap;
-		margin-bottom: 0.75rem;
-		font-size: 0.85rem;
 	}
 	button {
 		min-height: 44px;

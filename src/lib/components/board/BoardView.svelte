@@ -27,7 +27,10 @@
 		onmove,
 		onrenamecolumn,
 		onaddcolumn,
-		onshare
+		onshare,
+		moderationEnabled = false,
+		ontogglemoderation,
+		saving = false
 	}: {
 		columns?: BoardColumn[];
 		posts?: BoardPost[];
@@ -48,6 +51,9 @@
 		onrenamecolumn?: (payload: { columnId: string; title: string }) => void | Promise<void>;
 		onaddcolumn?: (title: string) => void | Promise<void>;
 		onshare?: () => void | Promise<void>;
+		moderationEnabled?: boolean;
+		ontogglemoderation?: () => void | Promise<void>;
+		saving?: boolean;
 	} = $props();
 	let activeComposer = $state<string | null>(null);
 	let search = $state('');
@@ -180,13 +186,31 @@
 	<article
 		data-testid={`board-post-${post.id}`}
 		class="board-card"
+		draggable={!!admin && !slideshow && !!onmove}
 		class:dragging={dragging === post.id}
-		ondragover={(event) => {
+		ondragstart={(event) => {
+			if (!admin || slideshow || !onmove) return;
+			dragging = post.id;
+			event.dataTransfer?.setData('application/x-edu-nara-board-post', post.id);
+			event.dataTransfer?.setData('text/plain', post.id);
+			if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+		}}
+		ondragend={() => (dragging = null)}
+		ondragenter={(event) => {
 			if (onmove) event.preventDefault();
+		}}
+		ondragover={(event) => {
+			if (onmove) {
+				event.preventDefault();
+				if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+			}
 		}}
 		ondrop={(event) => {
 			event.preventDefault();
-			const id = event.dataTransfer?.getData('text/plain') || dragging;
+			const id =
+				event.dataTransfer?.getData('application/x-edu-nara-board-post') ||
+				event.dataTransfer?.getData('text/plain') ||
+				dragging;
 			if (id && id !== post.id) void moveToColumn(id, post.columnId, dropPosition);
 		}}
 	>
@@ -198,25 +222,12 @@
 				title="Geser kartu"
 				ondragstart={(event) => {
 					dragging = post.id;
+					event.dataTransfer?.setData('application/x-edu-nara-board-post', post.id);
 					event.dataTransfer?.setData('text/plain', post.id);
 					if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
 				}}
 				ondragend={() => (dragging = null)}>⋮⋮</button
 			>{/if}
-		{#if admin && onmove}<label class="move-select"
-				>Pindahkan ke
-				<select
-					aria-label={`Pindahkan kartu ${post.title || post.body || post.author} ke kolom`}
-					value={post.columnId}
-					onchange={(event) => {
-						const target = event.currentTarget as HTMLSelectElement;
-						const targetColumn = columns.find((column) => column.id === target.value);
-						if (targetColumn && targetColumn.id !== post.columnId)
-							void moveToColumn(post.id, targetColumn.id, 0);
-					}}
-					>{#each columns as option}<option value={option.id}>{option.title}</option>{/each}</select
-				>
-			</label>{/if}
 		<header class="card-author">
 			<span class="avatar" aria-hidden="true"
 				>{post.author.slice(0, 1).toLocaleUpperCase('id')}</span
@@ -284,25 +295,33 @@
 		{/if}
 	</article>
 {/snippet}
-<div data-testid="board-view" class="board" class:presentation>
-	<div class="board-tools">
-		<label class="search"
-			><span>Cari kartu</span><input
-				type="search"
-				bind:value={search}
-				placeholder="Nama, judul, atau isi kartu…"
-			/></label
+<div data-testid="board-view" class="board" class:presentation class:slideshow-active={slideshow}>
+	<div class="board-tools" class:slideshow-mode={slideshow}>
+		<label class="search" aria-label="Cari kartu"
+			><span>Cari</span><input type="search" bind:value={search} placeholder="Cari kartu…" /></label
 		>
 		<button
+			class="tool-button"
 			onclick={() => {
 				slideshow = !slideshow;
 				slide = 0;
 			}}
-			aria-pressed={slideshow}>{slideshow ? 'Kembali ke papan' : 'Slideshow'}</button
+			aria-label={slideshow ? 'Kembali ke papan' : 'Slideshow'}
+			aria-pressed={slideshow}>{slideshow ? '▦' : '▷'}</button
 		>
-		{#if onshare}<button onclick={() => void onshare()} aria-label="Bagikan papan">↗ Bagikan</button
+		{#if onshare}<button
+				class="tool-button"
+				onclick={() => void onshare()}
+				aria-label="Bagikan papan">↗</button
 			>{/if}
-		{#if admin && (presentation || !slideshow) && onaddcolumn}
+		{#if admin && ontogglemoderation && !slideshow}<button
+				class="tool-button"
+				onclick={() => void ontogglemoderation()}
+				disabled={saving}
+				aria-label={moderationEnabled ? 'Nonaktifkan moderasi' : 'Aktifkan moderasi'}
+				aria-pressed={moderationEnabled}>{moderationEnabled ? '◉' : '◎'}</button
+			>{/if}
+		{#if admin && !slideshow && onaddcolumn}
 			<form
 				class="add-column"
 				onsubmit={(event) => {
@@ -316,10 +335,15 @@
 					maxlength="120"
 					placeholder="Kolom baru"
 				/>
-				<button type="submit" disabled={busy || !newColumnTitle.trim()}>+ Tambah kolom</button>
+				<button
+					class="tool-button"
+					type="submit"
+					aria-label="+ Tambah kolom"
+					disabled={busy || !newColumnTitle.trim()}>+</button
+				>
 			</form>
 		{/if}
-		{#if admin && !presentation && !slideshow}<label
+		{#if admin && !presentation && !slideshow}<label class="status-filter"
 				>Status<select bind:value={filter}
 					><option value="all">Semua</option><option value="pending">Menunggu</option><option
 						value="approved">Tampil</option
@@ -328,14 +352,14 @@
 				></label
 			>{/if}
 		{#if onpost && !disabled && !slideshow && columns[0]}<button
-				class="posting"
+				class="posting tool-button"
 				onclick={() => {
 					activeComposer = columns[0].id;
-				}}>+ Posting</button
+				}}>+</button
 			>{/if}
 	</div>
 	{#if error || actionError}<p role="alert" class="error">{error || actionError}</p>{/if}
-	{#if loading}<p role="status">Memuat papan kolaborasi…</p>{/if}
+	{#if loading}<p role="status" class="sr-only">Memuat papan kolaborasi…</p>{/if}
 	{#if slideshow}
 		<section class="slideshow" aria-label="Slideshow kartu disetujui" data-testid="board-slideshow">
 			{#if slides[slideIndex]}<p class="slide-column">
@@ -361,12 +385,22 @@
 					class="column"
 					data-testid={`board-column-${column.id}`}
 					aria-label={column.title}
-					ondragover={(event) => {
+					ondragenter={(event) => {
 						if (onmove) event.preventDefault();
+					}}
+					ondragover={(event) => {
+						if (onmove) {
+							event.preventDefault();
+							if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+						}
 					}}
 					ondrop={(event) => {
 						event.preventDefault();
-						const id = event.dataTransfer?.getData('text/plain') || dragging;
+						if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+						const id =
+							event.dataTransfer?.getData('application/x-edu-nara-board-post') ||
+							event.dataTransfer?.getData('text/plain') ||
+							dragging;
 						if (id) void moveToColumn(id, column.id, cards.length);
 					}}
 				>
@@ -384,8 +418,10 @@
 									bind:value={editingTitle}
 									maxlength="120"
 								/>
-								<button type="submit" disabled={busy}>Simpan</button>
-								<button type="button" onclick={() => (editingColumn = null)}>Batal</button>
+								<button type="submit" disabled={busy} aria-label="Simpan">✓</button>
+								<button type="button" onclick={() => (editingColumn = null)} aria-label="Batal"
+									>×</button
+								>
 							</form>
 						{:else}
 							<h2>{column.title}</h2>
@@ -425,23 +461,36 @@
 
 <style>
 	.board {
+		position: relative;
 		width: 100%;
 		min-width: 0;
 		max-width: 100%;
 		color: #0f172a;
 		border-radius: 1.25rem;
-		padding: clamp(0.6rem, 2vw, 1.4rem);
+		padding: clamp(4.75rem, 8vw, 5.75rem) clamp(0.6rem, 2vw, 1.4rem) clamp(0.6rem, 2vw, 1.4rem);
 		background: #eef2ff;
 	}
 	.board-tools {
+		position: absolute;
+		top: 0.85rem;
+		right: 0.85rem;
+		z-index: 10;
 		display: flex;
-		align-items: end;
+		align-items: center;
+		justify-content: flex-end;
 		flex-wrap: wrap;
-		gap: 0.65rem;
-		margin-bottom: 1.25rem;
-		padding: 0.35rem;
-		border-radius: 1rem;
-		background: color-mix(in srgb, #334155 10%, transparent);
+		gap: 0.35rem;
+		max-width: calc(100% - 1.7rem);
+		padding: 0.4rem;
+		border: 1px solid #64748b;
+		border-radius: 999px;
+		background: rgb(15 23 42 / 94%);
+		box-shadow: 0 12px 30px rgb(15 23 42 / 24%);
+		backdrop-filter: blur(12px);
+	}
+	.board-tools.slideshow-mode {
+		top: 0.65rem;
+		right: 0.65rem;
 	}
 	label {
 		display: grid;
@@ -450,27 +499,55 @@
 		font-weight: 700;
 	}
 	.search {
-		flex: 1;
-		min-width: min(100%, 12rem);
-	}
-	.add-column {
-		display: flex;
-		align-items: end;
-		gap: 0.35rem;
-		flex: 1 1 16rem;
-	}
-	.add-column input {
-		min-width: 8rem;
-	}
-	.column-edit {
 		display: flex;
 		align-items: center;
 		gap: 0.35rem;
-		width: 100%;
+		min-width: min(15rem, 42vw);
+		color: #cbd5e1;
+		font-size: 0.78rem;
+	}
+	.search input {
+		flex: 1;
+		min-width: 0;
+	}
+	.search span {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+	}
+	.add-column {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+	}
+	.add-column input {
+		width: 9rem;
+		min-width: 0;
+	}
+	.status-filter {
+		display: none;
+	}
+	.column-edit {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		min-width: 0;
+		max-width: 100%;
 	}
 	.column-edit input {
+		width: min(12rem, 55vw);
 		min-width: 0;
-		padding: 0.35rem 0.5rem;
+		padding: 0.35rem 0.55rem;
+		border: 2px solid #f97316;
+		border-radius: 0.7rem;
+		box-shadow: 0 0 0 3px rgb(251 146 60 / 18%);
+	}
+	.column-edit button {
+		min-height: 36px;
+		padding: 0.35rem 0.6rem;
+		border-radius: 0.6rem;
 	}
 	.icon-button {
 		min-height: 32px;
@@ -506,10 +583,46 @@
 	button:hover:not(:disabled) {
 		border-color: #4f46e5;
 	}
+	.tool-button {
+		display: inline-grid;
+		place-items: center;
+		width: 2.75rem;
+		height: 2.75rem;
+		min-height: 44px;
+		padding: 0;
+		border: 1px solid #64748b;
+		border-radius: 50%;
+		background: #1e293b;
+		color: #f8fafc;
+		font-size: 1.15rem;
+		font-weight: 800;
+	}
+	.tool-button:hover:not(:disabled),
+	.tool-button[aria-pressed='true'] {
+		border-color: #a5b4fc;
+		background: #4f46e5;
+		color: white;
+	}
+	.board-tools input,
+	.board-tools select {
+		min-height: 38px;
+		border-color: #64748b;
+		border-radius: 999px;
+		background: #0f172a;
+		color: #f8fafc;
+	}
+	.status-filter {
+		display: grid;
+		color: #cbd5e1;
+	}
+	.status-filter select {
+		width: auto;
+		min-width: 7rem;
+	}
 	.posting {
 		background: #4f46e5;
 		color: white;
-		border-color: #4f46e5;
+		border-color: #818cf8;
 	}
 	.columns {
 		display: flex;
@@ -572,17 +685,6 @@
 		border-radius: 0.4rem;
 		background: #f8fafc;
 		cursor: grab;
-	}
-	.move-select {
-		display: flex;
-		align-items: center;
-		gap: 0.35rem;
-		font-size: 0.75rem;
-		color: #475569;
-	}
-	.move-select select {
-		min-height: 32px;
-		padding: 0.2rem 0.4rem;
 	}
 	.board-card.dragging {
 		opacity: 0.45;
@@ -696,5 +798,33 @@
 	}
 	.presentation {
 		min-height: 65dvh;
+	}
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
+	}
+	@media (max-width: 560px) {
+		.board {
+			padding-top: 5.4rem;
+		}
+		.board-tools {
+			left: 0.65rem;
+			right: 0.65rem;
+			justify-content: flex-end;
+		}
+		.search {
+			flex: 1 1 100%;
+			min-width: 100%;
+		}
+		.add-column input {
+			width: 7rem;
+		}
 	}
 </style>

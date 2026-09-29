@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 test('production Board: columns, private media, moderation toggle, live updates and presentation', async ({
 	page,
@@ -27,10 +27,24 @@ test('production Board: columns, private media, moderation toggle, live updates 
 	await expect(page.getByLabel('Nama kolom 1', { exact: true })).toHaveValue('Refleksi');
 	await page.getByRole('button', { name: 'Pindahkan Refleksi ke kanan' }).click();
 	await expect(page.getByLabel('Nama kolom 1', { exact: true })).toHaveValue('Ide');
-	const popup = page.context().waitForEvent('page');
-	await page.getByRole('button', { name: 'Luncurkan sesi Board', exact: true }).click();
-	const presenter = await popup;
-	await presenter.waitForLoadState();
+	await expect(
+		page.getByRole('button', { name: 'Luncurkan sesi Board', exact: true })
+	).toBeEnabled();
+	let presenter: Page;
+	if (testInfo.project.name === 'mobile-360') {
+		await page
+			.locator('form')
+			.last()
+			.evaluate((form) => form.removeAttribute('target'));
+		await page.getByRole('button', { name: 'Luncurkan sesi Board', exact: true }).click();
+		presenter = page;
+		await presenter.waitForLoadState();
+	} else {
+		const popup = page.waitForEvent('popup');
+		await page.getByRole('button', { name: 'Luncurkan sesi Board', exact: true }).click();
+		presenter = await popup;
+		await presenter.waitForLoadState();
+	}
 	const code = (await presenter.getByTestId('session-code').textContent())!.trim();
 	const sessionId = presenter.url().split('/').pop()!;
 	await presenter.getByRole('button', { name: 'Buka sesi', exact: true }).click();
@@ -106,6 +120,23 @@ test('production Board: columns, private media, moderation toggle, live updates 
 		await author.getByLabel('Isi kartu', { exact: true }).fill('Kartu kedua');
 		await author.getByRole('button', { name: 'Kirim', exact: true }).click();
 		await expect(presenter.getByText('Kartu kedua', { exact: true })).toBeVisible();
+		if (testInfo.project.name === 'mobile-360') {
+			await expect(presenter.getByRole('button', { name: 'Slideshow', exact: true })).toBeVisible();
+			await expect(
+				presenter.getByRole('button', { name: 'Bagikan papan', exact: true })
+			).toBeVisible();
+			await expect(presenter.getByText('Panel dosen · Moderasi nonaktif')).toHaveCount(0);
+			await expect(presenter.getByText('Pindahkan ke', { exact: true })).toHaveCount(0);
+			const toolbar = presenter.getByTestId('board-view').locator('.board-tools');
+			await expect(toolbar).toHaveCSS('position', 'absolute');
+			expect(
+				await observer.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
+			).toBe(true);
+			return;
+		}
+		await presenter
+			.getByRole('button', { name: 'Edit judul Refleksi', exact: true })
+			.scrollIntoViewIfNeeded();
 		await presenter.getByRole('button', { name: 'Edit judul Refleksi', exact: true }).click();
 		await presenter.getByLabel('Edit judul Refleksi', { exact: true }).fill('Refleksi baru');
 		await presenter.getByRole('button', { name: 'Simpan', exact: true }).click();
@@ -115,11 +146,33 @@ test('production Board: columns, private media, moderation toggle, live updates 
 		await presenter.getByLabel('Judul kolom baru', { exact: true }).fill('Diskusi');
 		await presenter.getByRole('button', { name: '+ Tambah kolom', exact: true }).click();
 		await expect(presenter.getByRole('heading', { name: 'Diskusi', exact: true })).toBeVisible();
-		await presenter
-			.locator('article')
-			.filter({ hasText: 'Kartu kedua' })
-			.getByLabel('Pindahkan kartu Kartu kedua ke kolom', { exact: true })
-			.selectOption({ label: 'Refleksi baru' });
+		await presenter.evaluate(() => {
+			const source = [...document.querySelectorAll('article')].find((node) =>
+				node.textContent?.includes('Kartu kedua')
+			);
+			const target = document.querySelector('section[aria-label="Refleksi baru"]');
+			if (!source || !target) throw new Error('Board drag target tidak ditemukan.');
+			const transfer = new DataTransfer();
+			transfer.effectAllowed = 'move';
+			transfer.setData(
+				'application/x-edu-nara-board-post',
+				source.getAttribute('data-testid')!.replace('board-post-', '')
+			);
+			transfer.setData(
+				'text/plain',
+				source.getAttribute('data-testid')!.replace('board-post-', '')
+			);
+			source.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: transfer }));
+			target.dispatchEvent(new DragEvent('dragenter', { bubbles: true, dataTransfer: transfer }));
+			target.dispatchEvent(new DragEvent('dragover', { bubbles: true, dataTransfer: transfer }));
+			target.dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer: transfer }));
+			source.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: transfer }));
+		});
+		await expect(
+			presenter
+				.locator('section[aria-label="Refleksi baru"]')
+				.getByText('Kartu kedua', { exact: true })
+		).toBeVisible();
 		await expect(
 			presenter
 				.locator('section[aria-label="Refleksi baru"]')
