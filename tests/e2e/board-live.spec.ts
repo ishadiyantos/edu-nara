@@ -51,6 +51,14 @@ test('production Board: columns, private media, moderation toggle, live updates 
 	const sessionId = presenter.url().split('/').pop()!;
 	await presenter.getByRole('button', { name: 'Buka sesi', exact: true }).click();
 	await expect(presenter.getByTestId('board-view')).toBeVisible();
+	await expect(presenter.locator('.stage-header .board-tools')).toBeVisible();
+	await expect(presenter.getByTestId('session-controls')).toHaveCSS('position', 'fixed');
+	if (testInfo.project.name === 'desktop-1440') {
+		const status = (await presenter.locator('.stage-status').boundingBox())!;
+		const tools = (await presenter.locator('.board-tools').boundingBox())!;
+		expect(Math.abs(status.y + status.height / 2 - tools.y - tools.height / 2)).toBeLessThan(2);
+		expect(tools.x).toBeGreaterThan(status.x + status.width);
+	}
 	const authorContext = await browser.newContext({ viewport: { width: 360, height: 780 } });
 	const observerContext = await browser.newContext({ viewport: { width: 360, height: 780 } });
 	try {
@@ -64,7 +72,15 @@ test('production Board: columns, private media, moderation toggle, live updates 
 			await student.getByLabel('Nama tampilan').fill(name);
 			await student.getByRole('button', { name: 'Bergabung', exact: true }).click();
 			await expect(student.getByTestId('board-view')).toBeVisible();
+			const bounds = (await student.getByTestId('board-view').boundingBox())!;
+			expect(bounds.width).toBeGreaterThanOrEqual(330);
 		}
+		await observer.setViewportSize({ width: 1440, height: 900 });
+		expect((await observer.getByTestId('board-view').boundingBox())!.width).toBeGreaterThan(1350);
+		await observer.screenshot({
+			path: `test-results/board-student-wide-${testInfo.project.name}.png`
+		});
+		await observer.setViewportSize({ width: 360, height: 780 });
 		await author.getByRole('button', { name: 'Tambah kartu ke kolom Ide' }).click();
 		await author.getByLabel('Judul (opsional)').fill('Gagasan privat');
 		await author.getByLabel('Isi kartu', { exact: true }).fill('Belajar bersama dari foto');
@@ -129,8 +145,11 @@ test('production Board: columns, private media, moderation toggle, live updates 
 			).toBeVisible();
 			await expect(presenter.getByText('Panel dosen · Moderasi nonaktif')).toHaveCount(0);
 			await expect(presenter.getByText('Pindahkan ke', { exact: true })).toHaveCount(0);
-			const toolbar = presenter.getByTestId('board-view').locator('.board-tools');
-			await expect(toolbar).toHaveCSS('position', 'absolute');
+			const toolbar = presenter.locator('.stage-header .board-tools');
+			await expect(toolbar).toHaveCSS('position', 'static');
+			expect(
+				await presenter.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
+			).toBe(true);
 			expect(
 				await observer.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
 			).toBe(true);
@@ -269,6 +288,7 @@ test('production Board: columns, private media, moderation toggle, live updates 
 			presenter.getByRole('button', { name: 'Bagikan papan', exact: true })
 		).toBeVisible();
 		await presenter.getByRole('button', { name: 'Slideshow', exact: true }).click();
+		await expect(presenter.locator('.stage-header .board-tools')).toBeVisible();
 		await expect(presenter.getByTestId('board-slideshow')).toContainText('Langsung tampil');
 		await presenter.getByRole('button', { name: 'Kartu berikutnya →', exact: true }).click();
 		await expect(presenter.getByTestId('board-slideshow')).toContainText('Kartu kedua');

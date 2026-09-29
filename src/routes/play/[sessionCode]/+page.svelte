@@ -10,6 +10,7 @@
 <svelte:head><title>{data.snapshot.title} — Edu Nara</title></svelte:head>
 
 <main
+	class:student-board={data.activityType === 'board'}
 	class="relative min-h-dvh overflow-x-hidden bg-[#050816] py-4 text-white sm:py-10"
 	style="padding-top: max(1rem, env(safe-area-inset-top)); padding-bottom: max(1rem, env(safe-area-inset-bottom));"
 >
@@ -35,7 +36,12 @@
 		class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-300 via-fuchsia-400 to-amber-300"
 		aria-hidden="true"
 	></div>
-	<Container size="app" class="relative z-10 max-w-5xl">
+	<Container
+		size="app"
+		class={data.activityType === 'board'
+			? 'relative z-10 board-container'
+			: 'relative z-10 max-w-5xl'}
+	>
 		<a
 			class="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-white/10 px-4 py-2 text-sm font-black text-white/80 shadow-[0_0_24px_rgba(34,211,238,0.18)] backdrop-blur-md transition hover:bg-white/20 hover:text-white sm:mb-6"
 			href="/"
@@ -94,3 +100,28 @@
 		{/if}
 	</Container>
 </main>
+
+<style>
+	.student-board {
+		background:
+			radial-gradient(ellipse at 95% 0%, #52715266, transparent 55%),
+			linear-gradient(135deg, #163b36, #214c48 55%, #173c45);
+	}
+	.student-board > div[aria-hidden='true'] {
+		display: none;
+	}
+	.student-board :global(.board-container) {
+		width: 100%;
+		max-width: none;
+		padding-inline: clamp(0.75rem, 2vw, 2rem);
+	}
+	.student-board :global(.live-board) {
+		padding: 0;
+		border-radius: 0;
+		background: transparent;
+		min-height: calc(100dvh - 6rem);
+	}
+	.student-board :global(.column-content) {
+		padding-bottom: 6rem;
+	}
+</style>

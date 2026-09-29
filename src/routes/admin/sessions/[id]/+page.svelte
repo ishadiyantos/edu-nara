@@ -168,6 +168,7 @@
 			/* Reconnect retries owner-only scores. */
 		}
 	}
+	let boardToolbarHost = $state<HTMLElement | null>(null);
 	function key(event: KeyboardEvent) {
 		if (document.querySelector('dialog[open]')) return;
 		if (event.target instanceof HTMLElement && event.target.closest('input,textarea,select'))
@@ -309,13 +310,19 @@
 			</p>
 			<p class="stage-code" data-testid="session-code">{live.code}</p>
 		</div>
-		<p class="stage-status">
-			<span aria-hidden="true"></span>
-			<b data-testid="participant-count">{count}</b> peserta · {connected
-				? 'Live'
-				: 'Menghubungkan…'} ·
-			{live.state}
-		</p>
+		<div class="stage-actions">
+			<p class="stage-status">
+				<span aria-hidden="true"></span>
+				<b data-testid="participant-count">{count}</b> peserta · {connected
+					? 'Live'
+					: 'Menghubungkan…'} ·
+				{live.state}
+			</p>
+			{#if data.activityType === 'board'}<div
+					class="board-toolbar-host"
+					bind:this={boardToolbarHost}
+				></div>{/if}
+		</div>
 	</header>
 	<div
 		class:visible={!presenting ||
@@ -505,6 +512,7 @@
 			admin
 			presentation={presenting}
 			refreshKey={boardRefresh}
+			toolbarHost={boardToolbarHost}
 		/>
 	{:else if active}
 		{#if view === 'leaderboard'}
@@ -861,13 +869,15 @@
 			border-radius: 999px;
 		}
 	}
-	/* Board moderation must remain reachable below long cards on narrow screens. */
+	/* Board dock floats in both normal and fullscreen views. */
 	.session-screen.board-screen:not(.presentation) .session-toolbar {
-		position: static;
-		transform: none;
-		width: fit-content;
-		max-width: 100%;
-		margin: 0.35rem 0;
+		position: fixed;
+		left: 50%;
+		bottom: max(0.75rem, env(safe-area-inset-bottom));
+		transform: translateX(-50%);
+		width: max-content;
+		max-width: calc(100vw - 1rem);
+		margin: 0;
 	}
 	/* Joining instructions: the first thing a presenter shows the class. */
 	.joining-panel {
@@ -1390,7 +1400,7 @@
 	.board-screen.presentation .floating-control {
 		color: white;
 	}
-	.board-screen.presentation :global(.column-content) {
+	.board-screen :global(.column-content) {
 		padding-bottom: 6rem;
 	}
 	.session-screen.board-screen {
@@ -1434,5 +1444,23 @@
 	.board-screen :global(.live-board h1) {
 		font-size: clamp(1.5rem, 2.5vw, 2.5rem);
 		margin: 0.8rem 0 0;
+	}
+	.stage-actions {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		flex-wrap: wrap;
+		gap: 0.65rem;
+		min-width: 0;
+	}
+	.board-toolbar-host {
+		min-width: 0;
+		max-width: 100%;
+	}
+	.board-screen .stage-header {
+		flex-wrap: wrap;
+	}
+	.board-screen:not(.presentation) {
+		padding-bottom: 7rem;
 	}
 </style>

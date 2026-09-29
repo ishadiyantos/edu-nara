@@ -23,6 +23,7 @@
 		showOwn = false,
 		disabled = false,
 		presentation = false,
+		toolbarHost = null,
 		onmoderate,
 		onreorder,
 		onmove,
@@ -42,6 +43,7 @@
 		showOwn?: boolean;
 		disabled?: boolean;
 		presentation?: boolean;
+		toolbarHost?: HTMLElement | null;
 		onmoderate?: (payload: { postId: string; status: PostStatus }) => void | Promise<void>;
 		onreorder?: (payload: { columnId: string; posts: BoardPost[] }) => void | Promise<void>;
 		onmove?: (payload: {
@@ -68,6 +70,14 @@
 	let editingColumn = $state<string | null>(null);
 	let editingTitle = $state('');
 	let addingColumn = $state(false);
+	function placeToolbar(node: HTMLElement, target: HTMLElement | null) {
+		const parent = node.parentElement!;
+		function update(host: HTMLElement | null) {
+			(host ?? parent).appendChild(node);
+		}
+		update(target);
+		return { update, destroy: () => node.remove() };
+	}
 	const visible = $derived(
 		sortPosts(
 			posts.filter(
@@ -300,8 +310,19 @@
 		{/if}
 	</article>
 {/snippet}
-<div data-testid="board-view" class="board" class:presentation class:slideshow-active={slideshow}>
-	<div class="board-tools" class:slideshow-mode={slideshow}>
+<div
+	data-testid="board-view"
+	class="board"
+	class:presentation
+	class:slideshow-active={slideshow}
+	class:toolbar-hosted={!!toolbarHost}
+>
+	<div
+		class="board-tools"
+		class:slideshow-mode={slideshow}
+		class:hosted={!!toolbarHost}
+		use:placeToolbar={toolbarHost}
+	>
 		<label class="search" aria-label="Cari kartu"
 			><span>Cari</span><input type="search" bind:value={search} placeholder="Cari kartu…" /></label
 		>
@@ -891,5 +912,12 @@
 			flex: 1 1 100%;
 			min-width: 100%;
 		}
+	}
+	.board.toolbar-hosted {
+		padding-top: 1rem;
+	}
+	.board-tools.hosted {
+		position: static;
+		max-width: 100%;
 	}
 </style>

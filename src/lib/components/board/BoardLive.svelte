@@ -15,6 +15,7 @@
 		initial,
 		admin = false,
 		presentation = false,
+		toolbarHost = null,
 		refreshKey = 0,
 		title = ''
 	}: {
@@ -23,6 +24,7 @@
 		initial: Snapshot;
 		admin?: boolean;
 		presentation?: boolean;
+		toolbarHost?: HTMLElement | null;
 		refreshKey?: number;
 		title?: string;
 	} = $props();
@@ -184,6 +186,7 @@
 		posts={board.posts}
 		{admin}
 		{presentation}
+		{toolbarHost}
 		showOwn={!admin}
 		disabled={board.state !== 'open'}
 		onpost={admin ? undefined : post}
