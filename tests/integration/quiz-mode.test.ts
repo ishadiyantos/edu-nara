@@ -65,12 +65,19 @@ test('guided mode gates answering to the server-side active question', async () 
 	expect(accepted.questionId).toBe(first.id);
 });
 
-test('self-paced mode accepts any question of the session activity', async () => {
-	const { store, session, second, ana } = await fixture('self_paced');
-	const accepted = submitChoiceResponse(store, session.id, second.id, ana.token, [
+test('self-paced mode accepts any question and counts correct score', async () => {
+	const { store, session, first, second, ana } = await fixture('self_paced');
+	const firstAnswer = submitChoiceResponse(store, session.id, first.id, ana.token, [
+		first.options[0].id
+	]);
+	const secondAnswer = submitChoiceResponse(store, session.id, second.id, ana.token, [
 		second.options[1].id
 	]);
-	expect(accepted.questionId).toBe(second.id);
+	expect(firstAnswer.questionId).toBe(first.id);
+	expect(secondAnswer.questionId).toBe(second.id);
+	expect(quizLeaderboard(store, session.id)).toMatchObject([
+		{ displayName: 'Ana', answered: 2, score: 2000 }
+	]);
 });
 
 test('guided navigation moves the active question and ignores out-of-range moves', async () => {

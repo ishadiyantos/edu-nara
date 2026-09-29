@@ -28,13 +28,15 @@
 		sessionId,
 		questions,
 		responses = [],
-		snapshot
+		snapshot,
+		participantName = ''
 	}: {
 		sessionCode: string;
 		sessionId: string;
 		questions: Question[];
 		responses?: Answer[];
 		snapshot: Snapshot;
+		participantName?: string | null;
 	} = $props();
 	let live = $state(untrack(() => snapshot));
 	let saved = $state<Answer[]>(untrack(() => responses));
@@ -255,16 +257,33 @@
 			>
 		{/if}
 		{#if error}<p class="error" role="alert">{error}</p>{/if}
-		{#if !guided}
-			<nav aria-label="Navigasi soal">
-				<button disabled={current === 0 || loading} onclick={() => current--}>Sebelumnya</button>
+		<nav class="student-nav" aria-label="Navigasi soal">
+			<span class="student-nav-name" data-testid="student-floating-name" title="Nama tampilan"
+				>👤 {participantName || 'Peserta'}</span
+			>
+			{#if !guided}
 				<button
+					type="button"
+					class="student-nav-icon"
+					disabled={current === 0 || loading}
+					onclick={() => current--}
+					aria-label="Soal sebelumnya"
+					title="Soal sebelumnya"
+					><span aria-hidden="true">←</span><span class="sr-only">Soal sebelumnya</span></button
+				>
+				<button
+					type="button"
+					class="student-nav-icon"
 					disabled={loading}
 					onclick={() => (current < questions.length - 1 ? current++ : (finished = true))}
-					>{current < questions.length - 1 ? 'Pertanyaan berikutnya' : 'Selesai'}</button
+					aria-label={current < questions.length - 1 ? 'Soal berikutnya' : 'Selesai'}
+					title={current < questions.length - 1 ? 'Soal berikutnya' : 'Selesai'}
+					><span aria-hidden="true">{current < questions.length - 1 ? '→' : '✓'}</span><span
+						class="sr-only">{current < questions.length - 1 ? 'Soal berikutnya' : 'Selesai'}</span
+					></button
 				>
-			</nav>
-		{/if}
+			{/if}
+		</nav>
 	{:else}
 		<div class="finish-card waiting">
 			<p class="mode-chip">Stand by</p>
@@ -480,12 +499,71 @@
 		animation: shine 850ms ease;
 	}
 	.choices button.selected {
-		border-color: #fbbf24;
+		border: 4px solid #fef08a;
 		box-shadow:
-			0 0 0 3px rgb(251 191 36 / 0.2),
-			0 0 34px rgb(251 191 36 / 0.46),
+			0 0 0 3px rgb(251 191 36 / 0.32),
+			0 0 34px rgb(251 191 36 / 0.58),
 			0 18px 42px rgb(2 6 23 / 0.35);
 		transform: translateY(-2px) scale(1.015);
+	}
+	.student-nav {
+		position: fixed;
+		left: 50%;
+		bottom: max(0.75rem, env(safe-area-inset-bottom));
+		z-index: 40;
+		display: flex;
+		width: max-content;
+		max-width: calc(100vw - 1.5rem);
+		align-items: center;
+		gap: 0.4rem;
+		margin: 0;
+		transform: translateX(-50%);
+		border: 1px solid rgb(103 232 249 / 0.38);
+		border-radius: 999px;
+		background: rgb(2 6 23 / 0.86);
+		padding: 0.4rem;
+		box-shadow:
+			0 10px 34px rgb(2 6 23 / 0.5),
+			0 0 26px rgb(34 211 238 / 0.2);
+		backdrop-filter: blur(16px);
+	}
+	.student-nav-name {
+		display: block;
+		max-width: min(12rem, 48vw);
+		overflow: hidden;
+		padding: 0.45rem 0.7rem;
+		color: white;
+		font-size: 0.8rem;
+		font-weight: 950;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.student-nav-icon {
+		display: grid;
+		width: 2.75rem;
+		height: 2.75rem;
+		min-height: 2.75rem;
+		flex: 0 0 auto;
+		place-items: center;
+		border: 1px solid rgb(255 255 255 / 0.16);
+		border-radius: 999px;
+		background: rgb(255 255 255 / 0.1);
+		padding: 0;
+		color: white;
+		font-size: 1.35rem;
+		line-height: 1;
+	}
+	.student-nav-icon:hover:not(:disabled),
+	.student-nav-icon:focus-visible:not(:disabled) {
+		border-color: #67e8f9;
+		background: rgb(34 211 238 / 0.25);
+	}
+	.student-nav-icon:disabled {
+		opacity: 0.35;
+	}
+	.student-nav-icon:focus-visible {
+		outline: 3px solid #67e8f9;
+		outline-offset: 2px;
 	}
 	.option-letter {
 		display: grid;

@@ -9,13 +9,15 @@
 		sessionId,
 		questions,
 		activeQuestionId = null,
-		responses = []
+		responses = [],
+		participantName = ''
 	}: {
 		sessionCode: string;
 		sessionId: string;
 		questions: Question[];
 		activeQuestionId?: string | null;
 		responses?: Response[];
+		participantName?: string | null;
 	} = $props();
 	let syncedId = $state<string | null>(null);
 	const current = $derived(
@@ -188,4 +190,40 @@
 		</ul>
 	{/if}
 	<div class="mt-6"><WordcloudResults {words} /></div>
+	<nav class="student-nav" aria-label="Navigasi soal">
+		<span class="student-nav-name" data-testid="student-floating-name" title="Nama tampilan"
+			>👤 {participantName || 'Peserta'}</span
+		>
+	</nav>
 </section>
+
+<style>
+	.student-nav {
+		position: fixed;
+		left: 50%;
+		bottom: max(0.75rem, env(safe-area-inset-bottom));
+		z-index: 40;
+		display: flex;
+		width: max-content;
+		max-width: calc(100vw - 1.5rem);
+		transform: translateX(-50%);
+		border: 1px solid rgb(103 232 249 / 0.38);
+		border-radius: 999px;
+		background: rgb(2 6 23 / 0.86);
+		padding: 0.4rem 0.75rem;
+		box-shadow:
+			0 10px 34px rgb(2 6 23 / 0.5),
+			0 0 26px rgb(34 211 238 / 0.2);
+		backdrop-filter: blur(16px);
+	}
+	.student-nav-name {
+		max-width: min(12rem, 48vw);
+		overflow: hidden;
+		padding: 0.45rem 0.7rem;
+		color: white;
+		font-size: 0.8rem;
+		font-weight: 950;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+</style>

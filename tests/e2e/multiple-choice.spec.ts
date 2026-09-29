@@ -56,7 +56,7 @@ test('quiz supports a question bank, multiple correct answers, and a game-show s
 		await student.getByLabel('Nama tampilan').fill('Ayu');
 		await student.getByRole('button', { name: 'Bergabung' }).click();
 		await expect(student.getByTestId('choice-player')).toBeVisible();
-		await expect(student.getByTestId('student-floating-name')).toHaveText('👤Ayu');
+		await expect(student.getByTestId('student-floating-name')).toHaveText('👤 Ayu');
 		await expect(student.getByText('Ronde 1 dari 2')).toBeVisible();
 		await expect
 			.poll(() =>
@@ -76,11 +76,18 @@ test('quiz supports a question bank, multiple correct answers, and a game-show s
 			'aria-pressed',
 			'true'
 		);
+		await expect(student.getByRole('button', { name: /Jakarta/ })).toHaveCSS(
+			'border-top-width',
+			'4px'
+		);
+		await expect(student.getByTestId('student-floating-name')).toHaveText('👤 Ayu');
+		await expect(student.getByRole('button', { name: 'Soal sebelumnya' })).toBeVisible();
+		await expect(student.getByRole('button', { name: 'Soal berikutnya' })).toBeVisible();
 		await student.getByRole('button', { name: /Kirim jawaban/ }).click();
 		await expect(student.getByRole('status')).toHaveText('Jawaban tersimpan.');
 		await expect(student.getByText('Benar', { exact: true })).toHaveCount(0);
 		await expect(student.getByText('Hasil kelas', { exact: true })).toHaveCount(0);
-		await student.getByRole('button', { name: /Pertanyaan berikutnya/ }).click();
+		await student.getByRole('button', { name: 'Soal berikutnya' }).click();
 		await expect(student.getByText('Ronde 2 dari 2')).toBeVisible();
 		await student.getByRole('button', { name: /4/ }).click();
 		await student.getByRole('button', { name: /Kirim jawaban/ }).click();
@@ -153,6 +160,9 @@ test('quiz supports a question bank, multiple correct answers, and a game-show s
 	await expect(page.getByTestId('leaderboard-starfall')).toBeVisible();
 	await expect(page.getByText('Juara kelas')).toBeVisible();
 	await expect(page.getByRole('cell', { name: 'Ayu' })).toBeVisible();
+	await expect(
+		page.getByRole('row', { name: /Ayu/ }).getByText('2.000', { exact: true })
+	).toBeVisible();
 	await page.getByRole('button', { name: 'Tinjau soal' }).click();
 	await page.getByRole('button', { name: 'Soal 1: Apa ibu kota Indonesia?' }).click();
 	await expect(page.getByTestId('presenter-stage')).toBeVisible();

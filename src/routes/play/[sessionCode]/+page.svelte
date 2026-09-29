@@ -34,10 +34,6 @@
 		class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-300 via-fuchsia-400 to-amber-300"
 		aria-hidden="true"
 	></div>
-	{#if data.participantName}<div class="student-floating-name" data-testid="student-floating-name">
-			<span aria-hidden="true">👤</span>{data.participantName}
-		</div>{/if}
-
 	<Container size="app" class="relative z-10 max-w-5xl">
 		<a
 			class="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-white/10 px-4 py-2 text-sm font-black text-white/80 shadow-[0_0_24px_rgba(34,211,238,0.18)] backdrop-blur-md transition hover:bg-white/20 hover:text-white sm:mb-6"
@@ -73,6 +69,7 @@
 					questions={data.questions}
 					activeQuestionId={data.snapshot.activeQuestionId}
 					responses={data.responses}
+					participantName={data.participantName}
 				/>
 			{:else}
 				<ChoicePlayer
@@ -81,6 +78,7 @@
 					questions={data.questions}
 					responses={data.responses}
 					snapshot={data.snapshot}
+					participantName={data.participantName}
 				/>
 			{/if}
 		{:else}
@@ -88,28 +86,3 @@
 		{/if}
 	</Container>
 </main>
-
-<style>
-	.student-floating-name {
-		position: fixed;
-		right: max(0.75rem, env(safe-area-inset-right));
-		bottom: max(0.75rem, env(safe-area-inset-bottom));
-		z-index: 50;
-		display: inline-flex;
-		max-width: min(18rem, calc(100vw - 1.5rem));
-		align-items: center;
-		gap: 0.5rem;
-		overflow: hidden;
-		border: 1px solid rgb(34 211 238 / 0.36);
-		border-radius: 999px;
-		background: rgb(2 6 23 / 0.78);
-		padding: 0.6rem 0.85rem;
-		color: white;
-		font-size: 0.82rem;
-		font-weight: 950;
-		box-shadow: 0 0 26px rgb(34 211 238 / 0.24);
-		backdrop-filter: blur(14px);
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-</style>
