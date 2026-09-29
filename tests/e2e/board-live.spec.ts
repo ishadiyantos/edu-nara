@@ -260,6 +260,65 @@ test('production Board: columns, private media, moderation toggle, live updates 
 				.click();
 			await expect(presenter.getByRole('dialog')).not.toBeVisible();
 		}
+		// Inspect drag feedback and same-column insertion before the cross-column move.
+		const dragged = presenter.locator('[data-post-id]').filter({ hasText: 'Kartu kedua' });
+		const first = presenter.locator('[data-post-id]').filter({ hasText: 'Langsung tampil' });
+		let transfer = await presenter.evaluateHandle(() => new DataTransfer());
+		await dragged.dispatchEvent('dragstart', { dataTransfer: transfer });
+		await expect(dragged).toHaveCSS('filter', 'blur(1px)');
+		await expect(presenter.locator('[data-drag-preview]')).toHaveCount(1);
+		const firstBox = (await first.boundingBox())!;
+		await first.dispatchEvent('dragover', { dataTransfer: transfer, clientY: firstBox.y + 2 });
+		await expect(first.locator('..')).toHaveClass(/insert-before/);
+		expect(
+			await first
+				.locator('..')
+				.evaluate((node) => getComputedStyle(node, '::before').backgroundImage)
+		).toContain('250, 204, 21');
+		await presenter.screenshot({ path: `test-results/board-drag-${testInfo.project.name}.png` });
+		await presenter.keyboard.press('Escape');
+		await expect(presenter.locator('.insert-before, .insert-after')).toHaveCount(0);
+		await expect(dragged).not.toHaveClass(/dragging/);
+		await expect(presenter.locator('[data-drag-preview]')).toHaveCount(0);
+		await dragged.dispatchEvent('dragstart', { dataTransfer: transfer });
+		await first.dispatchEvent('drop', { dataTransfer: transfer, clientY: firstBox.y + 2 });
+		const ideaCards = presenter.locator('section[aria-label="Ide"] [data-post-id]');
+		await expect(ideaCards.nth(1)).toContainText('Kartu kedua');
+		await transfer.dispose();
+		await presenter.reload();
+		transfer = await presenter.evaluateHandle(() => new DataTransfer());
+		await expect(ideaCards.nth(1)).toContainText('Kartu kedua');
+		// Lower half means AFTER; API index excludes the dragged card.
+		const restoredFirstBox = (await first.boundingBox())!;
+		if (testInfo.project.name === 'desktop-1440') {
+			await first.scrollIntoViewIfNeeded();
+			const handle = (await dragged.locator('.drag-handle').boundingBox())!;
+			await presenter.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+			await presenter.mouse.down();
+			await presenter.mouse.move(handle.x + 15, handle.y + 20, { steps: 5 });
+			const target = (await first.boundingBox())!;
+			await presenter.mouse.move(target.x + target.width / 2, target.y + target.height - 8, {
+				steps: 15
+			});
+			await presenter.mouse.move(target.x + target.width / 2, target.y + target.height - 7);
+
+			await expect(first.locator('..')).toHaveClass(/insert-after/);
+			await presenter.screenshot({ path: 'test-results/board-native-drag.png' });
+			await presenter.mouse.up();
+		} else {
+			await dragged.dispatchEvent('dragstart', { dataTransfer: transfer });
+			await first.dispatchEvent('dragover', {
+				dataTransfer: transfer,
+				clientY: restoredFirstBox.y + restoredFirstBox.height - 2
+			});
+			await expect(first.locator('..')).toHaveClass(/insert-after/);
+			await first.dispatchEvent('drop', {
+				dataTransfer: transfer,
+				clientY: restoredFirstBox.y + restoredFirstBox.height - 2
+			});
+		}
+		await expect(ideaCards.last()).toContainText('Kartu kedua');
+		await transfer.dispose();
 		await presenter.evaluate(() => {
 			const source = [...document.querySelectorAll('article')].find((node) =>
 				node.textContent?.includes('Kartu kedua')

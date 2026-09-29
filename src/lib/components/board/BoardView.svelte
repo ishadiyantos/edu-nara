@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import {
 		SAMPLE_COLUMNS,
 		SAMPLE_POSTS,
@@ -66,6 +67,77 @@
 	let slideshow = $state(false);
 	let slide = $state(0);
 	let dragging = $state<string | null>(null);
+	let dropTarget = $state<{ columnId: string; beforeId: string | null } | null>(null);
+	let dragPreview: HTMLElement | null = null;
+	function clearDrag() {
+		dragging = null;
+		dropTarget = null;
+		dragPreview?.remove();
+		dragPreview = null;
+	}
+	onDestroy(clearDrag);
+	function startDrag(event: DragEvent, post: BoardPost) {
+		if (!admin || slideshow || !onmove || busy || !event.dataTransfer) {
+			event.preventDefault();
+			return;
+		}
+		event.stopPropagation();
+		clearDrag();
+		const source = (event.currentTarget as HTMLElement).closest('article')!;
+		const rect = source.getBoundingClientRect();
+		// Native drag image stays under the pointer, including outside the board.
+		dragPreview = source.cloneNode(true) as HTMLElement;
+		dragPreview.removeAttribute('data-testid');
+		dragPreview.removeAttribute('data-post-id');
+		dragPreview.setAttribute('aria-hidden', 'true');
+		dragPreview.dataset.dragPreview = 'true';
+		dragPreview.inert = true;
+		dragPreview.style.cssText = `position:fixed;left:-10000px;top:0;width:${rect.width}px;max-height:320px;overflow:hidden;transform:rotate(-2deg);opacity:0.95;box-shadow:0 18px 40px #001e2455;pointer-events:none;`;
+		(document.fullscreenElement ?? document.body).appendChild(dragPreview);
+		event.dataTransfer.setDragImage(
+			dragPreview,
+			Math.min(rect.width - 8, Math.max(8, event.clientX - rect.x)),
+			Math.min(280, Math.max(8, event.clientY - rect.y))
+		);
+		event.dataTransfer.setData('application/x-edu-nara-board-post', post.id);
+		event.dataTransfer.setData('text/plain', post.id);
+		event.dataTransfer.effectAllowed = 'move';
+		dragging = post.id;
+	}
+	function locateDrop(event: DragEvent, columnId: string) {
+		if (!dragging || !admin || !onmove || busy) return null;
+		const column = event.currentTarget as HTMLElement;
+		const cards = [...column.querySelectorAll<HTMLElement>('[data-post-id]')].filter(
+			(node) => node.dataset.postId !== dragging
+		);
+		const next = cards.find((node) => {
+			const rect = node.getBoundingClientRect();
+			return event.clientY < rect.top + rect.height / 2;
+		});
+		return { columnId, beforeId: next?.dataset.postId ?? null };
+	}
+	function dragOver(event: DragEvent, columnId: string) {
+		const target = locateDrop(event, columnId);
+		if (!target) return;
+		event.preventDefault();
+		if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+		dropTarget = target;
+	}
+	function dropCard(event: DragEvent, columnId: string) {
+		const target = locateDrop(event, columnId);
+		if (!target || !dragging) return;
+		event.preventDefault();
+		event.stopPropagation();
+		const id = dragging;
+		// API position excludes the dragged card, also when filters hide siblings.
+		const siblings = sortPosts(posts.filter((p) => p.columnId === columnId && p.id !== id));
+		const position = target.beforeId
+			? siblings.findIndex((p) => p.id === target.beforeId)
+			: siblings.length;
+		clearDrag();
+		if (position >= 0) void moveToColumn(id, columnId, position);
+	}
+
 	let newColumnTitle = $state('');
 	let editingColumn = $state<string | null>(null);
 	let editingTitle = $state('');
@@ -177,6 +249,10 @@
 		}
 	}
 	function key(event: KeyboardEvent) {
+		if (event.key === 'Escape' && dragging) {
+			clearDrag();
+			return;
+		}
 		if (editingColumn || addingColumn) return;
 		if (
 			!slideshow ||
@@ -195,39 +271,16 @@
 	}
 </script>
 
-<svelte:window onkeydown={key} />
-{#snippet card(post: BoardPost, dropPosition = 0)}
+<svelte:window onkeydown={key} ondragend={clearDrag} ondrop={clearDrag} onblur={clearDrag} />
+{#snippet card(post: BoardPost)}
 	<article
 		data-testid={`board-post-${post.id}`}
+		data-post-id={post.id}
 		class="board-card"
 		draggable={!!admin && !slideshow && !!onmove}
 		class:dragging={dragging === post.id}
-		ondragstart={(event) => {
-			if (!admin || slideshow || !onmove) return;
-			dragging = post.id;
-			event.dataTransfer?.setData('application/x-edu-nara-board-post', post.id);
-			event.dataTransfer?.setData('text/plain', post.id);
-			if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
-		}}
-		ondragend={() => (dragging = null)}
-		ondragenter={(event) => {
-			if (onmove) event.preventDefault();
-		}}
-		ondragover={(event) => {
-			if (onmove) {
-				event.preventDefault();
-				if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-			}
-		}}
-		ondrop={(event) => {
-			event.preventDefault();
-			event.stopPropagation();
-			const id =
-				event.dataTransfer?.getData('application/x-edu-nara-board-post') ||
-				event.dataTransfer?.getData('text/plain') ||
-				dragging;
-			if (id && id !== post.id) void moveToColumn(id, post.columnId, dropPosition);
-		}}
+		ondragstart={(event) => startDrag(event, post)}
+		ondragend={clearDrag}
 	>
 		{#if admin && !slideshow && onmove}<button
 				type="button"
@@ -235,13 +288,8 @@
 				draggable="true"
 				aria-label={`Geser kartu ${post.title || post.body || post.author}`}
 				title="Geser kartu"
-				ondragstart={(event) => {
-					dragging = post.id;
-					event.dataTransfer?.setData('application/x-edu-nara-board-post', post.id);
-					event.dataTransfer?.setData('text/plain', post.id);
-					if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
-				}}
-				ondragend={() => (dragging = null)}>⋮⋮</button
+				ondragstart={(event) => startDrag(event, post)}
+				ondragend={clearDrag}>⋮⋮</button
 			>{/if}
 		<header class="card-author">
 			<span class="avatar" aria-hidden="true"
@@ -400,24 +448,15 @@
 					class="column"
 					data-testid={`board-column-${column.id}`}
 					aria-label={column.title}
-					ondragenter={(event) => {
-						if (onmove) event.preventDefault();
+					ondragover={(event) => dragOver(event, column.id)}
+					ondragleave={(event) => {
+						if (
+							!(event.relatedTarget instanceof Node) ||
+							!event.currentTarget.contains(event.relatedTarget)
+						)
+							dropTarget = null;
 					}}
-					ondragover={(event) => {
-						if (onmove) {
-							event.preventDefault();
-							if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-						}
-					}}
-					ondrop={(event) => {
-						event.preventDefault();
-						if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-						const id =
-							event.dataTransfer?.getData('application/x-edu-nara-board-post') ||
-							event.dataTransfer?.getData('text/plain') ||
-							dragging;
-						if (id) void moveToColumn(id, column.id, cards.length);
-					}}
+					ondrop={(event) => dropCard(event, column.id)}
 				>
 					<header class="column-heading">
 						<span class="column-count">{cards.length} kartu</span>
@@ -446,9 +485,18 @@
 								oncancel={() => (activeComposer = null)}
 								{disabled}
 							/>{/if}
-						{#each cards as post, index (post.id)}{@render card(post, index)}{:else}<p
-								class="empty"
+						{#each cards as post (post.id)}
+							<div
+								class="card-slot"
+								class:insert-before={dropTarget?.columnId === column.id &&
+									dropTarget.beforeId === post.id}
+								class:insert-after={dropTarget?.columnId === column.id &&
+									dropTarget.beforeId === null &&
+									cards.at(-1)?.id === post.id}
 							>
+								{@render card(post)}
+							</div>
+						{:else}<p class="empty" class:insert-before={dropTarget?.columnId === column.id}>
 								{search ? 'Tidak ada kartu yang cocok.' : 'Belum ada kiriman.'}
 							</p>{/each}
 					</div>
@@ -769,9 +817,49 @@
 		background: transparent;
 		cursor: grab;
 	}
+	.board-card {
+		transition:
+			opacity 160ms ease,
+			filter 160ms ease;
+	}
+	.board-card[draggable='true'] {
+		cursor: grab;
+	}
 	.board-card.dragging {
-		opacity: 0.45;
-		outline: 2px dashed #4f46e5;
+		opacity: 0.3;
+		filter: blur(1px);
+		cursor: grabbing;
+	}
+	.card-slot,
+	.empty {
+		position: relative;
+	}
+	.column-content {
+		padding-top: 0.65rem;
+	}
+	.insert-before::before,
+	.insert-after::after {
+		content: '';
+		position: absolute;
+		left: 0;
+		right: 0;
+		height: 8px;
+		top: -0.65rem;
+		z-index: 2;
+		pointer-events: none;
+		background:
+			radial-gradient(circle at 4px 4px, #facc15 0 4px, transparent 4px),
+			linear-gradient(#facc15, #facc15) 4px center / calc(100% - 4px) 3px no-repeat;
+		filter: drop-shadow(0 0 3px #facc1555);
+	}
+	.insert-after::after {
+		top: auto;
+		bottom: -0.65rem;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.board-card {
+			transition: none;
+		}
 	}
 	.card-author {
 		padding-right: 2.5rem;
