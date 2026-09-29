@@ -5,6 +5,7 @@
 	import ChoicePlayer from '$lib/components/poll/ChoicePlayer.svelte';
 	import WordcloudPlayer from '$lib/components/poll/WordcloudPlayer.svelte';
 	let { data } = $props();
+	let studentToolbarHost = $state<HTMLElement | null>(null);
 </script>
 
 <svelte:head><title>{data.snapshot.title} — Edu Nara</title></svelte:head>
@@ -42,19 +43,37 @@
 			? 'relative z-10 board-container'
 			: 'relative z-10 max-w-5xl'}
 	>
-		<a
-			class="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-white/10 px-4 py-2 text-sm font-black text-white/80 shadow-[0_0_24px_rgba(34,211,238,0.18)] backdrop-blur-md transition hover:bg-white/20 hover:text-white sm:mb-6"
-			href="/"
-		>
-			← Exit session <span class="sr-only">Keluar dari sesi</span>
-		</a>
+		{#if data.activityType !== 'board'}<a
+				class="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-white/10 px-4 py-2 text-sm font-black text-white/80 shadow-[0_0_24px_rgba(34,211,238,0.18)] backdrop-blur-md transition hover:bg-white/20 hover:text-white sm:mb-6"
+				href="/"
+			>
+				← Exit session <span class="sr-only">Keluar dari sesi</span>
+			</a>{/if}
 
 		{#if data.activityType === 'board' && data.board}
+			<div class="student-board-header">
+				<div class="student-board-copy">
+					<div class="student-board-identity">
+						<p>Edu Nara · Papan diskusi</p>
+						<strong>{data.snapshot.code}</strong>
+					</div>
+					<h1 class="student-board-title">{data.snapshot.title}</h1>
+				</div>
+				<div class="student-board-actions">
+					<a class="student-board-pill" href="/" aria-label="Exit session">← Exit session</a>
+					<div class="student-board-toolbar-host" bind:this={studentToolbarHost}></div>
+					<p class="student-board-status">
+						<span aria-hidden="true"></span><b>{data.snapshot.count}</b> peserta · Live · {data
+							.snapshot.state}
+					</p>
+				</div>
+			</div>
 			<BoardLive
 				sessionId={data.snapshot.id}
 				sessionCode={data.snapshot.code}
 				initial={data.board}
 				title={data.snapshot.title}
+				toolbarHost={studentToolbarHost}
 			/>
 		{:else if data.snapshot.state === 'open' && data.questions.length}
 			<div class="mb-4 flex flex-wrap items-end justify-between gap-3 sm:mb-5">
@@ -123,5 +142,106 @@
 	}
 	.student-board :global(.column-content) {
 		padding-bottom: 6rem;
+	}
+	.student-board-header {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1rem;
+		flex-wrap: wrap;
+		padding: 0.25rem 0 0.5rem;
+		color: #c6e9db;
+	}
+	.student-board-copy {
+		min-width: 0;
+	}
+	.student-board-identity {
+		display: flex;
+		align-items: center;
+		gap: 0.65rem;
+		min-width: 0;
+	}
+	.student-board-identity p {
+		margin: 0;
+		font-size: 0.7rem;
+		font-weight: 900;
+		letter-spacing: 0.22em;
+		text-transform: uppercase;
+	}
+	.student-board-identity strong {
+		padding: 0.4rem 0.65rem;
+		border-radius: 0.5rem;
+		background: #ffffff15;
+		color: white;
+		font:
+			900 1.15rem/1 ui-monospace,
+			monospace;
+		letter-spacing: 0.12em;
+	}
+	.student-board-title {
+		margin: 0.35rem 0 0;
+		max-width: min(58rem, 65vw);
+		color: white;
+		font-size: clamp(1.45rem, 3vw, 3rem);
+		font-weight: 950;
+		line-height: 1;
+		letter-spacing: -0.04em;
+		overflow-wrap: anywhere;
+	}
+	.student-board-actions {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		min-width: 0;
+	}
+	.student-board-pill,
+	.student-board-status {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45rem;
+		min-height: 2.75rem;
+		margin: 0;
+		border: 1px solid rgb(255 255 255 / 0.14);
+		border-radius: 999px;
+		background: rgb(255 255 255 / 0.08);
+		padding: 0.65rem 0.9rem;
+		color: rgb(226 232 240 / 0.86);
+		font-size: 0.78rem;
+		font-weight: 800;
+		white-space: nowrap;
+	}
+	.student-board-pill {
+		color: white;
+		text-decoration: none;
+	}
+	.student-board-pill:hover {
+		background: rgb(255 255 255 / 0.16);
+	}
+	.student-board-status span {
+		width: 0.55rem;
+		height: 0.55rem;
+		border-radius: 999px;
+		background: #34d399;
+		box-shadow: 0 0 14px rgb(52 211 153 / 0.9);
+	}
+	.student-board-toolbar-host {
+		display: contents;
+	}
+	.student-board :global(.live-board h1) {
+		display: none;
+	}
+	@media (max-width: 720px) {
+		.student-board-header {
+			align-items: flex-start;
+		}
+		.student-board-actions {
+			width: 100%;
+			justify-content: flex-start;
+		}
+		.student-board-status {
+			margin-left: auto;
+		}
 	}
 </style>

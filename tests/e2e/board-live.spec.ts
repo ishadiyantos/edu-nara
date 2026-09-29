@@ -57,7 +57,7 @@ test('production Board: columns, private media, moderation toggle, live updates 
 		const status = (await presenter.locator('.stage-status').boundingBox())!;
 		const tools = (await presenter.locator('.board-tools').boundingBox())!;
 		expect(Math.abs(status.y + status.height / 2 - tools.y - tools.height / 2)).toBeLessThan(2);
-		expect(tools.x).toBeGreaterThan(status.x + status.width);
+		expect(status.x).toBeGreaterThan(tools.x + tools.width);
 	}
 	const authorContext = await browser.newContext({ viewport: { width: 360, height: 780 } });
 	const observerContext = await browser.newContext({ viewport: { width: 360, height: 780 } });
@@ -72,6 +72,9 @@ test('production Board: columns, private media, moderation toggle, live updates 
 			await student.getByLabel('Nama tampilan').fill(name);
 			await student.getByRole('button', { name: 'Bergabung', exact: true }).click();
 			await expect(student.getByTestId('board-view')).toBeVisible();
+			await expect(student.getByRole('link', { name: 'Exit session' })).toBeVisible();
+			await expect(student.locator('.student-board-status')).toBeVisible();
+			await expect(student.locator('.student-board-actions .board-tools')).toBeVisible();
 			const bounds = (await student.getByTestId('board-view').boundingBox())!;
 			expect(bounds.width).toBeGreaterThanOrEqual(330);
 		}

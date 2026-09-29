@@ -304,13 +304,20 @@
 	<div class="stage-beams" aria-hidden="true"></div>
 	<div class="stage-grid" aria-hidden="true"></div>
 	<header class="stage-header">
-		<div>
-			<p class="stage-kicker">
-				{data.activityType === 'board' ? 'Edu Nara · Papan diskusi' : `Edu Nara · ${live.title}`}
-			</p>
-			<p class="stage-code" data-testid="session-code">{live.code}</p>
+		<div class="board-stage-copy">
+			<div class="board-stage-identity">
+				<p class="stage-kicker">
+					{data.activityType === 'board' ? 'Edu Nara · Papan diskusi' : `Edu Nara · ${live.title}`}
+				</p>
+				<p class="stage-code" data-testid="session-code">{live.code}</p>
+			</div>
+			{#if data.activityType === 'board'}<h1 class="board-stage-title">{live.title}</h1>{/if}
 		</div>
 		<div class="stage-actions">
+			{#if data.activityType === 'board'}<div
+					class="board-toolbar-host"
+					bind:this={boardToolbarHost}
+				></div>{/if}
 			<p class="stage-status">
 				<span aria-hidden="true"></span>
 				<b data-testid="participant-count">{count}</b> peserta · {connected
@@ -318,10 +325,6 @@
 					: 'Menghubungkan…'} ·
 				{live.state}
 			</p>
-			{#if data.activityType === 'board'}<div
-					class="board-toolbar-host"
-					bind:this={boardToolbarHost}
-				></div>{/if}
 		</div>
 	</header>
 	<div
@@ -1413,15 +1416,22 @@
 		display: none;
 	}
 	.board-screen .stage-header {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		align-items: start;
 		border: 0;
-		padding-bottom: 0.5rem;
-		gap: 0.5rem;
+		padding-bottom: 0.25rem;
+		gap: 0.75rem;
 	}
-	.board-screen .stage-header > div {
+	.board-screen .board-stage-copy {
+		display: block;
+		min-width: 0;
+	}
+	.board-screen .board-stage-identity {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: 1rem;
+		gap: 0.65rem;
 	}
 	.board-screen .stage-code {
 		font-size: 1.15rem;
@@ -1436,14 +1446,37 @@
 		color: #c6e9db;
 		text-shadow: none;
 	}
+	.board-stage-title {
+		margin: 0.35rem 0 0;
+		max-width: min(58rem, 65vw);
+		color: white;
+		font-size: clamp(1.45rem, 3vw, 3rem);
+		font-weight: 950;
+		line-height: 1;
+		letter-spacing: -0.04em;
+		overflow-wrap: anywhere;
+	}
+	.board-screen .stage-actions {
+		grid-column: 2;
+		grid-row: 1;
+		align-self: start;
+		justify-self: end;
+		justify-content: flex-end;
+		gap: 0.5rem;
+	}
+	.board-screen .board-toolbar-host {
+		order: 1;
+	}
+	.board-screen .stage-status {
+		order: 2;
+	}
 	.board-screen :global(.live-board) {
 		background: transparent;
 		border-radius: 0;
 		padding: 0;
 	}
 	.board-screen :global(.live-board h1) {
-		font-size: clamp(1.5rem, 2.5vw, 2.5rem);
-		margin: 0.8rem 0 0;
+		display: none;
 	}
 	.stage-actions {
 		display: flex;
@@ -1457,10 +1490,17 @@
 		min-width: 0;
 		max-width: 100%;
 	}
-	.board-screen .stage-header {
-		flex-wrap: wrap;
-	}
 	.board-screen:not(.presentation) {
 		padding-bottom: 7rem;
+	}
+	@media (max-width: 900px) {
+		.board-screen .stage-header {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: flex-start;
+		}
+		.board-screen .stage-actions {
+			width: 100%;
+		}
 	}
 </style>

@@ -920,4 +920,14 @@
 		position: static;
 		max-width: 100%;
 	}
+	.board-tools,
+	.board-tools.hosted {
+		border-color: rgb(255 255 255 / 0.14);
+		border-radius: 999px;
+		background: rgb(255 255 255 / 0.08);
+		box-shadow: none;
+	}
+	.board-tools.hosted {
+		padding: 0.35rem;
+	}
 </style>
