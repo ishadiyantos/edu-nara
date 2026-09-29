@@ -14,7 +14,7 @@
 	const guided = $derived(data.activityType === 'choice' && live.quizMode === 'guided');
 	const questions = $derived(data.questions);
 	const activeIndex = $derived(
-		data.activityType === 'wordcloud' || guided
+		data.activityType === 'wordcloud' || (guided && live.state !== 'ended')
 			? Math.max(
 					0,
 					questions.findIndex((q) => q.id === live.activeQuestionId)
@@ -303,7 +303,9 @@
 		</p>
 	</header>
 	<div
-		class:visible={!presenting || controls}
+		class:visible={!presenting ||
+			controls ||
+			(data.activityType === 'choice' && live.state === 'ended')}
 		class="session-toolbar"
 		data-testid="session-controls"
 		role="group"
@@ -355,7 +357,7 @@
 				title="Reset timer"><Icon name="timer" /> <span>Reset timer</span></button
 			>
 		{/if}
-		{#if !presenting && data.activityType === 'choice' && live.state === 'ended'}
+		{#if data.activityType === 'choice' && live.state === 'ended'}
 			<button
 				type="button"
 				class="floating-control"
@@ -432,7 +434,7 @@
 	/>
 	{#if form?.message}<p role="status">{form.message}</p>{/if}
 	{#if errorMessage}<p role="alert">{errorMessage}</p>{/if}
-	{#if !presenting && !showJoin && data.activityType === 'choice' && live.state === 'ended'}
+	{#if !showJoin && data.activityType === 'choice' && live.state === 'ended'}
 		<div class="top-navigation" data-testid="post-session-review-nav">
 			{#if questions.length > 1}<nav class="flex flex-wrap gap-2" aria-label="Daftar soal">
 					{#each questions as question, i}<button

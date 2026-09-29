@@ -221,10 +221,15 @@ test('guided quiz syncs presenter question and timer state across two participan
 		await expect.poll(() => sheet.evaluate((el) => getComputedStyle(el).overflowY)).toBe('auto');
 		await expect(first.getByTestId('session-state')).toHaveText('Sesi selesai');
 		await expect(presenter.getByTestId('post-session-review-nav')).toBeVisible();
+		await presenter.getByTestId('fullscreen-button').click();
+		await expect(presenter.getByRole('button', { name: 'Tinjau soal' })).toBeVisible();
 		await presenter.getByRole('button', { name: 'Tinjau soal' }).click();
+		await expect(presenter.getByRole('button', { name: 'Leaderboard' })).toBeVisible();
 		await expect(presenter.getByTestId('presenter-stage')).toBeVisible();
 		await presenter.getByRole('button', { name: 'Soal 1: Soal terpandu satu' }).click();
-		await presenter.waitForTimeout(300);
+		await expect(presenter.getByText('Ronde 1 / 2', { exact: true })).toBeVisible();
+		await presenter.getByRole('button', { name: 'Soal 2: Soal terpandu dua' }).click();
+		await expect(presenter.getByText('Ronde 2 / 2', { exact: true })).toBeVisible();
 		await expect(presenter.getByTestId('quiz-leaderboard')).toHaveCount(0);
 		await expect(first.getByText('Soal terpandu dua')).toBeVisible();
 		expect(
