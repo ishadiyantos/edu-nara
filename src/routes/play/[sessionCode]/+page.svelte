@@ -221,6 +221,9 @@
 		display: none;
 	}
 	@media (max-width: 720px) {
+		.student-board :global(.board-container) {
+			padding-inline: 12px;
+		}
 		.student-board-header {
 			align-items: flex-start;
 		}

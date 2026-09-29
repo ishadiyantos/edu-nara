@@ -1504,6 +1504,9 @@
 		}
 	}
 	@media (max-width: 640px) {
+		.session-screen.board-screen {
+			padding-inline: 12px;
+		}
 		.session-screen.board-screen .session-toolbar {
 			flex-wrap: nowrap;
 			justify-content: flex-start;

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
+	import { onDestroy, tick } from 'svelte';
 	import {
 		SAMPLE_COLUMNS,
 		SAMPLE_POSTS,
@@ -61,6 +61,19 @@
 	} = $props();
 	let activeComposer = $state<string | null>(null);
 	let search = $state('');
+	let searchOpen = $state(false);
+	let searchInput: HTMLInputElement;
+	let searchToggle: HTMLButtonElement;
+	async function toggleSearch() {
+		searchOpen = !searchOpen;
+		if (searchOpen) {
+			await tick();
+			searchInput.focus();
+		} else {
+			search = '';
+			searchToggle.focus();
+		}
+	}
 	let filter = $state('all');
 	let busy = $state(false);
 	let actionError = $state('');
@@ -363,9 +376,46 @@
 		class:hosted={!!toolbarHost}
 		use:placeToolbar={toolbarHost}
 	>
-		<label class="search" aria-label="Cari kartu"
-			><span>Cari</span><input type="search" bind:value={search} placeholder="Cari kartu…" /></label
-		>
+		<div class="search-control" class:search-open={searchOpen}>
+			<button
+				type="button"
+				class="tool-button search-toggle"
+				bind:this={searchToggle}
+				aria-label={searchOpen ? 'Tutup pencarian' : 'Buka pencarian'}
+				title={searchOpen ? 'Tutup pencarian' : 'Cari kartu'}
+				aria-expanded={searchOpen}
+				onclick={toggleSearch}
+			>
+				<svg
+					aria-hidden="true"
+					width="20"
+					height="20"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+				>
+					<circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" />
+				</svg>
+			</button>
+			<label class="search"
+				><span>Cari</span><input
+					type="search"
+					aria-label="Cari kartu"
+					bind:this={searchInput}
+					bind:value={search}
+					placeholder="Cari kartu…"
+					onkeydown={(event) => {
+						if (event.key === 'Escape' && searchOpen) {
+							event.preventDefault();
+							event.stopPropagation();
+							void toggleSearch();
+						}
+					}}
+				/></label
+			>
+		</div>
 		<button
 			class="tool-button"
 			onclick={() => {
@@ -1011,5 +1061,41 @@
 	.board-tools :is(button, input, select):focus-visible {
 		outline: 2px solid #facc55;
 		outline-offset: 2px;
+	}
+	.search-control {
+		display: contents;
+	}
+	.search-toggle {
+		display: none;
+	}
+	@media (max-width: 720px) {
+		.search-control {
+			display: block;
+			flex: 0 0 44px;
+		}
+		.board-tools.hosted {
+			position: relative;
+			inset: auto;
+		}
+		.search-toggle {
+			display: inline-grid;
+		}
+		.board-tools .search-control .search {
+			display: none;
+			position: absolute;
+			top: calc(100% + 0.35rem);
+			left: 0;
+			width: 100%;
+			min-width: 0;
+			z-index: 30;
+		}
+		.board-tools .search-control.search-open .search {
+			display: flex;
+		}
+		.board-tools .search-control input {
+			background: #163b36;
+			border: 1px solid #8ab8a8;
+			box-shadow: 0 6px 18px #001e2466;
+		}
 	}
 </style>

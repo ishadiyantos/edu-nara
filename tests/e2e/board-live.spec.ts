@@ -55,6 +55,10 @@ test('production Board: columns, private media, moderation toggle, live updates 
 	await expect(presenter.getByTestId('session-controls')).toHaveCSS('position', 'fixed');
 	await expect(presenter.locator('.board-tools')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
 	if (testInfo.project.name === 'mobile-360') {
+		await expect(presenter.getByLabel('Cari kartu', { exact: true })).not.toBeVisible();
+		await presenter.getByRole('button', { name: 'Buka pencarian', exact: true }).click();
+		await expect(presenter.getByLabel('Cari kartu', { exact: true })).toBeFocused();
+		await presenter.getByRole('button', { name: 'Tutup pencarian', exact: true }).click();
 		const dock = presenter.getByTestId('session-controls');
 		expect((await dock.boundingBox())!.height).toBeLessThan(52);
 		for (const control of await dock.locator('.floating-control').all()) {
@@ -102,6 +106,11 @@ test('production Board: columns, private media, moderation toggle, live updates 
 				'border-top-width',
 				'0px'
 			);
+			await expect(student.getByLabel('Cari kartu', { exact: true })).not.toBeVisible();
+			await student.getByRole('button', { name: 'Buka pencarian', exact: true }).click();
+			await expect(student.getByLabel('Cari kartu', { exact: true })).toBeFocused();
+			await student.getByLabel('Cari kartu', { exact: true }).press('Escape');
+			await expect(student.getByLabel('Cari kartu', { exact: true })).not.toBeVisible();
 			const actions = (await student.locator('.student-board-actions').boundingBox())!;
 			expect(actions.height).toBeLessThanOrEqual(72);
 			await expect(student.locator('.exit-label')).not.toBeVisible();
@@ -110,6 +119,8 @@ test('production Board: columns, private media, moderation toggle, live updates 
 			});
 			const bounds = (await student.getByTestId('board-view').boundingBox())!;
 			expect(bounds.width).toBeGreaterThanOrEqual(330);
+			expect(bounds.x).toBeGreaterThanOrEqual(12);
+			expect(bounds.x + bounds.width).toBeLessThanOrEqual(348);
 		}
 		await observer.setViewportSize({ width: 1440, height: 900 });
 		expect((await observer.getByTestId('board-view').boundingBox())!.width).toBeGreaterThan(1350);
@@ -182,7 +193,7 @@ test('production Board: columns, private media, moderation toggle, live updates 
 			await expect(presenter.getByText('Panel dosen · Moderasi nonaktif')).toHaveCount(0);
 			await expect(presenter.getByText('Pindahkan ke', { exact: true })).toHaveCount(0);
 			const toolbar = presenter.locator('.stage-header .board-tools');
-			await expect(toolbar).toHaveCSS('position', 'static');
+			await expect(toolbar).toHaveCSS('position', 'relative');
 			expect(
 				await presenter.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
 			).toBe(true);
@@ -371,9 +382,11 @@ test('production Board: columns, private media, moderation toggle, live updates 
 				.filter({ hasText: 'Kartu kedua' })
 		).toHaveCount(1);
 		await crossColumnTransfer.dispose();
+		await observer.getByRole('button', { name: 'Buka pencarian', exact: true }).click();
 		await observer.getByLabel('Cari kartu', { exact: true }).fill('tidak cocok');
 		await expect(observer.getByText('Langsung tampil', { exact: true })).toHaveCount(0);
-		await observer.getByLabel('Cari kartu', { exact: true }).fill('');
+		await observer.getByRole('button', { name: 'Tutup pencarian', exact: true }).click();
+		await expect(observer.getByText('Langsung tampil', { exact: true })).toBeVisible();
 		expect(await observer.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
 			true
 		);
