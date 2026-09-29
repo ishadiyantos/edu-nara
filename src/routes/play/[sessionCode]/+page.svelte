@@ -197,6 +197,8 @@
 		white-space: nowrap;
 	}
 	.student-board-pill {
+		border: 0;
+		border-radius: 0.75rem;
 		color: white;
 		text-decoration: none;
 	}

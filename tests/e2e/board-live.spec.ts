@@ -53,6 +53,12 @@ test('production Board: columns, private media, moderation toggle, live updates 
 	await expect(presenter.getByTestId('board-view')).toBeVisible();
 	await expect(presenter.locator('.stage-header .board-tools')).toBeVisible();
 	await expect(presenter.getByTestId('session-controls')).toHaveCSS('position', 'fixed');
+	await expect(presenter.locator('.board-tools')).toHaveCSS('border-top-width', '0px');
+	await expect(presenter.locator('.board-tools')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+	await expect(presenter.getByRole('button', { name: 'Slideshow', exact: true })).toHaveCSS(
+		'border-top-width',
+		'0px'
+	);
 	if (testInfo.project.name === 'desktop-1440') {
 		const status = (await presenter.locator('.stage-status').boundingBox())!;
 		const tools = (await presenter.locator('.board-tools').boundingBox())!;
@@ -75,6 +81,14 @@ test('production Board: columns, private media, moderation toggle, live updates 
 			await expect(student.getByRole('link', { name: 'Exit session' })).toBeVisible();
 			await expect(student.locator('.student-board-status')).toBeVisible();
 			await expect(student.locator('.student-board-actions .board-tools')).toBeVisible();
+			await expect(student.locator('.board-tools')).toHaveCSS(
+				'background-color',
+				'rgba(0, 0, 0, 0)'
+			);
+			await expect(student.getByRole('button', { name: 'Slideshow', exact: true })).toHaveCSS(
+				'border-top-width',
+				'0px'
+			);
 			const bounds = (await student.getByTestId('board-view').boundingBox())!;
 			expect(bounds.width).toBeGreaterThanOrEqual(330);
 		}

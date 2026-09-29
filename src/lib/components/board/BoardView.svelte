@@ -535,12 +535,9 @@
 		flex-wrap: wrap;
 		gap: 0.35rem;
 		max-width: 100%;
-		padding: 0.4rem;
-		border: 1px solid #ffffff30;
-		border-radius: 1rem;
-		background: rgb(13 49 48 / 92%);
-		box-shadow: 0 8px 24px #001e2430;
-		backdrop-filter: blur(12px);
+		padding: 0;
+		border: 0;
+		background: transparent;
 	}
 	.board-tools.slideshow-mode {
 		top: 0.65rem;
@@ -639,7 +636,7 @@
 		height: 2.75rem;
 		min-height: 44px;
 		padding: 0;
-		border: 1px solid #64748b;
+		border: 0;
 		border-radius: 0.75rem;
 		background: #ffffff12;
 		color: #f8fafc;
@@ -654,10 +651,10 @@
 	}
 	.board-tools input,
 	.board-tools select {
-		min-height: 38px;
-		border-color: #64748b;
-		border-radius: 999px;
-		background: #092c2c;
+		min-height: 44px;
+		border: 0;
+		border-radius: 0.75rem;
+		background: #ffffff12;
 		color: #f8fafc;
 	}
 	.status-filter {
@@ -920,14 +917,8 @@
 		position: static;
 		max-width: 100%;
 	}
-	.board-tools,
-	.board-tools.hosted {
-		border-color: rgb(255 255 255 / 0.14);
-		border-radius: 999px;
-		background: rgb(255 255 255 / 0.08);
-		box-shadow: none;
-	}
-	.board-tools.hosted {
-		padding: 0.35rem;
+	.board-tools :is(button, input, select):focus-visible {
+		outline: 2px solid #facc55;
+		outline-offset: 2px;
 	}
 </style>
