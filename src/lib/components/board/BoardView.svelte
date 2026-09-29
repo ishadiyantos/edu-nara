@@ -282,15 +282,6 @@
 		ondragstart={(event) => startDrag(event, post)}
 		ondragend={clearDrag}
 	>
-		{#if admin && !slideshow && onmove}<button
-				type="button"
-				class="drag-handle"
-				draggable="true"
-				aria-label={`Geser kartu ${post.title || post.body || post.author}`}
-				title="Geser kartu"
-				ondragstart={(event) => startDrag(event, post)}
-				ondragend={clearDrag}>⋮⋮</button
-			>{/if}
 		<header class="card-author">
 			<span class="avatar" aria-hidden="true"
 				>{post.author.slice(0, 1).toLocaleUpperCase('id')}</span
@@ -360,6 +351,7 @@
 {/snippet}
 <div
 	data-testid="board-view"
+	aria-busy={busy}
 	class="board"
 	class:presentation
 	class:slideshow-active={slideshow}
@@ -807,32 +799,28 @@
 		gap: 0.85rem;
 		overflow-wrap: anywhere;
 	}
-	.drag-handle {
-		position: absolute;
-		top: 0.5rem;
-		right: 0.5rem;
-		padding: 0;
-		border: 0;
-		border-radius: 0.4rem;
-		background: transparent;
-		cursor: grab;
-	}
+
 	.board-card {
 		transition:
-			opacity 160ms ease,
-			filter 160ms ease;
+			opacity 180ms ease,
+			filter 180ms ease,
+			transform 180ms ease,
+			box-shadow 180ms ease;
 	}
 	.board-card[draggable='true'] {
 		cursor: grab;
 	}
 	.board-card.dragging {
-		opacity: 0.3;
-		filter: blur(1px);
+		opacity: 0.18;
+		filter: blur(2.5px) saturate(0.7);
+		transform: scale(0.985);
+		box-shadow: 0 0 0 2px #facc5570;
 		cursor: grabbing;
 	}
 	.card-slot,
 	.empty {
 		position: relative;
+		transition: transform 180ms ease;
 	}
 	.column-content {
 		padding-top: 0.65rem;
@@ -843,22 +831,37 @@
 		position: absolute;
 		left: 0;
 		right: 0;
-		height: 8px;
-		top: -0.65rem;
-		z-index: 2;
+		height: 10px;
+		top: -0.8rem;
+		z-index: 4;
 		pointer-events: none;
 		background:
 			radial-gradient(circle at 4px 4px, #facc15 0 4px, transparent 4px),
-			linear-gradient(#facc15, #facc15) 4px center / calc(100% - 4px) 3px no-repeat;
-		filter: drop-shadow(0 0 3px #facc1555);
+			linear-gradient(#facc15, #facc15) 5px center / calc(100% - 5px) 4px no-repeat;
+		filter: drop-shadow(0 0 5px #facc15aa);
+		animation: insertion-pulse 900ms ease-in-out infinite alternate;
 	}
 	.insert-after::after {
 		top: auto;
-		bottom: -0.65rem;
+		bottom: -0.8rem;
+	}
+	@keyframes insertion-pulse {
+		from {
+			opacity: 0.7;
+			transform: scaleX(0.985);
+		}
+		to {
+			opacity: 1;
+			transform: scaleX(1);
+		}
 	}
 	@media (prefers-reduced-motion: reduce) {
-		.board-card {
+		.board-card,
+		.card-slot,
+		.insert-before::before,
+		.insert-after::after {
 			transition: none;
+			animation: none;
 		}
 	}
 	.card-author {

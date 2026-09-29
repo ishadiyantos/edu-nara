@@ -43,7 +43,9 @@
 					<h1 class="student-board-title">{data.snapshot.title}</h1>
 				</div>
 				<div class="student-board-actions">
-					<a class="student-board-pill" href="/" aria-label="Exit session">← Exit session</a>
+					<a class="student-board-pill" href="/" aria-label="Exit session" title="Keluar dari sesi"
+						><span aria-hidden="true">←</span><span class="exit-label">Exit session</span></a
+					>
 					<div class="student-board-toolbar-host" bind:this={studentToolbarHost}></div>
 					<p class="student-board-status">
 						<span aria-hidden="true"></span><b>{data.snapshot.count}</b> peserta · Live · {data
@@ -226,8 +228,56 @@
 			width: 100%;
 			justify-content: flex-start;
 		}
+		.student-board-actions {
+			gap: 0.25rem;
+		}
+		.student-board-pill {
+			width: 44px;
+			height: 44px;
+			padding: 0;
+			justify-content: center;
+			flex-shrink: 0;
+			font-size: 1.2rem;
+		}
+		.exit-label {
+			display: none;
+		}
+		.student-board-actions :global(.board-tools) {
+			flex: 1;
+			min-width: 0;
+			flex-wrap: nowrap;
+			gap: 0.25rem;
+		}
+		.student-board-actions :global(.search) {
+			flex: 1;
+			min-width: 0;
+		}
+		.student-board-actions :global(.tool-button) {
+			flex-shrink: 0;
+		}
+		.student-board-title {
+			max-width: 100%;
+			font-size: 1.5rem;
+			line-height: 1.15;
+		}
+		.student-board-header {
+			gap: 0.5rem;
+		}
+		.student-board-identity p {
+			font-size: 0.6rem;
+			letter-spacing: 0.1em;
+		}
+		.student-board-identity strong {
+			font-size: 1rem;
+			padding: 0.3rem 0.45rem;
+		}
 		.student-board-status {
-			margin-left: auto;
+			flex-basis: 100%;
+			min-height: 1.25rem;
+			padding: 0;
+			border: 0;
+			background: transparent;
+			font-size: 0.7rem;
 		}
 	}
 </style>

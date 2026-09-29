@@ -1503,4 +1503,40 @@
 			width: 100%;
 		}
 	}
+	@media (max-width: 640px) {
+		.session-screen.board-screen .session-toolbar {
+			flex-wrap: nowrap;
+			justify-content: flex-start;
+			gap: 0.1rem;
+			padding: 0.1rem;
+			max-width: calc(100vw - 1rem);
+			border: 0;
+			border-radius: 0;
+			background: transparent;
+			backdrop-filter: none;
+			box-shadow: none;
+			overflow-x: auto;
+			scrollbar-width: thin;
+			scrollbar-color: #94a3b8 #0f172a;
+		}
+		.board-screen .session-toolbar form {
+			flex-shrink: 0;
+		}
+		.session-screen.board-screen .floating-control {
+			flex-shrink: 0;
+			width: 44px;
+			height: 44px;
+			padding: 0;
+			border-radius: 0.8rem;
+			background: rgb(15 23 42 / 0.85);
+			color: #e2e8f0;
+		}
+		.board-screen .floating-control :global(svg) {
+			width: 18px;
+			height: 18px;
+		}
+		.board-screen .floating-control:focus-visible {
+			outline-offset: -3px;
+		}
+	}
 </style>

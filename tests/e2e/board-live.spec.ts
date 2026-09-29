@@ -53,8 +53,21 @@ test('production Board: columns, private media, moderation toggle, live updates 
 	await expect(presenter.getByTestId('board-view')).toBeVisible();
 	await expect(presenter.locator('.stage-header .board-tools')).toBeVisible();
 	await expect(presenter.getByTestId('session-controls')).toHaveCSS('position', 'fixed');
-	await expect(presenter.locator('.board-tools')).toHaveCSS('border-top-width', '0px');
 	await expect(presenter.locator('.board-tools')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+	if (testInfo.project.name === 'mobile-360') {
+		const dock = presenter.getByTestId('session-controls');
+		expect((await dock.boundingBox())!.height).toBeLessThan(52);
+		for (const control of await dock.locator('.floating-control').all()) {
+			const box = (await control.boundingBox())!;
+			expect(box.width).toBeGreaterThanOrEqual(44);
+			expect(box.height).toBeGreaterThanOrEqual(44);
+		}
+		await expect(dock).toHaveCSS('border-top-width', '0px');
+		await expect(presenter.getByTestId('session-controls')).toHaveCSS(
+			'background-color',
+			'rgba(0, 0, 0, 0)'
+		);
+	}
 	await expect(presenter.getByRole('button', { name: 'Slideshow', exact: true })).toHaveCSS(
 		'border-top-width',
 		'0px'
@@ -89,6 +102,12 @@ test('production Board: columns, private media, moderation toggle, live updates 
 				'border-top-width',
 				'0px'
 			);
+			const actions = (await student.locator('.student-board-actions').boundingBox())!;
+			expect(actions.height).toBeLessThanOrEqual(72);
+			await expect(student.locator('.exit-label')).not.toBeVisible();
+			await student.screenshot({
+				path: `test-results/board-mobile-compact-${name}-${testInfo.project.name}.png`
+			});
 			const bounds = (await student.getByTestId('board-view').boundingBox())!;
 			expect(bounds.width).toBeGreaterThanOrEqual(330);
 		}
@@ -265,7 +284,10 @@ test('production Board: columns, private media, moderation toggle, live updates 
 		const first = presenter.locator('[data-post-id]').filter({ hasText: 'Langsung tampil' });
 		let transfer = await presenter.evaluateHandle(() => new DataTransfer());
 		await dragged.dispatchEvent('dragstart', { dataTransfer: transfer });
-		await expect(dragged).toHaveCSS('filter', 'blur(1px)');
+		await expect(dragged).toHaveClass(/dragging/);
+		await expect
+			.poll(async () => dragged.evaluate((node) => getComputedStyle(node).filter))
+			.toBe('blur(2.5px) saturate(0.7)');
 		await expect(presenter.locator('[data-drag-preview]')).toHaveCount(1);
 		const firstBox = (await first.boundingBox())!;
 		await first.dispatchEvent('dragover', { dataTransfer: transfer, clientY: firstBox.y + 2 });
@@ -292,16 +314,15 @@ test('production Board: columns, private media, moderation toggle, live updates 
 		const restoredFirstBox = (await first.boundingBox())!;
 		if (testInfo.project.name === 'desktop-1440') {
 			await first.scrollIntoViewIfNeeded();
-			const handle = (await dragged.locator('.drag-handle').boundingBox())!;
-			await presenter.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+			const source = (await dragged.boundingBox())!;
+			await presenter.mouse.move(source.x + source.width / 2, source.y + source.height / 2);
 			await presenter.mouse.down();
-			await presenter.mouse.move(handle.x + 15, handle.y + 20, { steps: 5 });
+			await presenter.mouse.move(source.x + 20, source.y + 20, { steps: 5 });
 			const target = (await first.boundingBox())!;
 			await presenter.mouse.move(target.x + target.width / 2, target.y + target.height - 8, {
 				steps: 15
 			});
 			await presenter.mouse.move(target.x + target.width / 2, target.y + target.height - 7);
-
 			await expect(first.locator('..')).toHaveClass(/insert-after/);
 			await presenter.screenshot({ path: 'test-results/board-native-drag.png' });
 			await presenter.mouse.up();
@@ -318,39 +339,38 @@ test('production Board: columns, private media, moderation toggle, live updates 
 			});
 		}
 		await expect(ideaCards.last()).toContainText('Kartu kedua');
+		await expect(presenter.getByTestId('board-view')).toHaveAttribute('aria-busy', 'false');
 		await transfer.dispose();
-		await presenter.evaluate(() => {
-			const source = [...document.querySelectorAll('article')].find((node) =>
-				node.textContent?.includes('Kartu kedua')
-			);
-			const target = document.querySelector('section[aria-label="Refleksi baru"]');
-			if (!source || !target) throw new Error('Board drag target tidak ditemukan.');
-			const transfer = new DataTransfer();
-			transfer.effectAllowed = 'move';
-			transfer.setData(
-				'application/x-edu-nara-board-post',
-				source.getAttribute('data-testid')!.replace('board-post-', '')
-			);
-			transfer.setData(
-				'text/plain',
-				source.getAttribute('data-testid')!.replace('board-post-', '')
-			);
-			source.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: transfer }));
-			target.dispatchEvent(new DragEvent('dragenter', { bubbles: true, dataTransfer: transfer }));
-			target.dispatchEvent(new DragEvent('dragover', { bubbles: true, dataTransfer: transfer }));
-			target.dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer: transfer }));
-			source.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: transfer }));
+		const crossColumnSource = presenter
+			.locator('[data-post-id]')
+			.filter({ hasText: 'Kartu kedua' });
+		const crossColumnTarget = presenter.locator('section[aria-label="Refleksi baru"]');
+		const crossColumnTransfer = await presenter.evaluateHandle(() => new DataTransfer());
+		await crossColumnSource.dispatchEvent('dragstart', { dataTransfer: crossColumnTransfer });
+		const crossTargetBox = (await crossColumnTarget.boundingBox())!;
+		await crossColumnTarget.dispatchEvent('dragover', {
+			dataTransfer: crossColumnTransfer,
+			clientY: crossTargetBox.y + 8
 		});
+		await expect(crossColumnTarget.locator('.empty')).toHaveClass(/insert-before/);
+		const moveResponse = presenter.waitForResponse(
+			(response) =>
+				response.url().includes('/posts/') &&
+				response.url().endsWith('/move') &&
+				response.request().method() === 'POST'
+		);
+		await crossColumnTarget.dispatchEvent('drop', {
+			dataTransfer: crossColumnTransfer,
+			clientY: crossTargetBox.y + 8
+		});
+		expect((await moveResponse).ok()).toBe(true);
+		await crossColumnSource.dispatchEvent('dragend', { dataTransfer: crossColumnTransfer });
 		await expect(
 			presenter
-				.locator('section[aria-label="Refleksi baru"]')
-				.getByText('Kartu kedua', { exact: true })
-		).toBeVisible();
-		await expect(
-			presenter
-				.locator('section[aria-label="Refleksi baru"]')
-				.getByText('Kartu kedua', { exact: true })
-		).toBeVisible();
+				.locator('section[aria-label="Refleksi baru"] [data-post-id]')
+				.filter({ hasText: 'Kartu kedua' })
+		).toHaveCount(1);
+		await crossColumnTransfer.dispose();
 		await observer.getByLabel('Cari kartu', { exact: true }).fill('tidak cocok');
 		await expect(observer.getByText('Langsung tampil', { exact: true })).toHaveCount(0);
 		await observer.getByLabel('Cari kartu', { exact: true }).fill('');
