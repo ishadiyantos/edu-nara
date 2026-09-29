@@ -16,8 +16,10 @@ import {
 	boardImageAccess,
 	listBoard,
 	moderateBoardPost,
+	moveBoardPost,
 	reorderBoardPosts,
-	submitBoardPost
+	submitBoardPost,
+	updateBoardColumn
 } from '../../src/lib/server/board';
 
 const stores: ReturnType<typeof openDatabase>[] = [];
@@ -144,4 +146,32 @@ test('admin board read includes moderation state while public read returns appro
 	]);
 	moderateBoardPost(store, admin.id, post.id, 'approved');
 	expect(listBoard(store, session.id).posts.map((row) => row.body)).toEqual(['Tinjau']);
+});
+
+test('admin can move approved cards across columns and rename columns during a live session', async () => {
+	const { store, admin, firstColumn, secondColumn, session, participant } = await fixture();
+	const first = submitBoardPost(store, session.id, participant.token, firstColumn.id, 'Pertama');
+	const second = submitBoardPost(store, session.id, participant.token, firstColumn.id, 'Kedua');
+	const third = submitBoardPost(store, session.id, participant.token, secondColumn.id, 'Ketiga');
+	for (const post of [first, second, third])
+		moderateBoardPost(store, admin.id, post.id, 'approved');
+
+	moveBoardPost(store, admin.id, session.id, first.id, secondColumn.id, 1);
+	expect(
+		listBoard(store, session.id).posts.map(({ body, columnId, position }) => ({
+			body,
+			columnId,
+			position
+		}))
+	).toEqual([
+		{ body: 'Kedua', columnId: firstColumn.id, position: 0 },
+		{ body: 'Ketiga', columnId: secondColumn.id, position: 0 },
+		{ body: 'Pertama', columnId: secondColumn.id, position: 1 }
+	]);
+
+	updateBoardColumn(store, admin.id, session.activityId, secondColumn.id, 'rename', 'Refleksi');
+	expect(
+		listBoard(store, session.id, admin.id).columns.find((column) => column.id === secondColumn.id)
+			?.title
+	).toBe('Refleksi');
 });

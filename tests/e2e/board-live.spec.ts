@@ -102,6 +102,29 @@ test('production Board: columns, private media, moderation toggle, live updates 
 		await expect(observer.getByText('Langsung tampil', { exact: true })).toBeVisible();
 		await observer.reload();
 		await expect(observer.getByText('Langsung tampil', { exact: true })).toBeVisible();
+		await author.getByRole('button', { name: 'Tambah kartu ke kolom Ide' }).click();
+		await author.getByLabel('Isi kartu', { exact: true }).fill('Kartu kedua');
+		await author.getByRole('button', { name: 'Kirim', exact: true }).click();
+		await expect(presenter.getByText('Kartu kedua', { exact: true })).toBeVisible();
+		await presenter.getByRole('button', { name: 'Edit judul Refleksi', exact: true }).click();
+		await presenter.getByLabel('Edit judul Refleksi', { exact: true }).fill('Refleksi baru');
+		await presenter.getByRole('button', { name: 'Simpan', exact: true }).click();
+		await expect(
+			presenter.getByRole('heading', { name: 'Refleksi baru', exact: true })
+		).toBeVisible();
+		await presenter.getByLabel('Judul kolom baru', { exact: true }).fill('Diskusi');
+		await presenter.getByRole('button', { name: '+ Tambah kolom', exact: true }).click();
+		await expect(presenter.getByRole('heading', { name: 'Diskusi', exact: true })).toBeVisible();
+		await presenter
+			.locator('article')
+			.filter({ hasText: 'Kartu kedua' })
+			.getByLabel('Pindahkan kartu Kartu kedua ke kolom', { exact: true })
+			.selectOption({ label: 'Refleksi baru' });
+		await expect(
+			presenter
+				.locator('section[aria-label="Refleksi baru"]')
+				.getByText('Kartu kedua', { exact: true })
+		).toBeVisible();
 		await observer.getByLabel('Cari kartu', { exact: true }).fill('tidak cocok');
 		await expect(observer.getByText('Langsung tampil', { exact: true })).toHaveCount(0);
 		await observer.getByLabel('Cari kartu', { exact: true }).fill('');
@@ -111,8 +134,13 @@ test('production Board: columns, private media, moderation toggle, live updates 
 		await presenter.getByTestId('fullscreen-button').click();
 		await expect(presenter.getByTestId('session-screen')).toHaveClass(/presentation/);
 		await expect(presenter.getByText('Gagasan privat', { exact: true })).toHaveCount(0);
+		await expect(
+			presenter.getByRole('button', { name: 'Bagikan papan', exact: true })
+		).toBeVisible();
 		await presenter.getByRole('button', { name: 'Slideshow', exact: true }).click();
 		await expect(presenter.getByTestId('board-slideshow')).toContainText('Langsung tampil');
+		await presenter.getByRole('button', { name: 'Kartu berikutnya →', exact: true }).click();
+		await expect(presenter.getByTestId('board-slideshow')).toContainText('Kartu kedua');
 		await observer.screenshot({
 			path: `test-results/board-${testInfo.project.name}-student.png`,
 			fullPage: true

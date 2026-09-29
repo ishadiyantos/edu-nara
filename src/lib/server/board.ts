@@ -214,6 +214,75 @@ export function submitBoardPost(
 	const lastEventId = events.publish(sessionId, 'board.post.new', {});
 	return { ...row, lastEventId };
 }
+export function moveBoardPost(
+	store: Store,
+	adminId: string,
+	sessionId: string,
+	postId: string,
+	targetColumnId: string,
+	targetPosition: number
+) {
+	const { activity } = sessionBoard(store, sessionId);
+	if (activity.ownerId !== adminId) throw new UserError('Akses admin ditolak.');
+	if (!Number.isInteger(targetPosition) || targetPosition < 0) {
+		throw new UserError('Posisi kartu tidak valid.');
+	}
+	const post = store.db
+		.select()
+		.from(boardPosts)
+		.where(and(eq(boardPosts.id, postId), eq(boardPosts.sessionId, sessionId)))
+		.get();
+	const target = store.db
+		.select({ id: boardColumns.id })
+		.from(boardColumns)
+		.where(and(eq(boardColumns.id, targetColumnId), eq(boardColumns.activityId, activity.id)))
+		.get();
+	if (!post || !target) throw new UserError('Kartu atau kolom tidak tersedia.');
+	const sourcePosts = store.db
+		.select()
+		.from(boardPosts)
+		.where(and(eq(boardPosts.sessionId, sessionId), eq(boardPosts.columnId, post.columnId)))
+		.orderBy(asc(boardPosts.position), asc(boardPosts.createdAt))
+		.all()
+		.filter((item) => item.id !== postId);
+	const targetPosts =
+		post.columnId === targetColumnId
+			? sourcePosts
+			: store.db
+					.select()
+					.from(boardPosts)
+					.where(and(eq(boardPosts.sessionId, sessionId), eq(boardPosts.columnId, targetColumnId)))
+					.orderBy(asc(boardPosts.position), asc(boardPosts.createdAt))
+					.all();
+	const next = [...targetPosts];
+	next.splice(Math.min(targetPosition, next.length), 0, post);
+	store.sqlite.transaction(() => {
+		if (post.columnId !== targetColumnId) {
+			store.db
+				.update(boardPosts)
+				.set({ columnId: targetColumnId })
+				.where(eq(boardPosts.id, postId))
+				.run();
+		}
+		sourcePosts.forEach((item, position) =>
+			store.db
+				.update(boardPosts)
+				.set({ position, updatedAt: Date.now() })
+				.where(eq(boardPosts.id, item.id))
+				.run()
+		);
+		next.forEach((item, position) =>
+			store.db
+				.update(boardPosts)
+				.set({ columnId: targetColumnId, position, updatedAt: Date.now() })
+				.where(eq(boardPosts.id, item.id))
+				.run()
+		);
+	})();
+	events.publish(sessionId, 'board.reordered', {});
+	return next.map((item) => item.id);
+}
+
 export function moderateBoardPost(store: Store, adminId: string, postId: string, status: unknown) {
 	const next = boardStatusSchema.parse(status);
 	const row = store.db

@@ -495,6 +495,7 @@
 			sessionId={live.id}
 			sessionCode={live.code}
 			initial={data.board}
+			title={live.title}
 			admin
 			presentation={presenting}
 			refreshKey={boardRefresh}

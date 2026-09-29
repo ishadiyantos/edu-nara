@@ -101,6 +101,33 @@
 		});
 		notice = 'Urutan kartu tersimpan.';
 	}
+	async function move(payload: { postId: string; targetColumnId: string; targetPosition: number }) {
+		await request(`/api/boards/${sessionCode}/posts/${payload.postId}/move`, {
+			columnId: payload.targetColumnId,
+			position: payload.targetPosition
+		});
+		notice = 'Kartu dipindahkan.';
+	}
+	async function renameColumn(payload: { columnId: string; title: string }) {
+		await request(`/api/boards/${sessionCode}/columns/${payload.columnId}`, {
+			title: payload.title
+		});
+		notice = 'Judul kolom tersimpan.';
+	}
+	async function createColumn(title: string) {
+		await request(`/api/boards/${sessionCode}/columns`, { title });
+		notice = 'Kolom baru ditambahkan.';
+	}
+	async function shareBoard() {
+		try {
+			const canShare = 'share' in navigator && typeof navigator.share === 'function';
+			if (canShare) await navigator.share({ title, url: window.location.href });
+			else await navigator.clipboard.writeText(window.location.href);
+			notice = canShare ? 'Papan siap dibagikan.' : 'Tautan papan disalin.';
+		} catch {
+			/* User cancelled native share. */
+		}
+	}
 	async function toggle() {
 		if (saving) return;
 		saving = true;
@@ -198,6 +225,10 @@
 		onpost={admin ? undefined : post}
 		onmoderate={admin ? moderate : undefined}
 		onreorder={admin ? reorder : undefined}
+		onmove={admin ? move : undefined}
+		onrenamecolumn={admin ? renameColumn : undefined}
+		onaddcolumn={admin ? createColumn : undefined}
+		onshare={shareBoard}
 	/>
 </section>
 
