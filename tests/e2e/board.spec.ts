@@ -20,7 +20,7 @@ test('board public view renders approved posts, safe links, composer limit, and 
 		.click();
 	const composer = page.getByTestId('post-composer');
 	await expect(composer).toBeVisible();
-	await composer.getByRole('textbox', { name: 'Tulis Kartu Baru' }).fill('x'.repeat(501));
+	await composer.getByRole('textbox', { name: 'Isi kartu' }).fill('x'.repeat(501));
 	await expect(composer.getByTestId('char-counter')).toContainText('501 / 500');
 	await expect(composer.getByRole('button', { name: 'Kirim' })).toBeDisabled();
 
@@ -32,7 +32,7 @@ test('board public view renders approved posts, safe links, composer limit, and 
 
 test('board shows empty state clearly', async ({ page }) => {
 	await page.goto('/mock/play/board');
-	await expect(page.getByText('Belum ada kartu tampil di kolom ini.')).toBeVisible();
+	await expect(page.getByText('Belum ada kartu yang cocok.')).toBeVisible();
 });
 
 // admin component route comes with backend integration task; test pure UX via module unit suite here.

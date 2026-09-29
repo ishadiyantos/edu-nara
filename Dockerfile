@@ -10,7 +10,7 @@ RUN pnpm prune --prod --ignore-scripts
 
 FROM node:22-bookworm-slim AS runtime
 WORKDIR /app
-ENV NODE_ENV=production HOST=0.0.0.0 PORT=3000 DATABASE_PATH=/app/data/edu-nara.db LOG_LEVEL=info
+ENV NODE_ENV=production HOST=0.0.0.0 PORT=3000 DATABASE_PATH=/app/data/edu-nara.db LOG_LEVEL=info BODY_SIZE_LIMIT=6M
 RUN mkdir -p /app/data && chown node:node /app/data
 COPY --from=builder --chown=node:node /app/build ./build
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules

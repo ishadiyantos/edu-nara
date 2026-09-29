@@ -14,9 +14,16 @@ export const POST: import('./$types').RequestHandler = async (event) => {
 	}
 	try {
 		const data = await body(event);
-		const status = boardStatusSchema.parse(data.status ?? data.action);
+		const aliases: Record<string, string> = {
+			approve: 'approved',
+			reject: 'rejected',
+			hide: 'hidden'
+		};
+		const status = boardStatusSchema.parse(
+			data.status ?? aliases[String(data.action)] ?? data.action
+		);
 		const post = moderateBoardPost(database(), adminId, event.params.postId, status);
-		return json({ ok: true, postId: post.id, status: post.status });
+		return json({ ok: true, postId: post.id, status: post.status, lastEventId: post.lastEventId });
 	} catch (err) {
 		return json({ ok: false, message: message(err) }, { status: 400 });
 	}

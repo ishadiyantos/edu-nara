@@ -1,11 +1,19 @@
 import { randomUUID } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { validateImageUpload } from './media';
 
 export function uploadDirectory(): string {
-	return process.env.UPLOAD_DIR || join(homedir(), '.local/share/edu-nara/uploads');
+	return (
+		process.env.UPLOAD_DIR ||
+		join(
+			process.env.DATABASE_PATH
+				? dirname(process.env.DATABASE_PATH)
+				: join(homedir(), '.local/share/edu-nara'),
+			'uploads'
+		)
+	);
 }
 
 export type StoredImage = {

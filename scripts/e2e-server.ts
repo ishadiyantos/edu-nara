@@ -17,6 +17,8 @@ const child = spawn(process.execPath, ['build/index.js'], {
 	env: {
 		...process.env,
 		DATABASE_PATH: path,
+		UPLOAD_DIR: join(dir, 'uploads'),
+		BODY_SIZE_LIMIT: '6M',
 		COOKIE_SECURE: 'false',
 		ORIGIN: 'http://127.0.0.1:4173',
 		HOST: '127.0.0.1',

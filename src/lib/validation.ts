@@ -1,4 +1,18 @@
 import { z } from 'zod';
+function safeBoardLink(value: string) {
+	try {
+		const url = new URL(value);
+		return (
+			['http:', 'https:'].includes(url.protocol) &&
+			!!url.hostname &&
+			!url.username &&
+			!url.password &&
+			!/[\s\\]/u.test(value)
+		);
+	} catch {
+		return false;
+	}
+}
 
 export const codeSchema = z
 	.string()
@@ -32,21 +46,46 @@ export const stateSchema = z.enum(['open', 'closed', 'ended']);
 const boardText = z
 	.string()
 	.trim()
-	.min(1, 'Teks wajib diisi.')
+
 	.refine((value) => [...value].length <= 500, 'Teks maksimal 500 karakter.')
 	.refine(
-		(value) => [...value].every((char) => char.charCodeAt(0) >= 32 && char.charCodeAt(0) !== 127),
+		(value) =>
+			[...value].every(
+				(char) =>
+					['\n', '\r', '\t'].includes(char) ||
+					(char.charCodeAt(0) >= 32 && char.charCodeAt(0) !== 127)
+			),
 		'Teks tidak valid.'
 	);
 
 export const boardPostSchema = z
 	.object({
 		columnId: z.string().trim().min(1).max(100),
-		body: boardText
+		body: boardText,
+		title: z.string().trim().max(120).default(''),
+		linkUrl: z
+			.string()
+			.trim()
+			.max(2048)
+			.refine((v) => !v || safeBoardLink(v), 'Tautan harus http/https.')
+			.default(''),
+		requestId: z.string().min(1).max(100).optional()
 	})
 	.strict();
-export const boardColumnSchema = z.object({ title: z.string().trim().min(1).max(120) }).strict();
-export const boardStatusSchema = z.enum(['pending', 'approved', 'rejected']);
+export const boardColumnSchema = z
+	.object({
+		title: z
+			.string()
+			.trim()
+			.min(1)
+			.max(120)
+			.refine(
+				(v) => [...v].every((char) => char.charCodeAt(0) >= 32 && char.charCodeAt(0) !== 127),
+				'Judul kolom tidak valid.'
+			)
+	})
+	.strict();
+export const boardStatusSchema = z.enum(['pending', 'approved', 'rejected', 'hidden']);
 export const boardOrderSchema = z
 	.object({ ids: z.array(z.string().trim().min(1).max(100)).max(500) })
 	.strict();

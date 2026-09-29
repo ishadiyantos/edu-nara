@@ -1,3 +1,4 @@
+import { listBoard } from '$lib/server/board';
 import { error, fail } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import { database } from '$lib/server/db/client';
@@ -28,6 +29,18 @@ export const load: import('./$types').PageServerLoad = (event) => {
 			.where(eq(activities.id, session.activityId))
 			.get()!;
 		const current = snapshot(store, event.params.id);
+		if (activity.type === 'board')
+			return {
+				snapshot: current,
+				activityType: activity.type,
+				questions: [],
+				words: [],
+				moderation: [],
+				leaderboard: [],
+				joinUrl: `${event.url.origin}/join?code=${current.code}`,
+				board: listBoard(store, session.id, owner),
+				activityId: activity.id
+			};
 		if (activity.type === 'wordcloud') {
 			const questions = getWordcloudQuestionsByActivity(store, session.activityId);
 			return {

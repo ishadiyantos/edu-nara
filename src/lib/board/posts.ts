@@ -1,6 +1,6 @@
 export const MAX_POST_BODY = 500;
 
-export type PostStatus = 'pending' | 'approved' | 'rejected';
+export type PostStatus = 'pending' | 'approved' | 'rejected' | 'hidden';
 
 export type BoardColumn = {
 	id: string;
@@ -13,6 +13,9 @@ export type BoardPost = {
 	columnId: string;
 	author: string;
 	body: string;
+	title?: string;
+	linkUrl?: string | null;
+	imageUrl?: string | null;
 	status: PostStatus;
 	position: number;
 	createdAt?: string;
@@ -131,17 +134,23 @@ export function sortPosts(posts: BoardPost[]): BoardPost[] {
 }
 
 export function statusLabel(status: PostStatus): string {
-	return { pending: 'Menunggu moderasi', approved: 'Tampil', rejected: 'Ditolak' }[status];
+	return {
+		pending: 'Menunggu moderasi',
+		approved: 'Tampil',
+		rejected: 'Ditolak',
+		hidden: 'Disembunyikan'
+	}[status];
 }
 
 export function statusTone(status: PostStatus): string {
 	return {
 		pending: 'border-amber-300/50 bg-amber-50 text-amber-900',
 		approved: 'border-emerald-300/50 bg-emerald-50 text-emerald-900',
-		rejected: 'border-rose-300/50 bg-rose-50 text-rose-900'
+		rejected: 'border-rose-300/50 bg-rose-50 text-rose-900',
+		hidden: 'border-slate-300 bg-slate-50 text-slate-900'
 	}[status];
 }
 
 export function postStatus(value: string): PostStatus {
-	return value === 'approved' || value === 'rejected' ? value : 'pending';
+	return value === 'approved' || value === 'rejected' || value === 'hidden' ? value : 'pending';
 }

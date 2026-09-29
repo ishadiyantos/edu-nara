@@ -9,17 +9,20 @@
 **Objective.** Membuktikan navigasi dan identitas visual sebelum membuat backend.
 
 **Files.**
+
 - Create: `src/routes/+page.svelte`
 - Create: `src/routes/join/+page.svelte`
 - Create: `src/routes/admin/+layout.svelte`
 - Create: `src/app.css`
 
 **Langkah.**
+
 1. Tetapkan nama sementara, warna utama, font lokal/system, radius, shadow, spacing, dan state komponen.
 2. Buat wireframe: landing, join, dashboard, presenter, dan 4 layar aktivitas.
 3. Validasi alur join singkat dengan pengguna; rapikan hambatan yang nyata.
 
 **Wireframe teks — Mahasiswa (360 px).**
+
 ```
 ┌─────────────────────────┐
 │ Edu Nara                │
@@ -52,6 +55,7 @@ Waiting room:
 **Objective.** Aplikasi bisa dijalankan, menyimpan data, login admin, dan membuat sesi.
 
 **Files.**
+
 - Create: `src/lib/server/db/schema.ts`
 - Create: `src/lib/server/db/client.ts`
 - Create: `src/lib/server/auth.ts`
@@ -61,6 +65,7 @@ Waiting room:
 - Create: `src/routes/api/join/+server.ts`
 
 **Langkah.**
+
 1. Bootstrap SvelteKit TypeScript + scripts lint/check/test/build.
 2. Pasang SQLite + Drizzle; aktifkan **WAL** dan **foreign keys**.
 3. Migration untuk 4 entitas inti.
@@ -73,6 +78,7 @@ Waiting room:
 10. Health endpoint yang cek proses & koneksi DB.
 
 **Catatan implementasi SSE.**
+
 - Simpan koneksi di `Map<sessionId, Set<Client>>` in-memory.
 - Setiap client dapat `lastEventId` monotonic; server buffer 100 event terakhir per sesi untuk resume saat reconnect.
 - Heartbeat server setiap 20 s; browser tidak mengirim ACK. Cleanup ketika request abort, otorisasi kedaluwarsa, atau antrean klien lambat penuh. Reconnect memakai replay/resync.
@@ -86,10 +92,12 @@ Waiting room:
 **Objective.** Aktivitas paling sederhana selesai end-to-end dan menjadi **pola** fitur berikutnya.
 
 **Files.**
+
 - Implementasikan komponen editor, player, presenter dan endpoint submit pada struktur proyek saat ini.
 - Migration untuk pertanyaan, opsi, respons, dan constraint satu respons per peserta/pertanyaan.
 
 **Langkah.**
+
 1. Editor pertanyaan + opsi dengan **preview ponsel** di kanan.
 2. Endpoint submit idempotent (`Idempotency-Key` atau constraint peserta + pertanyaan).
 3. SSE broadcast aggregate count, bukan data peserta.
@@ -98,6 +106,7 @@ Waiting room:
 6. Ekspor CSV UTF-8 dengan proteksi formula injection.
 
 **Wireframe — Player mahasiswa.**
+
 ```
 ┌─────────────────────────┐
 │ Q1 dari 1               │
@@ -124,6 +133,7 @@ Waiting room:
 **Files.** Implementasikan komponen Word Cloud editor/player/results dan logika normalisasi pada struktur proyek saat ini.
 
 **Langkah.**
+
 1. Batas 1–5 kata per peserta, panjang max 80 karakter.
 2. Normalisasi deterministik (kapital, spasi, Unicode NFC, input kosong, karakter kontrol).
 3. Config: jumlah kiriman per peserta + moderasi sebelum tampil.
@@ -132,12 +142,13 @@ Waiting room:
 6. Batasi frekuensi animasi (max 2 Hz) agar proyektor tidak tersendat.
 
 **Normalisasi minimal:**
+
 ```ts
 export function normalize(raw: string): string {
-  return raw.normalize('NFC').trim().toLowerCase()
-            .replace(/\s+/g, ' ').slice(0, 80);
+	return raw.normalize('NFC').trim().toLowerCase().replace(/\s+/g, ' ').slice(0, 80);
 }
 ```
+
 Sinonim/merge manual (dosen) datang setelah MVP.
 
 **Acceptance criteria.** Editor, kiriman mahasiswa, moderasi, dan agregasi presenter berjalan; varian kapital/spasi tergabung; konten belum disetujui tidak tampil. Target 200 respons diperiksa pada tahap stabilitas akhir.
@@ -146,9 +157,10 @@ Sinonim/merge manual (dosen) datang setelah MVP.
 
 ## Fase 4a — Padlet Clone: Teks + Moderasi (Rilis v0.3)
 
-**Objective.** Papan kolaborasi kartu **teks** yang bisa dimoderasi.
+**Objective.** Papan kolaborasi kartu teks, judul, gambar, dan tautan yang bisa dimoderasi. Core Fase 4a+4b dikirim bersama; kontrak aktif: [`features/board-v0.3-api.md`](features/board-v0.3-api.md).
 
 **Files.**
+
 - Create: `src/lib/components/board/BoardEditor.svelte`
 - Create: `src/lib/components/board/BoardView.svelte`
 - Create: `src/lib/components/board/PostComposer.svelte`
@@ -156,11 +168,12 @@ Sinonim/merge manual (dosen) datang setelah MVP.
 - Create: `src/routes/api/boards/posts/[postId]/moderate/+server.ts`
 
 **Langkah.**
+
 1. Layout **columns** (bukan freeform) — lebih baik untuk mobile & aksesibilitas.
-2. **Teks-only** dulu (max 500 char, auto-linkify).
-3. Moderasi **pending/approved/rejected** — default **pending** kalau moderasi aktif.
-4. Reaction opsional: 👍 ❤️ 😂 🤔 (bisa ditunda).
-5. Drag/reorder **hanya admin**; sediakan tombol pindah kiri/kanan sebagai alternatif keyboard.
+2. Teks maksimal 500 code point Unicode, judul opsional, auto-linkify aman; composer per kolom.
+3. Moderasi **pending/approved/rejected/hidden**. Toggle per papan tersimpan di editor dan panel sesi: aktif berarti kiriman baru pending, nonaktif berarti auto-approved. Antrean lama **tidak** otomatis disetujui.
+4. Reaksi dan komentar ditunda; pencarian kartu, slideshow dan fullscreen tersedia.
+5. Urutan **hanya admin**: kolom via tombol kiri/kanan, kartu via naik/turun. Kolom dapat dibuat/rename dan dihapus hanya jika kosong di semua sesi; tidak ada drag-and-drop pada core.
 6. Komentar setelah posting inti stabil.
 
 **Acceptance criteria.** Post teks aman terkirim; moderasi real-time; papan tetap nyaman pada 360 px.
@@ -170,15 +183,17 @@ Sinonim/merge manual (dosen) datang setelah MVP.
 ## Fase 4b — Padlet Clone: Gambar & Tautan (Rilis v0.4)
 
 **Files tambahan.**
-- Create: `src/lib/server/uploads.ts`
+
+- Reuse: `src/lib/server/media.ts`, `media-storage.ts`; route gambar terotorisasi di `/api/boards/images/[imageId]`.
 
 **Langkah.**
+
 1. Tautan: validasi skema **`http`/`https`** saja. **Jangan fetch preview URL** pada MVP (hindari SSRF).
 2. Gambar:
    - Validasi MIME **berdasarkan isi file** (magic bytes), bukan hanya extension.
    - Max 5 MB; JPEG/PNG/WebP.
    - **Random filename** server-side.
-   - Sajikan dari path `/uploads/…` dengan header `Content-Type` benar + `X-Content-Type-Options: nosniff`.
+   - Sajikan lewat `/api/boards/images/[imageId]` dengan otorisasi sesi/status, `no-store`, MIME benar dan `nosniff`; tidak ada URL gambar publik.
    - Resize ke max 1600 px pakai `sharp` (opsional, bila kebutuhan terbukti).
 3. Ekspor CSV + paket ZIP gambar **hanya bila benar-benar dibutuhkan**.
 
@@ -191,12 +206,14 @@ Sinonim/merge manual (dosen) datang setelah MVP.
 **Objective.** Dosen membuat TTS **manual**; mahasiswa memainkannya dari ponsel.
 
 **Files.**
+
 - Create: `src/lib/components/crossword/GridEditor.svelte`
 - Create: `src/lib/components/crossword/ClueEditor.svelte`
 - Create: `src/lib/components/crossword/CrosswordPlayer.svelte`
 - Create: `src/lib/server/crossword.ts`
 
 **Langkah.**
+
 1. Alfabet MVP: **huruf Latin**, angka opsional; normalisasi kapital & spasi.
 2. Validator entries: batas grid, overlap **cocok** (huruf yang bersilangan sama), tidak ada entry duplikat, **nomor deterministik**.
 3. Editor manual: posisi, arah (across/down), jawaban, petunjuk.
@@ -207,6 +224,7 @@ Sinonim/merge manual (dosen) datang setelah MVP.
 8. Generator grid **otomatis ditunda** sampai data pemakaian membuktikan kebutuhan.
 
 **Payload aman.** Klien hanya menerima:
+
 ```json
 {
   "gridShape": [[1,1,0,1],[1,0,0,1],...],
@@ -214,6 +232,7 @@ Sinonim/merge manual (dosen) datang setelah MVP.
   "numbers": [[1,0,0,2],...]
 }
 ```
+
 Jawaban tidak dikirim. Cek dilakukan via `POST /api/crosswords/:id/check` dengan payload huruf isian → server balas mask benar/salah.
 
 **Acceptance criteria.** Overlap divalidasi; jawaban tidak terlihat dari HTML/JSON awal; refresh memulihkan progres; navigasi keyboard berfungsi.
@@ -225,11 +244,13 @@ Jawaban tidak dikirim. Cek dilakukan via `POST /api/crosswords/:id/check` dengan
 **Objective.** Validasi stabilitas platform setelah semua fitur MVP terdeploy. Keamanan dasar, Docker, dan perlindungan data bukan pekerjaan yang ditunda ke fase ini.
 
 **Files.**
+
 - Create: `.env.example`
 - Create: `Dockerfile`
 - Update: `docs/DEPLOY.md`; gunakan panduan deploy/backup yang ada, jangan membuat dokumen duplikat.
 
 **Langkah.**
+
 1. Validasi seluruh input di server dengan **Zod**.
 2. **CSRF protection** untuk mutasi berbasis cookie + cek origin.
 3. Header keamanan: **CSP**, `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options: DENY`.

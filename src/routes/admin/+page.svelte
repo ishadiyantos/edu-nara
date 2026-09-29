@@ -228,11 +228,11 @@
 									></select
 								></label
 							>{/if}
-						{#if activity.type === 'choice' || activity.type === 'wordcloud'}
+						{#if activity.type === 'choice' || activity.type === 'wordcloud' || activity.type === 'board'}
 							<div class="grid gap-2 sm:grid-cols-2">
 								<a
 									class="inline-flex min-h-11 items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-center font-bold text-white shadow-[0_3px_0_#1e3a8a] transition hover:brightness-110 active:translate-y-0.5"
-									href={`/admin/activities/${activity.id}/${activity.type === 'wordcloud' ? 'wordcloud' : 'poll'}`}
+									href={`/admin/activities/${activity.id}/${activity.type === 'board' ? 'board' : activity.type === 'wordcloud' ? 'wordcloud' : 'poll'}`}
 									>Buka editor <span class="ml-2" aria-hidden="true">→</span></a
 								>
 								<Button

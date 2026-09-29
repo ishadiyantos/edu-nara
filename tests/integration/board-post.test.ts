@@ -12,6 +12,8 @@ import {
 } from '../../src/lib/server/sessions';
 import {
 	createBoardColumn,
+	setBoardModeration,
+	boardImageAccess,
 	listBoard,
 	moderateBoardPost,
 	reorderBoardPosts,
@@ -42,6 +44,41 @@ async function fixture(path = ':memory:') {
 	const participant = joinSession(store, { code: session.code, displayName: 'Ana' });
 	return { store, admin, activity, firstColumn, secondColumn, session, participant };
 }
+
+test('media and moderation remain scoped across toggle, retry, rejection and token expiry', async () => {
+	const { store, admin, activity, firstColumn, session, participant } = await fixture();
+	const other = joinSession(store, { code: session.code, displayName: 'Bela' });
+	const post = submitBoardPost(store, session.id, participant.token, firstColumn.id, 'Privat', {
+		requestId: 'retry-1',
+		imageId: '12345678-1234-4234-8234-123456789abc'
+	});
+	expect(boardImageAccess(store, post.imageId!, undefined, other.token)).toBeNull();
+	expect(boardImageAccess(store, post.imageId!, undefined, participant.token)).not.toBeNull();
+	setBoardModeration(store, admin.id, activity.id, false);
+	expect(listBoard(store, session.id, admin.id).posts[0].status).toBe('pending');
+	expect(
+		submitBoardPost(store, session.id, participant.token, firstColumn.id, 'Privat', {
+			requestId: 'retry-1'
+		}).id
+	).toBe(post.id);
+	expect(
+		submitBoardPost(store, session.id, participant.token, firstColumn.id, 'Publik').status
+	).toBe('approved');
+	moderateBoardPost(store, admin.id, post.id, 'approved');
+	expect(boardImageAccess(store, post.imageId!, undefined, other.token)).not.toBeNull();
+	moderateBoardPost(store, admin.id, post.id, 'hidden');
+	expect(boardImageAccess(store, post.imageId!, undefined, other.token)).toBeNull();
+	expect(boardImageAccess(store, post.imageId!, admin.id)).not.toBeNull();
+	setBoardModeration(store, admin.id, activity.id, true);
+	expect(submitBoardPost(store, session.id, participant.token, firstColumn.id, 'Baru').status).toBe(
+		'pending'
+	);
+	store.sqlite.prepare('UPDATE participants SET expires_at = 0').run();
+	expect(() =>
+		submitBoardPost(store, session.id, participant.token, firstColumn.id, 'Expired')
+	).toThrow();
+	expect(boardImageAccess(store, post.imageId!, undefined, participant.token)).toBeNull();
+});
 
 test('board post validates 500 Unicode characters and persists as pending', async () => {
 	const { store, firstColumn, session, participant } = await fixture();

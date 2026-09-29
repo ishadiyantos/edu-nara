@@ -2,6 +2,8 @@
 	import { deserialize, enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount, untrack } from 'svelte';
+	import BoardLive from '$lib/components/board/BoardLive.svelte';
+	let boardRefresh = $state(0);
 	import QuizLeaderboard from '$lib/components/poll/QuizLeaderboard.svelte';
 	import WordcloudResults from '$lib/components/poll/WordcloudResults.svelte';
 	import CelebrationBurst from '$lib/components/gamification/CelebrationBurst.svelte';
@@ -176,11 +178,11 @@
 		if (!presenting) return;
 		if (event.key === 'Escape') exit();
 		if (event.key === 'Tab') reveal();
-		if (!showJoin && event.key === 'ArrowRight') {
+		if (data.activityType !== 'board' && !showJoin && event.key === 'ArrowRight') {
 			event.preventDefault();
 			void select(activeIndex + 1, 1);
 		}
-		if (!showJoin && event.key === 'ArrowLeft') {
+		if (data.activityType !== 'board' && !showJoin && event.key === 'ArrowLeft') {
 			event.preventDefault();
 			void select(activeIndex - 1, -1);
 		}
@@ -194,6 +196,7 @@
 		const source = new EventSource(`/api/sessions/${live.id}/events`);
 		source.onopen = () => {
 			connected = true;
+			boardRefresh++;
 			void refreshResults();
 			void refreshLeaderboard();
 		};
@@ -209,6 +212,7 @@
 				const next = JSON.parse((event as MessageEvent).data);
 				const wasEnded = live.state === 'ended';
 				applyLive(next);
+				boardRefresh++;
 				if (!wasEnded && next.state === 'ended' && data.activityType === 'choice')
 					view = 'leaderboard';
 				void refreshResults();
@@ -218,6 +222,13 @@
 			void refreshResults();
 			void refreshLeaderboard();
 		});
+		for (const name of [
+			'board.post.new',
+			'board.post.moderated',
+			'board.post.removed',
+			'board.reordered'
+		])
+			source.addEventListener(name, () => boardRefresh++);
 		source.addEventListener('wordcloud.snapshot', () => void refreshResults());
 		return () => {
 			clearInterval(tick);
@@ -283,6 +294,7 @@
 	bind:this={stage}
 	tabindex="-1"
 	class:presentation={presenting}
+	class:board-screen={data.activityType === 'board'}
 	class="session-screen"
 	data-testid="session-screen"
 	data-view={view}
@@ -400,22 +412,22 @@
 			data-testid="presenter-navigation"
 		>
 			{#if presenting}
-				<button
-					class="floating-control"
-					aria-label="Sebelumnya"
-					title="Sebelumnya (←)"
-					disabled={showJoin || switching || activeIndex === 0}
-					onclick={() => select(activeIndex - 1, -1)}
-					><Icon name="arrow-left" /><span>Sebelumnya</span></button
-				>
-				<button
-					class="floating-control"
-					aria-label="Berikutnya"
-					title="Berikutnya (→)"
-					disabled={showJoin || switching || activeIndex >= questions.length - 1}
-					onclick={() => select(activeIndex + 1, 1)}
-					><Icon name="arrow-right" /><span>Berikutnya</span></button
-				>
+				{#if data.activityType !== 'board'}<button
+						class="floating-control"
+						aria-label="Sebelumnya"
+						title="Sebelumnya (←)"
+						disabled={showJoin || switching || activeIndex === 0}
+						onclick={() => select(activeIndex - 1, -1)}
+						><Icon name="arrow-left" /><span>Sebelumnya</span></button
+					>
+					<button
+						class="floating-control"
+						aria-label="Berikutnya"
+						title="Berikutnya (→)"
+						disabled={showJoin || switching || activeIndex >= questions.length - 1}
+						onclick={() => select(activeIndex + 1, 1)}
+						><Icon name="arrow-right" /><span>Berikutnya</span></button
+					>{/if}
 				<button
 					class="floating-control"
 					aria-label="Keluar presentasi (Esc)"
@@ -475,6 +487,18 @@
 				<QRCode value={data.joinUrl} size={320} label="QR code sesi" />
 			</div>
 		</section>
+	{:else if data.activityType === 'board' && data.board}
+		{#if !presenting}<a class="control" href={`/admin/activities/${data.activityId}/board`}
+				>Editor kolom</a
+			>{/if}
+		<BoardLive
+			sessionId={live.id}
+			sessionCode={live.code}
+			initial={data.board}
+			admin
+			presentation={presenting}
+			refreshKey={boardRefresh}
+		/>
 	{:else if active}
 		{#if view === 'leaderboard'}
 			<QuizLeaderboard
@@ -614,6 +638,10 @@
 </main>
 
 <style>
+	.session-screen.board-screen.presentation {
+		overflow-y: auto;
+		padding-bottom: 6rem;
+	}
 	.session-screen {
 		min-height: 100dvh;
 		width: 100%;
@@ -825,6 +853,14 @@
 			margin: 0;
 			border-radius: 999px;
 		}
+	}
+	/* Board moderation must remain reachable below long cards on narrow screens. */
+	.session-screen.board-screen:not(.presentation) .session-toolbar {
+		position: static;
+		transform: none;
+		width: fit-content;
+		max-width: 100%;
+		margin: 1rem auto;
 	}
 	/* Joining instructions: the first thing a presenter shows the class. */
 	.joining-panel {

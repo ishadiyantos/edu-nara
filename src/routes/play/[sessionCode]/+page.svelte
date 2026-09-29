@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BoardLive from '$lib/components/board/BoardLive.svelte';
 	import { Container } from '$components/ui';
 	import SessionStatus from '$lib/components/SessionStatus.svelte';
 	import ChoicePlayer from '$lib/components/poll/ChoicePlayer.svelte';
@@ -42,7 +43,14 @@
 			← Exit session <span class="sr-only">Keluar dari sesi</span>
 		</a>
 
-		{#if data.snapshot.state === 'open' && data.questions.length}
+		{#if data.activityType === 'board' && data.board}
+			<BoardLive
+				sessionId={data.snapshot.id}
+				sessionCode={data.snapshot.code}
+				initial={data.board}
+				title={data.snapshot.title}
+			/>
+		{:else if data.snapshot.state === 'open' && data.questions.length}
 			<div class="mb-4 flex flex-wrap items-end justify-between gap-3 sm:mb-5">
 				<div>
 					<p

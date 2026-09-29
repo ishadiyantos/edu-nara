@@ -14,6 +14,7 @@ export const adminSessions = sqliteTable('admin_sessions', {
 });
 export const activities = sqliteTable('activities', {
 	id: text().primaryKey(),
+	boardModeration: integer('board_moderation', { mode: 'boolean' }).notNull().default(true),
 	ownerId: text('owner_id')
 		.notNull()
 		.references(() => admins.id),
@@ -159,7 +160,11 @@ export const boardPosts = sqliteTable(
 			.notNull()
 			.references(() => participants.id),
 		body: text().notNull(),
-		status: text({ enum: ['pending', 'approved', 'rejected'] })
+		title: text().notNull().default(''),
+		linkUrl: text('link_url'),
+		imageId: text('image_id'),
+		requestId: text('request_id'),
+		status: text({ enum: ['pending', 'approved', 'rejected', 'hidden'] })
 			.notNull()
 			.default('pending'),
 		position: integer().notNull().default(0),
@@ -168,7 +173,9 @@ export const boardPosts = sqliteTable(
 	},
 	(t) => [
 		index('board_post_session_column').on(t.sessionId, t.columnId),
-		index('board_post_status').on(t.sessionId, t.status)
+		index('board_post_status').on(t.sessionId, t.status),
+		uniqueIndex('board_post_request').on(t.sessionId, t.participantId, t.requestId),
+		uniqueIndex('board_post_image').on(t.imageId)
 	]
 );
 export const wordcloudResponses = sqliteTable(

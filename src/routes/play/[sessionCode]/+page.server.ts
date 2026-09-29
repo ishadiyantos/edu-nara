@@ -1,3 +1,4 @@
+import { listBoard } from '$lib/server/board';
 import { error } from '@sveltejs/kit';
 import { database } from '$lib/server/db/client';
 import {
@@ -29,6 +30,16 @@ export const load: import('./$types').PageServerLoad = ({ params, cookies, local
 		.get()!.type;
 	const token = cookies.get(`edu_p_${session.id}`);
 	const participantName = participantDisplayName(store, session.id, token);
+	if (activityType === 'board')
+		return {
+			snapshot: current,
+			activityType,
+			questions: [],
+			responses: [],
+			initialScore: 0,
+			participantName,
+			board: listBoard(store, session.id, undefined, token)
+		};
 	if (session.state === 'draft')
 		return {
 			snapshot: current,
