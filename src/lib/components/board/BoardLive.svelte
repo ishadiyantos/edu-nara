@@ -204,6 +204,12 @@
 		width: 100%;
 		max-width: 100%;
 		min-width: 0;
+		padding: clamp(1rem, 2vw, 2rem);
+		border-radius: 1.25rem;
+		color: white;
+		background:
+			radial-gradient(ellipse at 95% 0%, #52715266, transparent 55%),
+			linear-gradient(135deg, #163b36, #214c48 55%, #173c45);
 	}
 	h1 {
 		font-size: clamp(1.5rem, 3vw, 2.5rem);

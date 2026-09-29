@@ -169,6 +169,7 @@
 		}
 	}
 	function key(event: KeyboardEvent) {
+		if (document.querySelector('dialog[open]')) return;
 		if (event.target instanceof HTMLElement && event.target.closest('input,textarea,select'))
 			return;
 		if (event.key.toLowerCase() === 'i' && !event.ctrlKey && !event.metaKey && !event.altKey) {
@@ -303,7 +304,9 @@
 	<div class="stage-grid" aria-hidden="true"></div>
 	<header class="stage-header">
 		<div>
-			<p class="stage-kicker">Edu Nara · {live.title}</p>
+			<p class="stage-kicker">
+				{data.activityType === 'board' ? 'Edu Nara · Papan diskusi' : `Edu Nara · ${live.title}`}
+			</p>
 			<p class="stage-code" data-testid="session-code">{live.code}</p>
 		</div>
 		<p class="stage-status">
@@ -326,6 +329,12 @@
 		<a class="floating-control" href="/admin" aria-label="Dashboard admin" title="Dashboard admin"
 			><Icon name="home" /> <span>Dashboard admin</span></a
 		>
+		{#if data.activityType === 'board'}<a
+				class="floating-control"
+				href={`/admin/activities/${data.activityId}/board`}
+				aria-label="Editor kolom"
+				title="Editor kolom">✎<span>Editor kolom</span></a
+			>{/if}
 		{#each statusControls as control}
 			<form
 				method="POST"
@@ -488,9 +497,6 @@
 			</div>
 		</section>
 	{:else if data.activityType === 'board' && data.board}
-		{#if !presenting}<a class="control" href={`/admin/activities/${data.activityId}/board`}
-				>Editor kolom</a
-			>{/if}
 		<BoardLive
 			sessionId={live.id}
 			sessionCode={live.code}
@@ -861,7 +867,7 @@
 		transform: none;
 		width: fit-content;
 		max-width: 100%;
-		margin: 1rem auto;
+		margin: 0.35rem 0;
 	}
 	/* Joining instructions: the first thing a presenter shows the class. */
 	.joining-panel {
@@ -1372,5 +1378,61 @@
 		.answer-fill {
 			transition: none;
 		}
+	}
+	/* Board uses a calm, full-bleed canvas; quiz keeps its game-show stage. */
+	.board-screen.presentation .session-toolbar {
+		background: #0d3130;
+		transition: none;
+	}
+	.board-screen.presentation .session-toolbar.visible {
+		opacity: 1;
+	}
+	.board-screen.presentation .floating-control {
+		color: white;
+	}
+	.board-screen.presentation :global(.column-content) {
+		padding-bottom: 6rem;
+	}
+	.session-screen.board-screen {
+		background:
+			radial-gradient(ellipse at 95% 0%, #52715266, transparent 55%),
+			linear-gradient(135deg, #163b36, #214c48 55%, #173c45);
+	}
+	.board-screen .stage-beams,
+	.board-screen .stage-grid {
+		display: none;
+	}
+	.board-screen .stage-header {
+		border: 0;
+		padding-bottom: 0.5rem;
+		gap: 0.5rem;
+	}
+	.board-screen .stage-header > div {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 1rem;
+	}
+	.board-screen .stage-code {
+		font-size: 1.15rem;
+		letter-spacing: 0.12em;
+		margin: 0;
+		text-shadow: none;
+		padding: 0.4rem 0.65rem;
+		background: #ffffff15;
+		border-radius: 0.5rem;
+	}
+	.board-screen .stage-kicker {
+		color: #c6e9db;
+		text-shadow: none;
+	}
+	.board-screen :global(.live-board) {
+		background: transparent;
+		border-radius: 0;
+		padding: 0;
+	}
+	.board-screen :global(.live-board h1) {
+		font-size: clamp(1.5rem, 2.5vw, 2.5rem);
+		margin: 0.8rem 0 0;
 	}
 </style>

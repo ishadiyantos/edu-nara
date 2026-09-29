@@ -12,4 +12,15 @@
 - Migration additive `0010_board_media`; volume `/app/data/uploads` wajib ikut backup.
   File orphan akibat retensi masih perlu cleanup terpisah. Komentar/reaksi ditunda.
 
+## Tampilan papan diskusi
+
+- Kanvas hijau gelap penuh pada presenter; judul Board utama, kode sesi ringkas.
+- Kolom fleksibel mengisi lebar desktop. Header judul panjang sejajar memakai CSS subgrid;
+  mobile tetap dapat digeser horizontal, isi tiap kolom bergulir vertikal.
+- Kartu putih dengan author/timestamp di atas; drag handle tidak membuat baris kosong.
+- Tombol `⋯` membuka modal edit judul, dengan textarea 120 karakter, Batal/Simpan.
+  Tambah kolom juga melalui modal. Modal tetap tersedia saat presentasi.
+- Pencarian/slideshow/share tetap di toolbar kanan atas; Posting mahasiswa mengambang
+  di kanan bawah. Tidak menambahkan komentar, reaksi, atau wallpaper eksternal.
+
 Status deploy/verifikasi production dicatat operator rilis; catatan ini bukan bukti deploy.

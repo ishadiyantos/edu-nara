@@ -12,6 +12,7 @@
 		type PostStatus
 	} from '$lib/board/posts';
 	import PostComposer, { type PostDraft } from './PostComposer.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
 	let {
 		columns = SAMPLE_COLUMNS,
 		posts = SAMPLE_POSTS,
@@ -66,6 +67,7 @@
 	let newColumnTitle = $state('');
 	let editingColumn = $state<string | null>(null);
 	let editingTitle = $state('');
+	let addingColumn = $state(false);
 	const visible = $derived(
 		sortPosts(
 			posts.filter(
@@ -157,6 +159,7 @@
 		try {
 			await onaddcolumn(title);
 			newColumnTitle = '';
+			addingColumn = false;
 		} catch (err) {
 			actionError = err instanceof Error ? err.message : 'Kolom gagal ditambahkan.';
 		} finally {
@@ -164,6 +167,7 @@
 		}
 	}
 	function key(event: KeyboardEvent) {
+		if (editingColumn || addingColumn) return;
 		if (
 			!slideshow ||
 			(event.target instanceof HTMLElement && event.target.closest('input,textarea,select'))
@@ -207,6 +211,7 @@
 		}}
 		ondrop={(event) => {
 			event.preventDefault();
+			event.stopPropagation();
 			const id =
 				event.dataTransfer?.getData('application/x-edu-nara-board-post') ||
 				event.dataTransfer?.getData('text/plain') ||
@@ -322,42 +327,31 @@
 				aria-pressed={moderationEnabled}>{moderationEnabled ? '◉' : '◎'}</button
 			>{/if}
 		{#if admin && !slideshow && onaddcolumn}
-			<form
-				class="add-column"
-				onsubmit={(event) => {
-					event.preventDefault();
-					void addColumn();
-				}}
+			<button
+				class="tool-button"
+				aria-label="Tambah kolom"
+				title="Tambah kolom"
+				onclick={() => {
+					actionError = '';
+					addingColumn = true;
+				}}>+</button
 			>
-				<input
-					aria-label="Judul kolom baru"
-					bind:value={newColumnTitle}
-					maxlength="120"
-					placeholder="Kolom baru"
-				/>
-				<button
-					class="tool-button"
-					type="submit"
-					aria-label="+ Tambah kolom"
-					disabled={busy || !newColumnTitle.trim()}>+</button
-				>
-			</form>
 		{/if}
 		{#if admin && !presentation && !slideshow}<label class="status-filter"
-				>Status<select bind:value={filter}
+				><span class="sr-only">Status</span><select bind:value={filter}
 					><option value="all">Semua</option><option value="pending">Menunggu</option><option
 						value="approved">Tampil</option
 					><option value="rejected">Ditolak</option><option value="hidden">Disembunyikan</option
 					></select
 				></label
 			>{/if}
-		{#if onpost && !disabled && !slideshow && columns[0]}<button
-				class="posting tool-button"
-				onclick={() => {
-					activeComposer = columns[0].id;
-				}}>+</button
-			>{/if}
 	</div>
+	{#if onpost && !disabled && !slideshow && columns[0]}<button
+			class="posting"
+			onclick={() => {
+				activeComposer = columns[0].id;
+			}}>+ Posting</button
+		>{/if}
 	{#if error || actionError}<p role="alert" class="error">{error || actionError}</p>{/if}
 	{#if loading}<p role="status" class="sr-only">Memuat papan kolaborasi…</p>{/if}
 	{#if slideshow}
@@ -405,52 +399,38 @@
 					}}
 				>
 					<header class="column-heading">
-						{#if editingColumn === column.id}
-							<form
-								class="column-edit"
-								onsubmit={(event) => {
-									event.preventDefault();
-									void renameColumn(column.id);
+						<span class="column-count">{cards.length} kartu</span>
+						<h2>{column.title}</h2>
+						{#if admin && onrenamecolumn}<button
+								class="icon-button"
+								aria-label={`Edit judul ${column.title}`}
+								onclick={() => {
+									actionError = '';
+									editingColumn = column.id;
+									editingTitle = column.title;
 								}}
-							>
-								<input
-									aria-label={`Edit judul ${column.title}`}
-									bind:value={editingTitle}
-									maxlength="120"
-								/>
-								<button type="submit" disabled={busy} aria-label="Simpan">✓</button>
-								<button type="button" onclick={() => (editingColumn = null)} aria-label="Batal"
-									>×</button
-								>
-							</form>
-						{:else}
-							<h2>{column.title}</h2>
-							{#if onrenamecolumn}<button
-									class="icon-button"
-									aria-label={`Edit judul ${column.title}`}
-									onclick={() => {
-										editingColumn = column.id;
-										editingTitle = column.title;
-									}}>✎</button
-								>{/if}
-						{/if}
-						<span>{cards.length}</span>
+								title="Edit judul kolom">⋯</button
+							>{/if}
 					</header>
-					{#if onpost && !disabled && !presentation}<button
-							class="add"
-							aria-label={`Tambah kartu ke kolom ${column.title}`}
-							onclick={() => (activeComposer = activeComposer === column.id ? null : column.id)}
-							>+ Tambah kartu</button
-						>{/if}
-					{#if activeComposer === column.id && onpost && !presentation}<PostComposer
-							columnId={column.id}
-							onsubmit={submit}
-							oncancel={() => (activeComposer = null)}
-							{disabled}
-						/>{/if}
-					{#each cards as post, index (post.id)}{@render card(post, index)}{:else}<p class="empty">
-							Belum ada kartu yang cocok.
-						</p>{/each}
+					<div class="column-content">
+						{#if onpost && !disabled && !presentation}<button
+								class="add"
+								aria-label={`Tambah kartu ke kolom ${column.title}`}
+								onclick={() => (activeComposer = activeComposer === column.id ? null : column.id)}
+								>+</button
+							>{/if}
+						{#if activeComposer === column.id && onpost && !presentation}<PostComposer
+								columnId={column.id}
+								onsubmit={submit}
+								oncancel={() => (activeComposer = null)}
+								{disabled}
+							/>{/if}
+						{#each cards as post, index (post.id)}{@render card(post, index)}{:else}<p
+								class="empty"
+							>
+								{search ? 'Tidak ada kartu yang cocok.' : 'Belum ada kiriman.'}
+							</p>{/each}
+					</div>
 				</section>
 			{:else}<p class="empty">
 					Belum ada kolom. Dosen dapat menambahkan kolom melalui editor.
@@ -459,33 +439,86 @@
 	{/if}
 </div>
 
+<Modal
+	open={editingColumn !== null || addingColumn}
+	title={addingColumn ? 'Tambah kolom' : 'Edit judul kolom'}
+	onclose={() => {
+		editingColumn = null;
+		addingColumn = false;
+	}}
+>
+	<form
+		class="column-form"
+		onsubmit={(event) => {
+			event.preventDefault();
+			if (addingColumn) void addColumn();
+			else if (editingColumn) void renameColumn(editingColumn);
+		}}
+	>
+		<label
+			>Judul kolom
+			{#if addingColumn}<textarea
+					aria-label="Judul kolom baru"
+					bind:value={newColumnTitle}
+					maxlength="120"
+					rows="4"
+					required
+				></textarea>
+			{:else}<textarea
+					aria-label={`Edit judul ${columns.find((c) => c.id === editingColumn)?.title}`}
+					bind:value={editingTitle}
+					maxlength="120"
+					rows="4"
+					required
+				></textarea>{/if}
+		</label>
+		<p class="character-count">
+			{(addingColumn ? newColumnTitle : editingTitle).length}/120 karakter
+		</p>
+		{#if actionError}<p role="alert" class="error">{actionError}</p>{/if}
+		<div class="dialog-actions">
+			<button
+				type="button"
+				onclick={() => {
+					editingColumn = null;
+					addingColumn = false;
+				}}>Batal</button
+			><button
+				class="save-column"
+				type="submit"
+				disabled={busy || !(addingColumn ? newColumnTitle : editingTitle).trim()}
+				>{busy ? 'Menyimpan…' : 'Simpan'}</button
+			>
+		</div>
+	</form>
+</Modal>
+
 <style>
 	.board {
 		position: relative;
 		width: 100%;
 		min-width: 0;
 		max-width: 100%;
-		color: #0f172a;
-		border-radius: 1.25rem;
-		padding: clamp(4.75rem, 8vw, 5.75rem) clamp(0.6rem, 2vw, 1.4rem) clamp(0.6rem, 2vw, 1.4rem);
-		background: #eef2ff;
+		color: #f8fafc;
+		padding: 5.5rem 0 1rem;
+		background: transparent;
 	}
 	.board-tools {
 		position: absolute;
 		top: 0.85rem;
-		right: 0.85rem;
+		right: 0;
 		z-index: 10;
 		display: flex;
 		align-items: center;
 		justify-content: flex-end;
 		flex-wrap: wrap;
 		gap: 0.35rem;
-		max-width: calc(100% - 1.7rem);
+		max-width: 100%;
 		padding: 0.4rem;
-		border: 1px solid #64748b;
-		border-radius: 999px;
-		background: rgb(15 23 42 / 94%);
-		box-shadow: 0 12px 30px rgb(15 23 42 / 24%);
+		border: 1px solid #ffffff30;
+		border-radius: 1rem;
+		background: rgb(13 49 48 / 92%);
+		box-shadow: 0 8px 24px #001e2430;
 		backdrop-filter: blur(12px);
 	}
 	.board-tools.slideshow-mode {
@@ -517,46 +550,41 @@
 		overflow: hidden;
 		clip: rect(0 0 0 0);
 	}
-	.add-column {
+	.column-form {
+		display: grid;
+		gap: 0.75rem;
+		color: #183042;
+	}
+	.column-form label {
+		font-size: 0.95rem;
+	}
+	.character-count {
+		text-align: right;
+		color: #647481;
+		font-size: 0.8rem;
+	}
+	.dialog-actions {
 		display: flex;
-		align-items: center;
-		gap: 0.35rem;
+		justify-content: flex-end;
+		gap: 0.5rem;
 	}
-	.add-column input {
-		width: 9rem;
-		min-width: 0;
-	}
-	.status-filter {
-		display: none;
-	}
-	.column-edit {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.3rem;
-		min-width: 0;
-		max-width: 100%;
-	}
-	.column-edit input {
-		width: min(12rem, 55vw);
-		min-width: 0;
-		padding: 0.35rem 0.55rem;
-		border: 2px solid #f97316;
-		border-radius: 0.7rem;
-		box-shadow: 0 0 0 3px rgb(251 146 60 / 18%);
-	}
-	.column-edit button {
-		min-height: 36px;
-		padding: 0.35rem 0.6rem;
-		border-radius: 0.6rem;
+	.save-column {
+		background: #176d65;
+		color: white;
+		border-color: #176d65;
 	}
 	.icon-button {
-		min-height: 32px;
-		min-width: 32px;
+		position: absolute;
+		top: 0.35rem;
+		right: 0.35rem;
 		padding: 0.2rem;
 		border: 0;
 		background: transparent;
+		color: white;
+		font-size: 1.5rem;
 	}
 	input,
+	textarea,
 	select {
 		min-height: 44px;
 		width: 100%;
@@ -591,16 +619,16 @@
 		min-height: 44px;
 		padding: 0;
 		border: 1px solid #64748b;
-		border-radius: 50%;
-		background: #1e293b;
+		border-radius: 0.75rem;
+		background: #ffffff12;
 		color: #f8fafc;
 		font-size: 1.15rem;
 		font-weight: 800;
 	}
 	.tool-button:hover:not(:disabled),
 	.tool-button[aria-pressed='true'] {
-		border-color: #a5b4fc;
-		background: #4f46e5;
+		border-color: #99f6e4;
+		background: #176d65;
 		color: white;
 	}
 	.board-tools input,
@@ -608,7 +636,7 @@
 		min-height: 38px;
 		border-color: #64748b;
 		border-radius: 999px;
-		background: #0f172a;
+		background: #092c2c;
 		color: #f8fafc;
 	}
 	.status-filter {
@@ -617,16 +645,27 @@
 	}
 	.status-filter select {
 		width: auto;
-		min-width: 7rem;
+		min-width: 5.5rem;
+		max-width: 6rem;
 	}
 	.posting {
-		background: #4f46e5;
-		color: white;
-		border-color: #818cf8;
+		position: fixed;
+		right: max(1.25rem, env(safe-area-inset-right));
+		bottom: max(1.25rem, env(safe-area-inset-bottom));
+		z-index: 20;
+		padding: 0.9rem 1.5rem;
+		border-radius: 999px;
+		background: #facc55;
+		color: #24332a;
+		border-color: #facc55;
+		box-shadow: 0 8px 28px #001e2450;
+		font-size: 1rem;
 	}
 	.columns {
-		display: flex;
-		align-items: flex-start;
+		display: grid;
+		grid-auto-flow: column;
+		grid-auto-columns: minmax(min(19rem, 85vw), 1fr);
+		grid-template-rows: auto auto;
 		gap: 1.25rem;
 		width: 100%;
 		max-width: 100%;
@@ -635,55 +674,81 @@
 		scroll-snap-type: x proximity;
 	}
 	.column {
-		flex: 0 0 min(300px, 100%);
 		min-width: 0;
 		display: grid;
-		gap: 0.85rem;
+		grid-row: span 2;
+		grid-template-rows: subgrid;
+		row-gap: 0.75rem;
 		scroll-snap-align: start;
 	}
-	.column-heading {
+	.column-content {
 		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.6rem;
-		border-bottom: 3px solid #818cf8;
-		padding: 0.5rem 0.2rem 0.75rem;
+		flex-direction: column;
+		gap: 0.85rem;
+		max-height: 65dvh;
+		overflow-y: auto;
+		padding: 0 0.2rem 0.5rem;
+		scrollbar-width: thin;
+		scrollbar-color: #ffffff60 transparent;
+	}
+	.column-content > :global(*) {
+		flex-shrink: 0;
+	}
+	.column-heading {
+		position: relative;
+		display: grid;
+		align-content: end;
+		gap: 0.5rem;
+		border: 1px solid #ffffff24;
+		border-radius: 1rem;
+		background: #164e47ed;
+		padding: 1.1rem 1.25rem 1.25rem;
+		box-shadow: 0 6px 20px #002a2720;
 	}
 	h2 {
-		font-size: 1rem;
-		font-weight: 850;
+		font-size: clamp(1.15rem, 1.6vw, 1.6rem);
+		font-weight: 800;
+		line-height: 1.35;
 		overflow-wrap: anywhere;
 	}
-	.column-heading span {
-		border-radius: 1rem;
-		background: #dfe5fb;
-		padding: 0.1rem 0.6rem;
-		font-size: 0.75rem;
+	.column-count {
+		padding-right: 2.5rem;
+		color: #bce0d5;
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
 	}
 	.add {
 		width: 100%;
-		border-style: dashed;
-		background: #ffffffa8;
+		border: 1px solid #ffffff28;
+		background: #ffffff18;
+		color: white;
+		font-size: 1.5rem;
+		padding: 0;
 	}
 	.board-card {
+		position: relative;
 		min-width: 0;
 		cursor: default;
 		background: #fff;
 		color: #0f172a;
 		padding: 1rem;
 		border: 1px solid #e2e8f0;
-		border-radius: 1rem;
-		box-shadow: 0 4px 14px #3341550b;
+		border-radius: 0.85rem;
+		box-shadow: 0 5px 16px #002a2726;
 		display: grid;
 		gap: 0.85rem;
 		overflow-wrap: anywhere;
 	}
 	.drag-handle {
-		justify-self: end;
-		padding: 0.15rem 0.5rem;
-		border: 1px dashed #94a3b8;
+		position: absolute;
+		top: 0.5rem;
+		right: 0.5rem;
+		padding: 0;
+		border: 0;
 		border-radius: 0.4rem;
-		background: #f8fafc;
+		background: transparent;
 		cursor: grab;
 	}
 	.board-card.dragging {
@@ -691,6 +756,7 @@
 		outline: 2px dashed #4f46e5;
 	}
 	.card-author {
+		padding-right: 2.5rem;
 		display: flex;
 		align-items: center;
 		gap: 0.6rem;
@@ -759,7 +825,9 @@
 	}
 	.empty {
 		padding: 1rem;
-		color: #64748b;
+		color: #d0e5df;
+		border: 1px dashed #ffffff38;
+		border-radius: 0.85rem;
 		font-size: 0.85rem;
 	}
 	.error {
@@ -781,7 +849,7 @@
 		font-size: clamp(1rem, 2vw, 1.5rem);
 	}
 	.slide-column {
-		color: #4338ca;
+		color: #d0f3e6;
 		font-weight: 800;
 		margin-bottom: 1rem;
 	}
@@ -812,19 +880,16 @@
 	}
 	@media (max-width: 560px) {
 		.board {
-			padding-top: 5.4rem;
+			padding-top: 9rem;
 		}
 		.board-tools {
-			left: 0.65rem;
-			right: 0.65rem;
+			left: 0;
+			right: 0;
 			justify-content: flex-end;
 		}
 		.search {
 			flex: 1 1 100%;
 			min-width: 100%;
-		}
-		.add-column input {
-			width: 7rem;
 		}
 	}
 </style>
