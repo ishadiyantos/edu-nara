@@ -73,6 +73,14 @@ describe('parseLinkMetadata', () => {
 			parseLinkMetadata(`<title>${'A'.repeat(500)}</title>`, 'https://a.test/')!.title.length
 		).toBeLessThanOrEqual(200);
 	});
+
+	it('ignores oversized malformed meta tags without blocking the event loop', () => {
+		const started = performance.now();
+		expect(
+			parseLinkMetadata(`<meta property="${'x'.repeat(40_000)}>`, 'https://a.test/')
+		).toBeNull();
+		expect(performance.now() - started).toBeLessThan(250);
+	});
 });
 
 describe('fetchLinkPreview against local servers', () => {

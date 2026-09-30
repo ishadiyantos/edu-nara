@@ -153,7 +153,7 @@ function decodeHtml(value: string): string {
 		.trim();
 }
 function meta(html: string, property: string): string {
-	for (const tag of html.match(/<meta\b[^>]*>/gi) ?? []) {
+	for (const tag of html.match(/<meta\b[^>]{0,4096}>/gi) ?? []) {
 		const attrs = Object.fromEntries(
 			[...tag.matchAll(/([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g)].map((m) => [
 				m[1].toLowerCase(),
