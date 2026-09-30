@@ -153,12 +153,17 @@ function decodeHtml(value: string): string {
 		.trim();
 }
 function meta(html: string, property: string): string {
-	for (const tag of html.match(/<meta\b[^>]{0,4096}>/gi) ?? []) {
+	// ponytail: bound candidate count and tag length; a single oversized attribute token costs quadratic regex time.
+	const starts = /<meta\b/gi;
+	for (let count = 0, found; count < 32 && (found = starts.exec(html)); count++) {
+		const tag = html.slice(found.index, found.index + 1025).match(/^<meta\b[^>]{0,1024}>/i)?.[0];
+		if (!tag) continue;
 		const attrs = Object.fromEntries(
-			[...tag.matchAll(/([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g)].map((m) => [
-				m[1].toLowerCase(),
-				m[2] ?? m[3] ?? m[4] ?? ''
-			])
+			[
+				...tag.matchAll(
+					/([\w:-]+)\s*=\s*(?:"([^"<>]{0,1024})"|'([^'<>]{0,1024})'|([^\s>]{1,1024}))/g
+				)
+			].map((m) => [m[1].toLowerCase(), m[2] ?? m[3] ?? m[4] ?? ''])
 		);
 		if ((attrs.property ?? attrs.name)?.toLowerCase() === property)
 			return decodeHtml(attrs.content ?? '');

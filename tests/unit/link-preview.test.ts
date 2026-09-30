@@ -81,6 +81,13 @@ describe('parseLinkMetadata', () => {
 		).toBeNull();
 		expect(performance.now() - started).toBeLessThan(250);
 	});
+
+	it('ignores excessive malformed meta tags within bounded time', () => {
+		const html = `<title>Fallback</title>${'<meta '.concat('x'.repeat(4000), '>').repeat(64)}`;
+		const started = performance.now();
+		expect(parseLinkMetadata(html, 'https://a.test/')).toEqual({ title: 'Fallback' });
+		expect(performance.now() - started).toBeLessThan(250);
+	});
 });
 
 describe('fetchLinkPreview against local servers', () => {
