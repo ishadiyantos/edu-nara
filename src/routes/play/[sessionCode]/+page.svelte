@@ -248,7 +248,8 @@
 		.student-board-actions :global(.board-tools) {
 			flex: 1;
 			min-width: 0;
-			flex-wrap: nowrap;
+			flex-wrap: wrap;
+			justify-content: flex-start;
 			gap: 0.25rem;
 		}
 		.student-board-actions :global(.search) {

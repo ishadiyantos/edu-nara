@@ -73,6 +73,11 @@ test('production Board: columns, private media, moderation toggle, live updates 
 		'border-top-width',
 		'0px'
 	);
+	for (const label of ['Present', 'Share', 'Moderation', 'Add column']) {
+		await expect(
+			presenter.locator('.board-tools .tool-label').getByText(label, { exact: true })
+		).toBeVisible();
+	}
 	if (testInfo.project.name === 'desktop-1440') {
 		const status = (await presenter.locator('.stage-status').boundingBox())!;
 		const tools = (await presenter.locator('.board-tools').boundingBox())!;
@@ -326,6 +331,22 @@ test('production Board: columns, private media, moderation toggle, live updates 
 		expect(
 			Math.max(...geometry.map((h) => h.bottom)) - Math.min(...geometry.map((h) => h.bottom))
 		).toBeLessThan(2);
+		const actionRows = await presenter.locator('.column-actions').evaluateAll((rows) =>
+			rows.map((row) => {
+				const boxes = [...row.querySelectorAll('button')].map((button) =>
+					button.getBoundingClientRect()
+				);
+				return boxes.every((a, i) =>
+					boxes
+						.slice(i + 1)
+						.every(
+							(b) =>
+								a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top
+						)
+				);
+			})
+		);
+		expect(actionRows.every(Boolean)).toBe(true);
 		if (testInfo.project.name === 'desktop-1440') expect(geometry[0].width).toBeGreaterThan(400);
 		const card = presenter.locator('article').filter({ hasText: 'Langsung tampil' });
 		expect(

@@ -462,6 +462,7 @@
 				>
 					<circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" />
 				</svg>
+				<span class="tool-label">Search</span>
 			</button>
 			<label class="search"
 				><span>Search</span><input
@@ -487,17 +488,23 @@
 				slide = 0;
 			}}
 			aria-label={slideshow ? 'Back to board' : 'Slideshow'}
-			aria-pressed={slideshow}>{slideshow ? '▦' : '▷'}</button
+			aria-pressed={slideshow}
+			><span aria-hidden="true">{slideshow ? '▦' : '▷'}</span><span class="tool-label"
+				>{slideshow ? 'Back to board' : 'Present'}</span
+			></button
 		>
 		{#if onshare}<button class="tool-button" onclick={() => void onshare()} aria-label="Share board"
-				>↗</button
+				><span aria-hidden="true">↗</span><span class="tool-label">Share</span></button
 			>{/if}
 		{#if admin && ontogglemoderation && !slideshow}<button
 				class="tool-button"
 				onclick={() => void ontogglemoderation()}
 				disabled={saving}
 				aria-label={moderationEnabled ? 'Disable moderation' : 'Enable moderation'}
-				aria-pressed={moderationEnabled}>{moderationEnabled ? '◉' : '◎'}</button
+				aria-pressed={moderationEnabled}
+				><span aria-hidden="true">{moderationEnabled ? '◉' : '◎'}</span><span class="tool-label"
+					>Moderation</span
+				></button
 			>{/if}
 		{#if admin && !slideshow && onaddcolumn}
 			<button
@@ -507,7 +514,7 @@
 				onclick={() => {
 					actionError = '';
 					addingColumn = true;
-				}}>+</button
+				}}><span aria-hidden="true">+</span><span class="tool-label">Add column</span></button
 			>
 		{/if}
 		{#if admin && !presentation && !slideshow}<label class="status-filter"
@@ -564,22 +571,26 @@
 					<header class="column-heading">
 						<span class="column-count">{cards.length} cards</span>
 						<h2>{column.title}</h2>
-						{#if admin && oncopygroup}<button
-								class="icon-button"
-								aria-label={`Copy group link for ${column.title}`}
-								title="Copy group link"
-								onclick={() => void oncopygroup(column.id)}>↗</button
-							>{/if}
-						{#if admin && onrenamecolumn}<button
-								class="icon-button"
-								aria-label={`Edit title ${column.title}`}
-								onclick={() => {
-									actionError = '';
-									editingColumn = column.id;
-									editingTitle = column.title;
-								}}
-								title="Edit column title">⋯</button
-							>{/if}
+						{#if admin && (oncopygroup || onrenamecolumn)}<div class="column-actions">
+								{#if oncopygroup}<button
+										class="column-action"
+										aria-label={`Copy group link for ${column.title}`}
+										title="Copy group link"
+										onclick={() => void oncopygroup(column.id)}
+										><span aria-hidden="true">↗</span><span>Group link</span></button
+									>{/if}
+								{#if admin && onrenamecolumn}<button
+										class="column-action"
+										aria-label={`Edit title ${column.title}`}
+										onclick={() => {
+											actionError = '';
+											editingColumn = column.id;
+											editingTitle = column.title;
+										}}
+										title="Edit column title"
+										><span aria-hidden="true">✎</span><span>Edit</span></button
+									>{/if}
+							</div>{/if}
 					</header>
 					<div class="column-content">
 						{#if onpost && !disabled && !presentation}<button
@@ -809,15 +820,23 @@
 		color: white;
 		border-color: #176d65;
 	}
-	.icon-button {
-		position: absolute;
-		top: 0.35rem;
-		right: 0.35rem;
-		padding: 0.2rem;
-		border: 0;
-		background: transparent;
+	.column-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.45rem;
+		margin-top: 0.2rem;
+	}
+	.column-action {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.4rem;
+		min-height: 40px;
+		min-width: 0;
+		padding: 0.45rem 0.7rem;
+		border-color: #ffffff32;
+		background: #ffffff12;
 		color: white;
-		font-size: 1.5rem;
 	}
 	input,
 	textarea,
@@ -848,18 +867,24 @@
 		border-color: #4f46e5;
 	}
 	.tool-button {
-		display: inline-grid;
-		place-items: center;
-		width: 2.75rem;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.4rem;
+		width: auto;
 		height: 2.75rem;
 		min-height: 44px;
-		padding: 0;
+		padding: 0 0.75rem;
 		border: 0;
 		border-radius: 0.75rem;
 		background: #ffffff12;
 		color: #f8fafc;
 		font-size: 1.15rem;
 		font-weight: 800;
+	}
+	.tool-label {
+		font-size: 0.76rem;
+		white-space: nowrap;
 	}
 	.tool-button:hover:not(:disabled),
 	.tool-button[aria-pressed='true'] {
@@ -949,7 +974,6 @@
 		overflow-wrap: anywhere;
 	}
 	.column-count {
-		padding-right: 2.5rem;
 		color: #bce0d5;
 		font-size: 0.72rem;
 		font-weight: 700;
