@@ -167,6 +167,7 @@
 	let editingColumn = $state<string | null>(null);
 	let editingTitle = $state('');
 	let addingColumn = $state(false);
+	let openColumnMenu = $state<string | null>(null);
 	function placeToolbar(node: HTMLElement, target: HTMLElement | null) {
 		const parent = node.parentElement!;
 		function update(host: HTMLElement | null) {
@@ -572,24 +573,34 @@
 						<span class="column-count">{cards.length} cards</span>
 						<h2>{column.title}</h2>
 						{#if admin && (oncopygroup || onrenamecolumn)}<div class="column-actions">
-								{#if oncopygroup}<button
-										class="column-action"
-										aria-label={`Copy group link for ${column.title}`}
-										title="Copy group link"
-										onclick={() => void oncopygroup(column.id)}
-										><span aria-hidden="true">↗</span><span>Group link</span></button
-									>{/if}
-								{#if admin && onrenamecolumn}<button
-										class="column-action"
-										aria-label={`Edit title ${column.title}`}
-										onclick={() => {
-											actionError = '';
-											editingColumn = column.id;
-											editingTitle = column.title;
-										}}
-										title="Edit column title"
-										><span aria-hidden="true">✎</span><span>Edit</span></button
-									>{/if}
+								<button
+									class="column-menu-button"
+									aria-label={`Column actions for ${column.title}`}
+									aria-haspopup="menu"
+									aria-expanded={openColumnMenu === column.id}
+									onclick={() => (openColumnMenu = openColumnMenu === column.id ? null : column.id)}
+									>⋯</button
+								>
+								{#if openColumnMenu === column.id}<div class="column-menu" role="menu">
+										{#if oncopygroup}<button
+												class="column-menu-item"
+												role="menuitem"
+												onclick={() => {
+													openColumnMenu = null;
+													void oncopygroup(column.id);
+												}}>Share group link</button
+											>{/if}
+										{#if onrenamecolumn}<button
+												class="column-menu-item"
+												role="menuitem"
+												onclick={() => {
+													openColumnMenu = null;
+													actionError = '';
+													editingColumn = column.id;
+													editingTitle = column.title;
+												}}>Edit column</button
+											>{/if}
+									</div>{/if}
 							</div>{/if}
 					</header>
 					<div class="column-content">
@@ -821,22 +832,49 @@
 		border-color: #176d65;
 	}
 	.column-actions {
+		position: relative;
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.45rem;
 		margin-top: 0.2rem;
 	}
-	.column-action {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.4rem;
+	.column-menu-button {
 		min-height: 40px;
-		min-width: 0;
-		padding: 0.45rem 0.7rem;
+		width: 40px;
+		min-width: 40px;
+		padding: 0;
 		border-color: #ffffff32;
 		background: #ffffff12;
 		color: white;
+		font-size: 1.4rem;
+		line-height: 1;
+	}
+	.column-menu {
+		position: absolute;
+		top: calc(100% + 0.35rem);
+		right: 0;
+		z-index: 20;
+		display: grid;
+		min-width: 10rem;
+		gap: 0.25rem;
+		padding: 0.4rem;
+		border: 1px solid #ffffff32;
+		border-radius: 0.75rem;
+		background: #123b36;
+		box-shadow: 0 10px 25px #001e2455;
+	}
+	.column-menu-item {
+		min-width: 0;
+		padding: 0.55rem 0.7rem;
+		border: 0;
+		border-radius: 0.5rem;
+		background: transparent;
+		color: white;
+		text-align: left;
+	}
+	.column-menu-item:hover,
+	.column-menu-item:focus-visible {
+		background: #ffffff1f;
 	}
 	input,
 	textarea,

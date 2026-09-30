@@ -162,18 +162,6 @@ export function joinSession(store: Store, input: unknown, existing?: string, now
 		const scoped = store;
 		const session = sessionByCode(scoped, data.code);
 		if (!session) throw new UserError('Session not available.');
-		if (participantValid(scoped, session.id, existing, now)) {
-			const current = scoped.db
-				.select({ columnId: participants.columnId })
-				.from(participants)
-				.where(eq(participants.tokenHash, hashToken(existing!)))
-				.get();
-			if (data.columnId && current?.columnId !== data.columnId)
-				throw new UserError('Participant is already assigned to another group.');
-			return { sessionId: session.id, code: session.code, token: existing!, created: false };
-		}
-		if (session.state === 'closed' || session.state === 'ended')
-			throw new UserError('Session is not open or has been closed.');
 		if (data.columnId) {
 			const column = store.db
 				.select({ id: boardColumns.id })
@@ -184,6 +172,29 @@ export function joinSession(store: Store, input: unknown, existing?: string, now
 				.get();
 			if (!column) throw new UserError('Board group is not available.');
 		}
+		if (participantValid(scoped, session.id, existing, now)) {
+			const current = scoped.db
+				.select({ id: participants.id, columnId: participants.columnId })
+				.from(participants)
+				.where(
+					and(
+						eq(participants.sessionId, session.id),
+						eq(participants.tokenHash, hashToken(existing!))
+					)
+				)
+				.get();
+			if (data.columnId && current?.columnId && current.columnId !== data.columnId)
+				throw new UserError('Participant is already assigned to another group.');
+			if (data.columnId && current && !current.columnId)
+				scoped.db
+					.update(participants)
+					.set({ columnId: data.columnId })
+					.where(eq(participants.id, current.id))
+					.run();
+			return { sessionId: session.id, code: session.code, token: existing!, created: false };
+		}
+		if (session.state === 'closed' || session.state === 'ended')
+			throw new UserError('Session is not open or has been closed.');
 		const token = newToken();
 		store.db
 			.insert(participants)

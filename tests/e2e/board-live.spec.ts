@@ -225,12 +225,18 @@ test('production Board: columns, private media, moderation toggle, live updates 
 			'board-column-',
 			''
 		);
-		await expect(
-			presenter.getByRole('button', { name: 'Copy group link for Ide', exact: true })
-		).toBeVisible();
+		await presenter.getByRole('button', { name: 'Column actions for Ide', exact: true }).click();
+		await expect(presenter.getByRole('menuitem', { name: 'Share group link' })).toBeVisible();
+		await expect(presenter.getByRole('menuitem', { name: 'Edit column' })).toBeVisible();
+		await presenter.getByRole('menuitem', { name: 'Share group link' }).click();
 		const groupContext = await browser.newContext({ viewport: { width: 360, height: 780 } });
 		try {
 			const group = await groupContext.newPage();
+			await group.goto(`/join?code=${code}`);
+			await group.getByLabel('Display name').fill('Citra');
+			await group.getByRole('button', { name: 'Join session', exact: true }).click();
+			await expect(group.getByRole('heading', { name: 'Ide', exact: true })).toBeVisible();
+			await expect(group.getByRole('heading', { name: 'Refleksi', exact: true })).toBeVisible();
 			await group.goto(`/join?code=${code}&column=${ideColumnId}`);
 			await group.getByLabel('Display name').fill('Citra');
 			await group.getByRole('button', { name: 'Join session', exact: true }).click();
@@ -292,13 +298,19 @@ test('production Board: columns, private media, moderation toggle, live updates 
 			).toBe(true);
 		}
 		await presenter
-			.getByRole('button', { name: 'Edit title Refleksi', exact: true })
+			.getByRole('button', { name: 'Column actions for Refleksi', exact: true })
 			.scrollIntoViewIfNeeded();
-		await presenter.getByRole('button', { name: 'Edit title Refleksi', exact: true }).click();
+		await presenter
+			.getByRole('button', { name: 'Column actions for Refleksi', exact: true })
+			.click();
+		await presenter.getByRole('menuitem', { name: 'Edit column' }).click();
 		await expect(presenter.getByRole('dialog', { name: 'Edit column title' })).toBeVisible();
 		await presenter.getByRole('button', { name: 'Cancel', exact: true }).click();
 		await expect(presenter.getByRole('dialog')).not.toBeVisible();
-		await presenter.getByRole('button', { name: 'Edit title Refleksi', exact: true }).click();
+		await presenter
+			.getByRole('button', { name: 'Column actions for Refleksi', exact: true })
+			.click();
+		await presenter.getByRole('menuitem', { name: 'Edit column' }).click();
 		await presenter.getByRole('dialog').getByRole('textbox').fill('Refleksi baru');
 		await presenter.getByRole('button', { name: 'Save', exact: true }).click();
 		await expect(
@@ -314,7 +326,10 @@ test('production Board: columns, private media, moderation toggle, live updates 
 			'Apakah penyuluhan secara digital dapat menggantikan penyuluhan konvensional atau tradisional?'
 		];
 		for (const [i, original] of ['Ide', 'Refleksi baru', 'Diskusi'].entries()) {
-			await presenter.getByRole('button', { name: `Edit title ${original}`, exact: true }).click();
+			await presenter
+				.getByRole('button', { name: `Column actions for ${original}`, exact: true })
+				.click();
+			await presenter.getByRole('menuitem', { name: 'Edit column' }).click();
 			await presenter.getByRole('dialog').getByRole('textbox').fill(prompts[i]);
 			await presenter
 				.getByRole('dialog')
@@ -373,15 +388,19 @@ test('production Board: columns, private media, moderation toggle, live updates 
 		await presenter.screenshot({
 			path: `test-results/board-presentation-${testInfo.project.name}.png`
 		});
-		await presenter.getByRole('button', { name: `Edit title ${prompts[0]}`, exact: true }).click();
+		await presenter
+			.getByRole('button', { name: `Column actions for ${prompts[0]}`, exact: true })
+			.click();
+		await presenter.getByRole('menuitem', { name: 'Edit column' }).click();
 		await expect(presenter.getByRole('dialog')).toBeVisible();
 		await presenter.getByRole('button', { name: 'Cancel', exact: true }).click();
 		await expect(presenter.getByTestId('session-screen')).toHaveClass(/presentation/);
 		await presenter.keyboard.press('Escape');
 		for (const [i, original] of ['Ide', 'Refleksi baru', 'Diskusi'].entries()) {
 			await presenter
-				.getByRole('button', { name: `Edit title ${prompts[i]}`, exact: true })
+				.getByRole('button', { name: `Column actions for ${prompts[i]}`, exact: true })
 				.click();
+			await presenter.getByRole('menuitem', { name: 'Edit column' }).click();
 			if (i === 0)
 				await presenter.screenshot({
 					path: `test-results/board-modal-${testInfo.project.name}.png`

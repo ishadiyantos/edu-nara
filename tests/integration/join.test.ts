@@ -10,10 +10,11 @@ import {
 	authorizeSession,
 	generateSessionCode
 } from '../../src/lib/server/sessions';
+import { createBoardColumn } from '../../src/lib/server/board';
 const s = openDatabase(':memory:');
 afterEach(() => {
 	s.sqlite.exec(
-		'DELETE FROM participants; DELETE FROM live_sessions; DELETE FROM activities; DELETE FROM admin_users;'
+		'DELETE FROM participants; DELETE FROM board_columns; DELETE FROM live_sessions; DELETE FROM activities; DELETE FROM admin_users;'
 	);
 });
 async function fixture() {
@@ -78,4 +79,26 @@ test('join token hashed, rejoin idempotent, cookie scoped, counts aggregate, clo
 		'timerRunning',
 		'title'
 	]);
+});
+
+test('existing ungrouped participant becomes column-bound from a group link once', async () => {
+	const { a } = await fixture();
+	const activity = createActivity(s, a.id, { title: 'Board', type: 'board' });
+	const first = createBoardColumn(s, a.id, activity.id, { title: 'Ide' });
+	const second = createBoardColumn(s, a.id, activity.id, { title: 'Refleksi' });
+	const session = launchSession(s, a.id, activity.id);
+	changeState(s, a.id, session.id, 'open');
+	const plain = joinSession(s, { code: session.code, displayName: 'Ana' });
+	const grouped = joinSession(
+		s,
+		{ code: session.code, displayName: 'Ana', columnId: first.id },
+		plain.token
+	);
+	expect(grouped.token).toBe(plain.token);
+	expect(s.sqlite.prepare('SELECT column_id FROM participants').get()).toEqual({
+		column_id: first.id
+	});
+	expect(() =>
+		joinSession(s, { code: session.code, displayName: 'Ana', columnId: second.id }, plain.token)
+	).toThrow('Participant is already assigned to another group.');
 });
