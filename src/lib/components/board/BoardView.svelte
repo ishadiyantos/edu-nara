@@ -59,7 +59,12 @@
 		ontogglemoderation?: () => void | Promise<void>;
 		saving?: boolean;
 	} = $props();
-	let activeComposer = $state<string | null>(null);
+	let composerOpen = $state(false);
+	let composerColumn = $state('');
+	function openComposer(columnId = columns[0]?.id ?? '') {
+		composerColumn = columnId;
+		composerOpen = true;
+	}
 	let search = $state('');
 	let searchOpen = $state(false);
 	let searchInput: HTMLInputElement;
@@ -186,7 +191,7 @@
 	async function submit(payload: PostDraft) {
 		if (!onpost) throw new Error('Pengiriman tidak tersedia.');
 		await onpost(payload);
-		activeComposer = null;
+		composerOpen = false;
 	}
 	async function moderate(postId: string, status: PostStatus) {
 		if (!onmoderate || busy) return;
@@ -289,7 +294,7 @@
 	<article
 		data-testid={`board-post-${post.id}`}
 		data-post-id={post.id}
-		class="board-card"
+		class={`board-card color-${post.cardColor ?? 'cream'}`}
 		draggable={!!admin && !slideshow && !!onmove}
 		class:dragging={dragging === post.id}
 		ondragstart={(event) => startDrag(event, post)}
@@ -331,8 +336,20 @@
 				class="attachment"
 				href={post.linkUrl}
 				target="_blank"
-				rel="noopener noreferrer">↗ {post.linkUrl}</a
-			>{/if}
+				rel="noopener noreferrer"
+			>
+				{#if post.previewImageUrl}<img
+						class="preview-image"
+						src={post.previewImageUrl}
+						alt=""
+						loading="lazy"
+					/>{/if}
+				<span
+					><b>{post.previewTitle || new URL(post.linkUrl).hostname}</b><small
+						>{new URL(post.linkUrl).hostname}</small
+					></span
+				>
+			</a>{/if}
 		{#if admin && !presentation && !slideshow}
 			{@const siblings = sortPosts(posts.filter((p) => p.columnId === post.columnId))}
 			<div class="moderation" aria-label={`Moderasi kartu ${post.author}`}>
@@ -460,7 +477,7 @@
 	{#if onpost && !disabled && !slideshow && columns[0]}<button
 			class="posting"
 			onclick={() => {
-				activeComposer = columns[0].id;
+				openComposer();
 			}}>+ Posting</button
 		>{/if}
 	{#if error || actionError}<p role="alert" class="error">{error || actionError}</p>{/if}
@@ -518,15 +535,8 @@
 						{#if onpost && !disabled && !presentation}<button
 								class="add"
 								aria-label={`Tambah kartu ke kolom ${column.title}`}
-								onclick={() => (activeComposer = activeComposer === column.id ? null : column.id)}
-								>+</button
+								onclick={() => openComposer(column.id)}>+</button
 							>{/if}
-						{#if activeComposer === column.id && onpost && !presentation}<PostComposer
-								columnId={column.id}
-								onsubmit={submit}
-								oncancel={() => (activeComposer = null)}
-								{disabled}
-							/>{/if}
 						{#each cards as post (post.id)}
 							<div
 								class="card-slot"
@@ -549,6 +559,16 @@
 		</div>
 	{/if}
 </div>
+
+<Modal open={composerOpen} title="Tulis kartu baru" onclose={() => (composerOpen = false)}>
+	<PostComposer
+		bind:columnId={composerColumn}
+		columns={[...columns].sort((a, b) => a.position - b.position)}
+		onsubmit={submit}
+		oncancel={() => (composerOpen = false)}
+		{disabled}
+	/>
+</Modal>
 
 <Modal
 	open={editingColumn !== null || addingColumn}
@@ -850,6 +870,24 @@
 		overflow-wrap: anywhere;
 	}
 
+	.board-card.color-cream {
+		background: #fffaf0;
+	}
+	.board-card.color-rose {
+		background: #ffe4e6;
+	}
+	.board-card.color-amber {
+		background: #fff3c4;
+	}
+	.board-card.color-mint {
+		background: #dcfce7;
+	}
+	.board-card.color-sky {
+		background: #e0f2fe;
+	}
+	.board-card.color-lavender {
+		background: #ede9fe;
+	}
 	.board-card {
 		transition:
 			opacity 180ms ease,
@@ -955,10 +993,40 @@
 		overflow-wrap: anywhere;
 	}
 	.attachment {
+		display: grid;
+		grid-template-columns: minmax(0, 7rem) 1fr;
+		align-items: center;
+		gap: 0.7rem;
+		color: #0f172a;
+		text-decoration: none;
+		overflow: hidden;
 		font-size: 0.85rem;
 		background: #f8fafc;
 		border-radius: 0.5rem;
 		padding: 0.6rem;
+	}
+	.attachment:not(:has(.preview-image)) {
+		grid-template-columns: 1fr;
+	}
+	.attachment span {
+		min-width: 0;
+		display: grid;
+		gap: 0.2rem;
+	}
+	.attachment b {
+		overflow-wrap: anywhere;
+	}
+	.attachment small {
+		color: #64748b;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.preview-image {
+		aspect-ratio: 16 / 9;
+		height: 100%;
+		object-fit: cover;
+		border-radius: 0.45rem;
 	}
 	img {
 		width: 100%;

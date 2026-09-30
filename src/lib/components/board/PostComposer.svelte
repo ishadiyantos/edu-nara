@@ -1,22 +1,36 @@
-<script lang="ts">
-	import { MAX_POST_BODY, postLength, isSafeHttpUrl } from '$lib/board/posts';
+<script module lang="ts">
+	export const CARD_COLORS = [
+		['cream', 'Krem'],
+		['rose', 'Merah muda'],
+		['amber', 'Kuning'],
+		['mint', 'Hijau mint'],
+		['sky', 'Biru langit'],
+		['lavender', 'Ungu muda']
+	] as const;
 	export type PostDraft = {
 		columnId: string;
 		body: string;
 		title: string;
 		linkUrl: string;
 		requestId: string;
+		cardColor: (typeof CARD_COLORS)[number][0];
 		image?: File;
 	};
+</script>
+
+<script lang="ts">
+	import { MAX_POST_BODY, postLength, isSafeHttpUrl } from '$lib/board/posts';
 	let {
-		columnId,
+		columnId = $bindable(''),
+		columns = [],
 		initialBody = '',
 		onsubmit,
 		oncancel,
 		disabled = false,
 		placeholder = 'Tulis ide Anda…'
 	}: {
-		columnId: string;
+		columnId?: string;
+		columns?: { id: string; title: string }[];
 		initialBody?: string;
 		onsubmit?: (payload: PostDraft) => void | Promise<void>;
 		oncancel?: () => void;
@@ -26,6 +40,7 @@
 	const initial = () => initialBody;
 	let body = $state(initial());
 	let title = $state('');
+	let cardColor = $state<(typeof CARD_COLORS)[number][0]>('cream');
 	let linkUrl = $state('');
 	let image = $state<File | undefined>();
 	let fileInput: HTMLInputElement;
@@ -63,7 +78,8 @@
 			linkUrl,
 			image?.name,
 			image?.size,
-			image?.lastModified
+			image?.lastModified,
+			cardColor
 		]);
 		if (!requestId || priorPayload !== signature) {
 			requestId = Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) =>
@@ -80,11 +96,13 @@
 				title: title.trim(),
 				linkUrl: linkUrl.trim(),
 				image,
-				requestId
+				requestId,
+				cardColor
 			});
 			body = '';
 			title = '';
 			linkUrl = '';
+			cardColor = 'cream';
 			image = undefined;
 			requestId = '';
 			sent = true;
@@ -100,6 +118,10 @@
 <form data-testid="post-composer" onsubmit={send} class="composer">
 	<fieldset disabled={sending || disabled}>
 		<legend>Tulis kartu baru</legend>
+		<label for="post-column">Letakkan di kolom</label>
+		<select id="post-column" bind:value={columnId} required>
+			{#each columns as column}<option value={column.id}>{column.title}</option>{/each}
+		</select>
 		<label for={`post-title-${columnId}`}>Judul (opsional)</label>
 		<input
 			id={`post-title-${columnId}`}
@@ -118,6 +140,19 @@
 		<span data-testid="char-counter" class:over={length > MAX_POST_BODY}
 			>{length} / {MAX_POST_BODY}</span
 		>
+		<fieldset class="color-picker">
+			<legend>Warna kartu</legend>
+			<div role="group" aria-label="Warna kartu">
+				{#each CARD_COLORS as [value, label]}<button
+						type="button"
+						class={`color-swatch ${value}`}
+						class:selected={cardColor === value}
+						aria-label={label}
+						aria-pressed={cardColor === value}
+						onclick={() => (cardColor = value)}
+					></button>{/each}
+			</div>
+		</fieldset>
 		<label for={`post-link-${columnId}`}>Tautan http/https (opsional)</label>
 		<input
 			id={`post-link-${columnId}`}
@@ -136,7 +171,9 @@
 				image = e.currentTarget.files?.[0];
 			}}
 		/>
-		<small>JPEG, PNG, atau WebP. Tautan tidak mengambil pratinjau otomatis.</small>
+		<small
+			>JPEG, PNG, atau WebP. Tautan akan mencoba menampilkan pratinjau aman bila situs mengizinkan.</small
+		>
 		{#if image}<button
 				type="button"
 				onclick={() => {
@@ -177,7 +214,8 @@
 		font-weight: 700;
 	}
 	input,
-	textarea {
+	textarea,
+	select {
 		width: 100%;
 		min-width: 0;
 		border: 1px solid #cbd5e1;
@@ -197,6 +235,51 @@
 	span {
 		font-size: 0.75rem;
 		color: #475569;
+	}
+	.color-picker {
+		border: 0;
+		padding: 0;
+	}
+	.color-picker legend {
+		font-size: 0.8rem;
+		margin-bottom: 0.35rem;
+	}
+	.color-picker div {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.45rem;
+	}
+	.color-swatch {
+		width: 44px;
+		min-width: 44px;
+		min-height: 44px;
+		height: 44px;
+		padding: 0;
+		border-radius: 50%;
+		border: 2px solid #fff;
+		box-shadow: 0 0 0 1px #94a3b8;
+	}
+	.color-swatch.selected {
+		box-shadow: 0 0 0 3px #0f766e;
+		transform: scale(1.08);
+	}
+	.color-swatch.cream {
+		background: #fff7df;
+	}
+	.color-swatch.rose {
+		background: #ffdce1;
+	}
+	.color-swatch.amber {
+		background: #fff0b8;
+	}
+	.color-swatch.mint {
+		background: #d8f4e7;
+	}
+	.color-swatch.sky {
+		background: #d8efff;
+	}
+	.color-swatch.lavender {
+		background: #e9ddff;
 	}
 	.actions {
 		display: flex;

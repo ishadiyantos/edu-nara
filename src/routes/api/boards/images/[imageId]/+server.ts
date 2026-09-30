@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
+import { eq, or } from 'drizzle-orm';
 import { database } from '$lib/server/db/client';
 import { boardPosts } from '$lib/server/db/schema';
 import { boardImageAccess } from '$lib/server/board';
@@ -11,7 +11,7 @@ export const GET: import('./$types').RequestHandler = (event) => {
 	const row = store.db
 		.select({ sessionId: boardPosts.sessionId })
 		.from(boardPosts)
-		.where(eq(boardPosts.imageId, id))
+		.where(or(eq(boardPosts.imageId, id), eq(boardPosts.previewImageId, id)))
 		.get();
 	if (
 		!row ||

@@ -16,6 +16,9 @@ export type BoardPost = {
 	title?: string;
 	linkUrl?: string | null;
 	imageUrl?: string | null;
+	previewTitle?: string | null;
+	previewImageUrl?: string | null;
+	cardColor?: 'cream' | 'rose' | 'amber' | 'mint' | 'sky' | 'lavender';
 	status: PostStatus;
 	position: number;
 	createdAt?: string;

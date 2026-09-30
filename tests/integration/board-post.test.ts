@@ -82,6 +82,39 @@ test('media and moderation remain scoped across toggle, retry, rejection and tok
 	expect(boardImageAccess(store, post.imageId!, undefined, participant.token)).toBeNull();
 });
 
+test('card color and link preview metadata persist and use scoped media access', async () => {
+	const { store, admin, firstColumn, session, participant } = await fixture();
+	const post = submitBoardPost(store, session.id, participant.token, firstColumn.id, 'Cek tautan', {
+		linkUrl: 'https://example.com/video',
+		cardColor: 'rose',
+		previewTitle: 'Video pembelajaran',
+		previewImageId: '12345678-1234-4234-8234-123456789abc'
+	});
+	const own = listBoard(store, session.id, undefined, participant.token).posts[0];
+	expect(own).toMatchObject({
+		cardColor: 'rose',
+		previewTitle: 'Video pembelajaran',
+		previewImageUrl: '/api/boards/images/12345678-1234-4234-8234-123456789abc'
+	});
+	expect(
+		boardImageAccess(store, post.previewImageId!, undefined, participant.token)
+	).not.toBeNull();
+	expect(boardImageAccess(store, post.previewImageId!)).toBeNull();
+	moderateBoardPost(store, admin.id, post.id, 'approved');
+	expect(boardImageAccess(store, post.previewImageId!)).toBeNull();
+	const other = joinSession(store, { code: session.code, displayName: 'Bela' });
+	expect(boardImageAccess(store, post.previewImageId!, undefined, other.token)).not.toBeNull();
+});
+
+test('card color rejects arbitrary CSS values', async () => {
+	const { store, firstColumn, session, participant } = await fixture();
+	expect(() =>
+		submitBoardPost(store, session.id, participant.token, firstColumn.id, 'X', {
+			cardColor: 'url(javascript:alert(1))'
+		})
+	).toThrow();
+});
+
 test('board post validates 500 Unicode characters and persists as pending', async () => {
 	const { store, firstColumn, session, participant } = await fixture();
 	const post = submitBoardPost(

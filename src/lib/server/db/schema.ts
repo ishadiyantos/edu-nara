@@ -163,6 +163,11 @@ export const boardPosts = sqliteTable(
 		title: text().notNull().default(''),
 		linkUrl: text('link_url'),
 		imageId: text('image_id'),
+		previewTitle: text('preview_title'),
+		previewImageId: text('preview_image_id'),
+		cardColor: text('card_color', { enum: ['cream', 'rose', 'amber', 'mint', 'sky', 'lavender'] })
+			.notNull()
+			.default('cream'),
 		requestId: text('request_id'),
 		status: text({ enum: ['pending', 'approved', 'rejected', 'hidden'] })
 			.notNull()
@@ -175,7 +180,8 @@ export const boardPosts = sqliteTable(
 		index('board_post_session_column').on(t.sessionId, t.columnId),
 		index('board_post_status').on(t.sessionId, t.status),
 		uniqueIndex('board_post_request').on(t.sessionId, t.participantId, t.requestId),
-		uniqueIndex('board_post_image').on(t.imageId)
+		uniqueIndex('board_post_image').on(t.imageId),
+		uniqueIndex('board_post_preview_image').on(t.previewImageId)
 	]
 );
 export const wordcloudResponses = sqliteTable(

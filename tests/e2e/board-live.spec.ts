@@ -129,6 +129,11 @@ test('production Board: columns, private media, moderation toggle, live updates 
 		});
 		await observer.setViewportSize({ width: 360, height: 780 });
 		await author.getByRole('button', { name: 'Tambah kartu ke kolom Ide' }).click();
+		await expect(author.getByRole('dialog', { name: 'Tulis kartu baru' })).toBeVisible();
+		await expect(author.getByLabel('Letakkan di kolom').locator('option:checked')).toHaveText(
+			'Ide'
+		);
+		await author.getByRole('button', { name: 'Merah muda', exact: true }).click();
 		await author.getByLabel('Judul (opsional)').fill('Gagasan privat');
 		await author.getByLabel('Isi kartu', { exact: true }).fill('Belajar bersama dari foto');
 		await author.getByLabel('Tautan http/https (opsional)').fill('https://example.com/kelas');
@@ -143,6 +148,9 @@ test('production Board: columns, private media, moderation toggle, live updates 
 		await author.getByRole('button', { name: 'Kirim', exact: true }).click();
 		const ownCard = author.locator('article').filter({ hasText: 'Gagasan privat' });
 		await expect(ownCard).toContainText('Menunggu moderasi');
+		await expect(ownCard).toHaveCSS('background-color', 'rgb(255, 228, 230)');
+		await author.reload();
+		await expect(ownCard).toHaveCSS('background-color', 'rgb(255, 228, 230)');
 		await expect
 			.poll(() => ownCard.locator('img').evaluate((img: HTMLImageElement) => img.naturalWidth))
 			.toBe(64);

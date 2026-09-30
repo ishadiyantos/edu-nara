@@ -5,7 +5,13 @@
 
 	let posts = $state<BoardPost[]>([...SAMPLE_POSTS]);
 
-	async function addPost(payload: { columnId: string; body: string }) {
+	async function addPost(payload: {
+		columnId: string;
+		body: string;
+		title?: string;
+		linkUrl?: string;
+		cardColor?: BoardPost['cardColor'];
+	}) {
 		posts = [
 			...posts,
 			{
@@ -13,7 +19,10 @@
 				columnId: payload.columnId,
 				author: 'Kamu',
 				body: payload.body,
-				status: 'pending',
+				title: payload.title,
+				linkUrl: payload.linkUrl,
+				cardColor: payload.cardColor,
+				status: 'approved',
 				position: posts.filter((post) => post.columnId === payload.columnId).length
 			}
 		];

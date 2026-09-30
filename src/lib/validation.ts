@@ -58,6 +58,7 @@ const boardText = z
 		'Teks tidak valid.'
 	);
 
+export const boardCardColors = ['cream', 'rose', 'amber', 'mint', 'sky', 'lavender'] as const;
 export const boardPostSchema = z
 	.object({
 		columnId: z.string().trim().min(1).max(100),
@@ -69,6 +70,7 @@ export const boardPostSchema = z
 			.max(2048)
 			.refine((v) => !v || safeBoardLink(v), 'Tautan harus http/https.')
 			.default(''),
+		cardColor: z.enum(boardCardColors).default('cream'),
 		requestId: z.string().min(1).max(100).optional()
 	})
 	.strict();

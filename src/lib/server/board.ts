@@ -157,12 +157,20 @@ export function submitBoardPost(
 	token: string,
 	columnId: string,
 	body: string,
-	extras: { title?: string; linkUrl?: string; requestId?: string; imageId?: string } = {}
+	extras: {
+		title?: string;
+		linkUrl?: string;
+		requestId?: string;
+		imageId?: string;
+		previewTitle?: string;
+		previewImageId?: string;
+		cardColor?: string;
+	} = {}
 ) {
 	const { session, activity } = sessionBoard(store, sessionId);
 	const author = participant(store, sessionId, token);
 	if (!author) throw new UserError('Peserta belum terautentikasi.');
-	const { imageId, ...fields } = extras;
+	const { imageId, previewTitle, previewImageId, ...fields } = extras;
 	const data = boardPostSchema.parse({ columnId, body, ...fields });
 	if (data.requestId) {
 		const prior = store.db
@@ -182,6 +190,8 @@ export function submitBoardPost(
 	if (!data.body && !data.title && !data.linkUrl && !imageId)
 		throw new UserError('Isi teks, judul, tautan, atau gambar terlebih dahulu.');
 	if (imageId) z.uuid().parse(imageId);
+	if (previewImageId) z.uuid().parse(previewImageId);
+	if (previewTitle) z.string().max(200).parse(previewTitle);
 	const column = store.db
 		.select({ id: boardColumns.id })
 		.from(boardColumns)
@@ -203,6 +213,9 @@ export function submitBoardPost(
 		title: data.title,
 		linkUrl: data.linkUrl || null,
 		imageId: imageId ?? null,
+		previewTitle: previewTitle ?? null,
+		previewImageId: previewImageId ?? null,
+		cardColor: data.cardColor,
 		requestId: data.requestId ?? null,
 		status: activity.boardModeration ? ('pending' as const) : ('approved' as const),
 		position: (last?.position ?? -1) + 1,
@@ -356,6 +369,9 @@ export function listBoard(store: Store, sessionId: string, adminId?: string, tok
 			title: boardPosts.title,
 			linkUrl: boardPosts.linkUrl,
 			imageId: boardPosts.imageId,
+			previewTitle: boardPosts.previewTitle,
+			previewImageId: boardPosts.previewImageId,
+			cardColor: boardPosts.cardColor,
 			status: boardPosts.status,
 			position: boardPosts.position,
 			createdAt: boardPosts.createdAt
@@ -375,10 +391,11 @@ export function listBoard(store: Store, sessionId: string, adminId?: string, tok
 		)
 		.orderBy(asc(boardPosts.position), asc(boardPosts.createdAt))
 		.all()
-		.map(({ imageId, createdAt, ...post }) => ({
+		.map(({ imageId, previewImageId, createdAt, ...post }) => ({
 			...post,
 			createdAt: new Date(createdAt).toISOString(),
-			imageUrl: imageId ? `/api/boards/images/${imageId}` : null
+			imageUrl: imageId ? `/api/boards/images/${imageId}` : null,
+			previewImageUrl: previewImageId ? `/api/boards/images/${previewImageId}` : null
 		}));
 	return {
 		columns: columns.map(({ id, title, position }) => ({ id, title, position })),
@@ -393,7 +410,12 @@ export function boardImageAccess(store: Store, imageId: string, adminId?: string
 		.from(boardPosts)
 		.innerJoin(sessions, eq(sessions.id, boardPosts.sessionId))
 		.innerJoin(activities, eq(activities.id, sessions.activityId))
-		.where(and(eq(boardPosts.imageId, imageId), eq(activities.type, 'board')))
+		.where(
+			and(
+				or(eq(boardPosts.imageId, imageId), eq(boardPosts.previewImageId, imageId)),
+				eq(activities.type, 'board')
+			)
+		)
 		.get();
 	if (!row) return null;
 	if (adminId && row.ownerId === adminId) return row.post;

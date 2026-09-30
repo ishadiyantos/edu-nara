@@ -82,7 +82,7 @@
 	}
 	async function post(payload: PostDraft) {
 		const body = new FormData();
-		for (const key of ['columnId', 'body', 'title', 'linkUrl', 'requestId'] as const)
+		for (const key of ['columnId', 'body', 'title', 'linkUrl', 'requestId', 'cardColor'] as const)
 			body.set(key, payload[key]);
 		if (payload.image) body.set('image', payload.image);
 		await request(`/api/boards/${sessionCode}/posts`, body);
