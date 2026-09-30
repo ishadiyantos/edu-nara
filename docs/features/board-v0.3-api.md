@@ -8,11 +8,15 @@ Batas 20 kolom; nama 1–120 karakter. Hapus ditolak bila kolom memiliki kartu
 pada sesi mana pun, termasuk kartu ditolak/disembunyikan. Sesi diluncurkan
 ke presenter standar `/admin/sessions/[id]`; mahasiswa memakai `/play/[sessionCode]`.
 
-Papan memakai kolom horizontal dan kartu putih: nama, waktu WIB, judul opsional,
-teks, gambar, tautan. Composer ada di atas tiap kolom. Pencarian mencakup nama,
-judul, isi, tautan. Slideshow hanya memuat kartu disetujui dan memakai tombol
-sebelumnya/berikutnya atau panah keyboard. Fullscreen presenter memakai kontrol
-sesi yang sudah ada; kartu panjang tetap dapat digulir. Reaksi/komentar tidak ada.
+Papan memakai kolom horizontal: nama, waktu WIB, judul opsional, teks, gambar,
+tautan. Pencarian mencakup nama, judul, isi, tautan. Slideshow hanya memuat kartu
+disetujui dan memakai tombol sebelumnya/berikutnya atau panah keyboard. Fullscreen
+presenter memakai kontrol sesi yang sudah ada; kartu panjang tetap dapat digulir.
+Reaksi/komentar tidak ada. **Composer** dibuka sebagai modal; pilih kolom tujuan
+sebelum kirim. Kartu baru dapat memakai warna pastel ringan (krem, merah muda,
+kuning, mint, biru langit, atau ungu muda) dengan teks tetap gelap dan terbaca.
+Preview tautan aman menampilkan judul dan thumbnail lokal bila metadata tersedia.
+URL tetap tampil sebagai fallback bila fetch gagal.
 
 ## Moderasi dan akses
 
@@ -32,7 +36,7 @@ sesi yang sudah ada; kartu panjang tetap dapat digulir. Reaksi/komentar tidak ad
 ## Kontrak API
 
 - `GET /api/boards/[sessionCode]/posts`: `{ok, columns, posts, moderationEnabled, state}`.
-  Post berisi `id,columnId,author,title,body,linkUrl,imageUrl,status,position,createdAt`;
+  - Post berisi `id,columnId,author,title,body,linkUrl,imageUrl,previewTitle,previewImageUrl,cardColor,status,position,createdAt`;
   tidak mengirim token/hash peserta, request ID, atau path filesystem.
 - `POST /api/boards/[sessionCode]/posts`: JSON teks atau multipart dengan
   `columnId,body,title?,linkUrl?,requestId?` dan file opsional `image`.
@@ -52,8 +56,9 @@ sesi yang sudah ada; kartu panjang tetap dapat digulir. Reaksi/komentar tidak ad
 
 Teks maksimal **500 code point Unicode**, newline/tab diterima; karakter kontrol
 lain ditolak. Judul opsional maksimal 120; minimal satu dari teks/judul/link/gambar.
-Tautan maksimal 2048, URL absolut http/https saja, tanpa kredensial atau whitespace.
-Tidak ada fetch preview URL server-side. Rendering memakai escaping Svelte;
+- Tautan maksimal 2048, URL absolut http/https saja, tanpa kredensial atau whitespace.
+- Preview server-side hanya mengambil URL publik melalui koneksi IPv4 yang dipin setelah DNS, memblokir jaringan privat, memvalidasi setiap redirect, tanpa cookie/kredensial, dengan timeout dan batas ukuran. Metadata di-escape oleh Svelte; thumbnail disimpan sebagai media Board terotorisasi.
+- Rendering memakai escaping Svelte;
 linkify menghasilkan elemen `<a>`, bukan HTML mentah.
 
 ## Media dan penyimpanan
@@ -70,8 +75,9 @@ Adapter node/Docker Compose memakai `BODY_SIZE_LIMIT=6M`; batas HTTP JSON tetap
 Production Compose: `/app/data/uploads`, volume data persisten yang sama.
 File baru dibersihkan bila validasi/penyimpanan DB gagal atau retry sudah tersimpan.
 
-Migration **0010_board_media** hanya menambah `activities.board_moderation`,
-`board_posts.title/link_url/image_id/request_id`, serta unique request/image index.
+Migration **0010_board_media** dan **0011_board_link_preview** hanya menambah
+`activities.board_moderation`, `board_posts.title/link_url/image_id/request_id`,
+`board_posts.preview_title/preview_image_id/card_color`, serta unique index.
 Tidak ada reset, rewrite tabel, atau penghapusan data lama.
 
 **Operasional:** backup SQLite saja tidak mencakup gambar. Backup/restore harus
