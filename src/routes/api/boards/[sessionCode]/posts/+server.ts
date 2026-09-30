@@ -13,6 +13,15 @@ import { buildLinkPreview } from '$lib/server/link-preview';
 import { linkifyBody } from '$lib/board/posts';
 import { limits } from '$lib/server/security';
 
+function removeGeneratedImage(directory: string, id?: string) {
+	if (!id) return;
+	try {
+		rmSync(join(directory, id), { force: true });
+	} catch {
+		/* Cleanup is best-effort; a committed post must still return success. */
+	}
+}
+
 export const GET: import('./$types').RequestHandler = (event) => {
 	const store = database();
 	const session = sessionByCode(store, event.params.sessionCode);
@@ -94,13 +103,14 @@ export const POST: import('./$types').RequestHandler = async (event) => {
 			form.delete('image');
 			input = Object.fromEntries(form);
 		} else input = await body(event);
-		const data = boardPostSchema.parse(input);
+		let data = boardPostSchema.parse(input);
 		if (session.state !== 'open') throw new UserError('Sesi tidak menerima post.');
 		const snapshot = listBoard(store, session.id, undefined, token);
 		if (!snapshot.columns.some((column) => column.id === data.columnId))
 			throw new UserError('Kolom tidak tersedia.');
 		const bodyLink = linkifyBody(data.body).find((segment) => segment.type === 'link');
 		data.linkUrl ||= bodyLink?.type === 'link' ? bodyLink.href : '';
+		data = boardPostSchema.parse(data);
 		const preview = data.linkUrl ? await buildLinkPreview(data.linkUrl) : null;
 		if (preview?.image && validateImageUpload(preview.image).ok) {
 			try {
@@ -119,9 +129,8 @@ export const POST: import('./$types').RequestHandler = async (event) => {
 			previewImageId,
 			imageId
 		});
-		if (imageId && post.imageId !== imageId) rmSync(join(directory, imageId), { force: true });
-		if (previewImageId && post.previewImageId !== previewImageId)
-			rmSync(join(directory, previewImageId), { force: true });
+		if (post.imageId !== imageId) removeGeneratedImage(directory, imageId);
+		if (post.previewImageId !== previewImageId) removeGeneratedImage(directory, previewImageId);
 		previewImageId = undefined;
 		imageId = undefined;
 		return json({
@@ -132,8 +141,8 @@ export const POST: import('./$types').RequestHandler = async (event) => {
 			lastEventId: post.lastEventId
 		});
 	} catch (err) {
-		if (previewImageId) rmSync(join(directory, previewImageId), { force: true });
-		if (imageId) rmSync(join(directory, imageId), { force: true });
+		removeGeneratedImage(directory, previewImageId);
+		removeGeneratedImage(directory, imageId);
 		return json({ ok: false, message: message(err) }, { status: 400 });
 	}
 };

@@ -1,18 +1,5 @@
 import { z } from 'zod';
-function safeBoardLink(value: string) {
-	try {
-		const url = new URL(value);
-		return (
-			['http:', 'https:'].includes(url.protocol) &&
-			!!url.hostname &&
-			!url.username &&
-			!url.password &&
-			!/[\s\\]/u.test(value)
-		);
-	} catch {
-		return false;
-	}
-}
+import { isSafeHttpUrl } from './board/posts';
 
 export const codeSchema = z
 	.string()
@@ -68,7 +55,7 @@ export const boardPostSchema = z
 			.string()
 			.trim()
 			.max(2048)
-			.refine((v) => !v || safeBoardLink(v), 'Tautan harus http/https.')
+			.refine((v) => !v || isSafeHttpUrl(v), 'Tautan harus http/https.')
 			.default(''),
 		cardColor: z.enum(boardCardColors).default('cream'),
 		requestId: z.string().min(1).max(100).optional()

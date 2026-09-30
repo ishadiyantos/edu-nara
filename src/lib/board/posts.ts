@@ -87,7 +87,14 @@ export function validatePostBody(
 export function isSafeHttpUrl(value: string): boolean {
 	try {
 		const url = new URL(value);
-		return (url.protocol === 'http:' || url.protocol === 'https:') && Boolean(url.hostname);
+		return (
+			(url.protocol === 'http:' || url.protocol === 'https:') &&
+			Boolean(url.hostname) &&
+			!url.username &&
+			!url.password &&
+			!url.port &&
+			!/[\s\\]/u.test(value)
+		);
 	} catch {
 		return false;
 	}

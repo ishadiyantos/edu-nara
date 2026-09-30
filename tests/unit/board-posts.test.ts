@@ -30,10 +30,12 @@ describe('safe http url detection', () => {
 		expect(isSafeHttpUrl('http://contoh.ac.id')).toBe(true);
 	});
 
-	it('rejects javascript, data, and malformed urls', () => {
+	it('rejects javascript, data, malformed, credential, and explicit-port urls', () => {
 		expect(isSafeHttpUrl('javascript:alert(1)')).toBe(false);
 		expect(isSafeHttpUrl('data:text/html,<script>alert(1)</script>')).toBe(false);
-		expect(isSafeHttpUrl('HTTPS:/\u200b/evil.test')).toBe(false);
+		expect(isSafeHttpUrl('HTTPS:/​/evil.test')).toBe(false);
+		expect(isSafeHttpUrl('https://user:pass@contoh.ac.id')).toBe(false);
+		expect(isSafeHttpUrl('https://contoh.ac.id:8443')).toBe(false);
 		expect(isSafeHttpUrl('not-a-url')).toBe(false);
 	});
 });
