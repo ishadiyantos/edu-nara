@@ -813,9 +813,10 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.85rem;
-		max-height: 65dvh;
+		/* Scroll area follows the remaining viewport so long columns cut far below the floating dock. */
+		max-height: max(26rem, calc(100dvh - 16rem));
 		overflow-y: auto;
-		padding: 0 0.2rem 0.5rem;
+		padding: 0 0.2rem 1rem;
 		scrollbar-width: thin;
 		scrollbar-color: #ffffff60 transparent;
 	}

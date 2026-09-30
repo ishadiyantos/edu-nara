@@ -193,6 +193,24 @@ test('production Board: columns, private media, moderation toggle, live updates 
 		await author.getByLabel('Isi kartu', { exact: true }).fill('Kartu kedua');
 		await author.getByRole('button', { name: 'Kirim', exact: true }).click();
 		await expect(presenter.getByText('Kartu kedua', { exact: true })).toBeVisible();
+		const columnEnds = await presenter.locator('.column-content').evaluateAll((columns) =>
+			columns
+				.map((column) => {
+					column.scrollTop = column.scrollHeight;
+					const last = column.querySelector('.card-slot:last-of-type');
+					if (!last) return null;
+					const content = column.getBoundingClientRect();
+					const card = last.getBoundingClientRect();
+					return {
+						scrollable: column.scrollHeight > column.clientHeight,
+						clearance: content.bottom - card.bottom
+					};
+				})
+				.filter((value): value is { scrollable: boolean; clearance: number } => value !== null)
+		);
+		for (const column of columnEnds) {
+			if (column.scrollable) expect(column.clearance).toBeGreaterThanOrEqual(12);
+		}
 		if (testInfo.project.name === 'mobile-360') {
 			await expect(presenter.getByRole('button', { name: 'Slideshow', exact: true })).toBeVisible();
 			await expect(
