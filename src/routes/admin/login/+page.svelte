@@ -10,7 +10,7 @@
 	<Container size="narrow"
 		><a class="link mb-6 inline-block" href="/">← Back</a><Card>
 			<h1 class="mb-2 text-2xl font-bold">Admin login</h1>
-			<p class="mb-6 text-muted">Akun hanya disediakan pemilik platform.</p>
+			<p class="mb-6 text-muted">Accounts are issued by the platform owner.</p>
 			<form
 				method="POST"
 				use:enhance={() => {
