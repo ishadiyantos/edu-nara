@@ -12,7 +12,7 @@ export const actions = {
 				expires: new Date(session.expiresAt)
 			});
 		} catch {
-			return fail(400, { message: 'Email atau kata sandi salah.' });
+			return fail(400, { message: 'Incorrect email or password.' });
 		}
 		redirect(303, '/admin');
 	}

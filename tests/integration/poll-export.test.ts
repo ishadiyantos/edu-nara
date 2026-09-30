@@ -35,7 +35,7 @@ test('choice export includes one aggregate row per response', async () => {
 	]);
 
 	expect(choiceExportRows(store, session.id)).toEqual([
-		['Peserta', 'Soal', 'Jawaban', 'Poin', 'Benar'],
-		['=Ayu', 'Pilih', 'A,B', 1000, 'Ya']
+		['Participant', 'Question', 'Answer', 'Points', 'Correct'],
+		['=Ayu', 'Pilih', 'A,B', 1000, 'Yes']
 	]);
 });

@@ -168,10 +168,10 @@ test('pause retains remaining time, expired timer rejects responses until explic
 		.run(Date.now() - 1, session.id);
 	expect(() =>
 		submitChoiceResponse(store, session.id, first.id, ana.token, [first.options[0].id])
-	).toThrow('Waktu soal ini sudah habis.');
+	).toThrow('Time is up for this question.');
 	expect(() =>
 		setChoiceTimer(store, admin.id, session.id, { questionId: first.id, running: true })
-	).toThrow('Timer habis. Reset timer untuk memulai lagi.');
+	).toThrow('Timer expired. Reset it to start again.');
 	expect(
 		setChoiceTimer(store, admin.id, session.id, {
 			questionId: first.id,
@@ -190,12 +190,12 @@ test('guided control rejects foreign questions and all submissions stop after se
 		correctOptions: [0]
 	});
 	expect(() => setActiveChoiceQuestion(store, admin.id, session.id, foreign.id)).toThrow(
-		'Pertanyaan tidak tersedia untuk sesi ini.'
+		'Question not available for this session.'
 	);
 	changeState(store, admin.id, session.id, 'ended');
 	expect(() =>
 		submitChoiceResponse(store, session.id, first.id, ana.token, [first.options[0].id])
-	).toThrow('Sesi tidak menerima jawaban.');
+	).toThrow('Session is not accepting answers.');
 });
 
 test('leaderboard ranks participants by score without leaking pending answers', async () => {

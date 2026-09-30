@@ -23,7 +23,7 @@ export function ownedSession(store: Store, adminId: string, id: string) {
 		.innerJoin(activities, eq(activities.id, sessions.activityId))
 		.where(and(eq(sessions.id, id), eq(activities.ownerId, adminId)))
 		.get();
-	if (!row) throw new UserError('Sesi tidak ditemukan.');
+	if (!row) throw new UserError('Session not found.');
 	return row.session;
 }
 export function launchSession(
@@ -40,7 +40,7 @@ export function launchSession(
 			.where(and(eq(activities.id, activityId), eq(activities.ownerId, adminId)))
 			.get()
 	)
-		throw new UserError('Aktivitas tidak ditemukan.');
+		throw new UserError('Activity not found.');
 	const quizMode = z.enum(['guided', 'self_paced']).parse(mode);
 	for (let attempt = 0; attempt < 10; attempt++) {
 		const row = {
@@ -59,13 +59,13 @@ export function launchSession(
 			.get();
 		if (inserted) return { ...inserted, activeQuestionId: null };
 	}
-	throw new UserError('Kode sesi tidak tersedia.');
+	throw new UserError('Session code not available.');
 }
 export function changeState(store: Store, adminId: string, id: string, input: unknown) {
 	const state = stateSchema.parse(input);
 	const current = ownedSession(store, adminId, id);
 	if (current.state === 'ended' || (current.state === 'draft' && state === 'closed'))
-		throw new UserError('Perubahan status tidak diizinkan.');
+		throw new UserError('State change not allowed.');
 	const now = Date.now();
 	let activeQuestionId = current.activeQuestionId;
 	let timerDeadline = current.timerDeadline;
@@ -161,11 +161,11 @@ export function joinSession(store: Store, input: unknown, existing?: string, now
 	return store.sqlite.transaction(() => {
 		const scoped = store;
 		const session = sessionByCode(scoped, data.code);
-		if (!session) throw new UserError('Sesi tidak tersedia.');
+		if (!session) throw new UserError('Session not available.');
 		if (participantValid(scoped, session.id, existing, now))
 			return { sessionId: session.id, code: session.code, token: existing!, created: false };
 		if (session.state === 'closed' || session.state === 'ended')
-			throw new UserError('Sesi belum dibuka atau sudah ditutup.');
+			throw new UserError('Session is not open or has been closed.');
 		const token = newToken();
 		store.db
 			.insert(participants)
@@ -199,7 +199,7 @@ export function snapshot(store: Store, id: string) {
 		.innerJoin(activities, eq(activities.id, sessions.activityId))
 		.where(eq(sessions.id, id))
 		.get();
-	if (!row) throw new UserError('Sesi tidak ditemukan.');
+	if (!row) throw new UserError('Session not found.');
 	const activeQuestionId =
 		row.activeQuestionId ??
 		(row.state !== 'draft'

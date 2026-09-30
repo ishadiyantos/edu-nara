@@ -189,7 +189,7 @@
 	);
 	const slideIndex = $derived(Math.min(slide, Math.max(0, slides.length - 1)));
 	async function submit(payload: PostDraft) {
-		if (!onpost) throw new Error('Pengiriman tidak tersedia.');
+		if (!onpost) throw new Error('Submission not available.');
 		await onpost(payload);
 		composerOpen = false;
 	}
@@ -200,7 +200,7 @@
 		try {
 			await onmoderate({ postId, status });
 		} catch (err) {
-			actionError = err instanceof Error ? err.message : 'Moderasi gagal.';
+			actionError = err instanceof Error ? err.message : 'Moderation failed.';
 		} finally {
 			busy = false;
 		}
@@ -219,7 +219,7 @@
 				)
 			});
 		} catch (err) {
-			actionError = err instanceof Error ? err.message : 'Urutan gagal disimpan.';
+			actionError = err instanceof Error ? err.message : 'Could not save order.';
 		} finally {
 			busy = false;
 		}
@@ -231,7 +231,7 @@
 		try {
 			await onmove({ postId, targetColumnId, targetPosition });
 		} catch (err) {
-			actionError = err instanceof Error ? err.message : 'Pemindahan kartu gagal.';
+			actionError = err instanceof Error ? err.message : 'Could not move card.';
 		} finally {
 			dragging = null;
 			busy = false;
@@ -246,7 +246,7 @@
 			await onrenamecolumn({ columnId, title });
 			editingColumn = null;
 		} catch (err) {
-			actionError = err instanceof Error ? err.message : 'Judul kolom gagal disimpan.';
+			actionError = err instanceof Error ? err.message : 'Could not save column title.';
 		} finally {
 			busy = false;
 		}
@@ -261,7 +261,7 @@
 			newColumnTitle = '';
 			addingColumn = false;
 		} catch (err) {
-			actionError = err instanceof Error ? err.message : 'Kolom gagal ditambahkan.';
+			actionError = err instanceof Error ? err.message : 'Could not add column.';
 		} finally {
 			busy = false;
 		}
@@ -305,8 +305,8 @@
 				>{post.author.slice(0, 1).toLocaleUpperCase('id')}</span
 			>
 			<div>
-				<b>{post.author || 'Peserta'}</b>{#if post.createdAt}<time datetime={post.createdAt}
-						>{new Date(post.createdAt).toLocaleString('id-ID', {
+				<b>{post.author || 'Participant'}</b>{#if post.createdAt}<time datetime={post.createdAt}
+						>{new Date(post.createdAt).toLocaleString('en-US', {
 							timeZone: 'Asia/Jakarta',
 							day: 'numeric',
 							month: 'short',
@@ -322,7 +322,7 @@
 		{#if post.title}<h3>{post.title}</h3>{/if}
 		{#if post.imageUrl}<img
 				src={post.imageUrl}
-				alt={post.title || `Gambar dari ${post.author}`}
+				alt={post.title || `Image from ${post.author}`}
 				loading="lazy"
 			/>{/if}
 		{#if post.body}<p class="body">
@@ -352,28 +352,28 @@
 			</a>{/if}
 		{#if admin && !presentation && !slideshow}
 			{@const siblings = sortPosts(posts.filter((p) => p.columnId === post.columnId))}
-			<div class="moderation" aria-label={`Moderasi kartu ${post.author}`}>
+			<div class="moderation" aria-label={`Moderate card from ${post.author}`}>
 				{#if post.status !== 'approved'}<button
 						disabled={busy}
-						onclick={() => moderate(post.id, 'approved')}>Setujui</button
+						onclick={() => moderate(post.id, 'approved')}>Approve</button
 					>{/if}
 				{#if post.status !== 'rejected'}<button
 						disabled={busy}
-						onclick={() => moderate(post.id, 'rejected')}>Tolak</button
+						onclick={() => moderate(post.id, 'rejected')}>Reject</button
 					>{/if}
 				{#if post.status === 'approved'}<button
 						disabled={busy}
-						onclick={() => moderate(post.id, 'hidden')}>Sembunyikan</button
+						onclick={() => moderate(post.id, 'hidden')}>Hide</button
 					>{/if}
 				<button
 					disabled={busy || siblings[0]?.id === post.id}
 					onclick={() => move(post, -1)}
-					aria-label={`Pindahkan kartu ${post.author} ke atas`}>↑</button
+					aria-label={`Move card from ${post.author} up`}>↑</button
 				>
 				<button
 					disabled={busy || siblings.at(-1)?.id === post.id}
 					onclick={() => move(post, 1)}
-					aria-label={`Pindahkan kartu ${post.author} ke bawah`}>↓</button
+					aria-label={`Move card from ${post.author} down`}>↓</button
 				>
 			</div>
 		{/if}
@@ -398,8 +398,8 @@
 				type="button"
 				class="tool-button search-toggle"
 				bind:this={searchToggle}
-				aria-label={searchOpen ? 'Tutup pencarian' : 'Buka pencarian'}
-				title={searchOpen ? 'Tutup pencarian' : 'Cari kartu'}
+				aria-label={searchOpen ? 'Close search' : 'Open search'}
+				title={searchOpen ? 'Close search' : 'Search cards'}
 				aria-expanded={searchOpen}
 				onclick={toggleSearch}
 			>
@@ -417,12 +417,12 @@
 				</svg>
 			</button>
 			<label class="search"
-				><span>Cari</span><input
+				><span>Search</span><input
 					type="search"
-					aria-label="Cari kartu"
+					aria-label="Search cards"
 					bind:this={searchInput}
 					bind:value={search}
-					placeholder="Cari kartu…"
+					placeholder="Search cards…"
 					onkeydown={(event) => {
 						if (event.key === 'Escape' && searchOpen) {
 							event.preventDefault();
@@ -439,26 +439,24 @@
 				slideshow = !slideshow;
 				slide = 0;
 			}}
-			aria-label={slideshow ? 'Kembali ke papan' : 'Slideshow'}
+			aria-label={slideshow ? 'Back to board' : 'Slideshow'}
 			aria-pressed={slideshow}>{slideshow ? '▦' : '▷'}</button
 		>
-		{#if onshare}<button
-				class="tool-button"
-				onclick={() => void onshare()}
-				aria-label="Bagikan papan">↗</button
+		{#if onshare}<button class="tool-button" onclick={() => void onshare()} aria-label="Share board"
+				>↗</button
 			>{/if}
 		{#if admin && ontogglemoderation && !slideshow}<button
 				class="tool-button"
 				onclick={() => void ontogglemoderation()}
 				disabled={saving}
-				aria-label={moderationEnabled ? 'Nonaktifkan moderasi' : 'Aktifkan moderasi'}
+				aria-label={moderationEnabled ? 'Disable moderation' : 'Enable moderation'}
 				aria-pressed={moderationEnabled}>{moderationEnabled ? '◉' : '◎'}</button
 			>{/if}
 		{#if admin && !slideshow && onaddcolumn}
 			<button
 				class="tool-button"
-				aria-label="Tambah kolom"
-				title="Tambah kolom"
+				aria-label="Add column"
+				title="Add column"
 				onclick={() => {
 					actionError = '';
 					addingColumn = true;
@@ -467,10 +465,9 @@
 		{/if}
 		{#if admin && !presentation && !slideshow}<label class="status-filter"
 				><span class="sr-only">Status</span><select bind:value={filter}
-					><option value="all">Semua</option><option value="pending">Menunggu</option><option
-						value="approved">Tampil</option
-					><option value="rejected">Ditolak</option><option value="hidden">Disembunyikan</option
-					></select
+					><option value="all">All</option><option value="pending">Pending</option><option
+						value="approved">Approved</option
+					><option value="rejected">Rejected</option><option value="hidden">Hidden</option></select
 				></label
 			>{/if}
 	</div>
@@ -478,29 +475,29 @@
 			class="posting"
 			onclick={() => {
 				openComposer();
-			}}>+ Posting</button
+			}}>+ Add card</button
 		>{/if}
 	{#if error || actionError}<p role="alert" class="error">{error || actionError}</p>{/if}
-	{#if loading}<p role="status" class="sr-only">Memuat papan kolaborasi…</p>{/if}
+	{#if loading}<p role="status" class="sr-only">Loading shared board…</p>{/if}
 	{#if slideshow}
-		<section class="slideshow" aria-label="Slideshow kartu disetujui" data-testid="board-slideshow">
+		<section class="slideshow" aria-label="Approved card slideshow" data-testid="board-slideshow">
 			{#if slides[slideIndex]}<p class="slide-column">
 					{columns.find((c) => c.id === slides[slideIndex].columnId)?.title}
 				</p>
-				{@render card(slides[slideIndex])}{:else}<p>Belum ada kartu disetujui yang cocok.</p>{/if}
-			<nav aria-label="Navigasi slideshow">
+				{@render card(slides[slideIndex])}{:else}<p>No matching approved cards yet.</p>{/if}
+			<nav aria-label="Slideshow navigation">
 				<button disabled={slideIndex === 0} onclick={() => (slide = slideIndex - 1)}
-					>← Kartu sebelumnya</button
+					>← Previous card</button
 				><span>{slides.length ? slideIndex + 1 : 0} / {slides.length}</span><button
 					disabled={slideIndex >= slides.length - 1}
-					onclick={() => (slide = slideIndex + 1)}>Kartu berikutnya →</button
+					onclick={() => (slide = slideIndex + 1)}>Next card →</button
 				>
 			</nav>
 		</section>
 	{:else}
 		<!-- Scroll region must be focusable for keyboard horizontal navigation. -->
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-		<div class="columns" tabindex="0" role="region" aria-label="Kolom papan, geser horizontal">
+		<div class="columns" tabindex="0" role="region" aria-label="Board columns, scroll horizontally">
 			{#each [...columns].sort((a, b) => a.position - b.position) as column (column.id)}
 				{@const cards = visible.filter((p) => p.columnId === column.id)}
 				<section
@@ -518,23 +515,23 @@
 					ondrop={(event) => dropCard(event, column.id)}
 				>
 					<header class="column-heading">
-						<span class="column-count">{cards.length} kartu</span>
+						<span class="column-count">{cards.length} cards</span>
 						<h2>{column.title}</h2>
 						{#if admin && onrenamecolumn}<button
 								class="icon-button"
-								aria-label={`Edit judul ${column.title}`}
+								aria-label={`Edit title ${column.title}`}
 								onclick={() => {
 									actionError = '';
 									editingColumn = column.id;
 									editingTitle = column.title;
 								}}
-								title="Edit judul kolom">⋯</button
+								title="Edit column title">⋯</button
 							>{/if}
 					</header>
 					<div class="column-content">
 						{#if onpost && !disabled && !presentation}<button
 								class="add"
-								aria-label={`Tambah kartu ke kolom ${column.title}`}
+								aria-label={`Add card to column ${column.title}`}
 								onclick={() => openComposer(column.id)}>+</button
 							>{/if}
 						{#each cards as post (post.id)}
@@ -549,18 +546,16 @@
 								{@render card(post)}
 							</div>
 						{:else}<p class="empty" class:insert-before={dropTarget?.columnId === column.id}>
-								{search ? 'Tidak ada kartu yang cocok.' : 'Belum ada kiriman.'}
+								{search ? 'No matching cards.' : 'No submissions yet.'}
 							</p>{/each}
 					</div>
 				</section>
-			{:else}<p class="empty">
-					Belum ada kolom. Dosen dapat menambahkan kolom melalui editor.
-				</p>{/each}
+			{:else}<p class="empty">No columns yet. The teacher can add columns in the editor.</p>{/each}
 		</div>
 	{/if}
 </div>
 
-<Modal open={composerOpen} title="Tulis kartu baru" onclose={() => (composerOpen = false)}>
+<Modal open={composerOpen} title="Write a new card" onclose={() => (composerOpen = false)}>
 	<PostComposer
 		bind:columnId={composerColumn}
 		columns={[...columns].sort((a, b) => a.position - b.position)}
@@ -572,7 +567,7 @@
 
 <Modal
 	open={editingColumn !== null || addingColumn}
-	title={addingColumn ? 'Tambah kolom' : 'Edit judul kolom'}
+	title={addingColumn ? 'Add column' : 'Edit column title'}
 	onclose={() => {
 		editingColumn = null;
 		addingColumn = false;
@@ -587,16 +582,16 @@
 		}}
 	>
 		<label
-			>Judul kolom
+			>Column title
 			{#if addingColumn}<textarea
-					aria-label="Judul kolom baru"
+					aria-label="New column title"
 					bind:value={newColumnTitle}
 					maxlength="120"
 					rows="4"
 					required
 				></textarea>
 			{:else}<textarea
-					aria-label={`Edit judul ${columns.find((c) => c.id === editingColumn)?.title}`}
+					aria-label={`Edit title ${columns.find((c) => c.id === editingColumn)?.title}`}
 					bind:value={editingTitle}
 					maxlength="120"
 					rows="4"
@@ -604,7 +599,7 @@
 				></textarea>{/if}
 		</label>
 		<p class="character-count">
-			{(addingColumn ? newColumnTitle : editingTitle).length}/120 karakter
+			{(addingColumn ? newColumnTitle : editingTitle).length}/120 characters
 		</p>
 		{#if actionError}<p role="alert" class="error">{actionError}</p>{/if}
 		<div class="dialog-actions">
@@ -613,12 +608,12 @@
 				onclick={() => {
 					editingColumn = null;
 					addingColumn = false;
-				}}>Batal</button
+				}}>Cancel</button
 			><button
 				class="save-column"
 				type="submit"
 				disabled={busy || !(addingColumn ? newColumnTitle : editingTitle).trim()}
-				>{busy ? 'Menyimpan…' : 'Simpan'}</button
+				>{busy ? 'Saving…' : 'Save'}</button
 			>
 		</div>
 	</form>

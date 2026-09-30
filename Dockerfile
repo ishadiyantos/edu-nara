@@ -18,6 +18,9 @@ COPY --from=builder --chown=node:node /app/package.json ./package.json
 COPY --from=builder --chown=node:node /app/drizzle ./drizzle
 COPY --from=builder --chown=node:node /app/src/lib/server ./src/lib/server
 COPY --from=builder --chown=node:node /app/src/lib/validation.ts ./src/lib/validation.ts
+COPY --from=builder --chown=node:node /app/src/lib/board ./src/lib/board
+COPY --from=builder --chown=node:node /app/src/lib/poll ./src/lib/poll
+COPY --from=builder --chown=node:node /app/src/lib/activity-templates.ts ./src/lib/activity-templates.ts
 COPY --from=builder --chown=node:node /app/scripts/start.ts /app/scripts/backup.ts /app/scripts/scheduled-backup.ts /app/scripts/maintenance.ts ./scripts/
 USER node
 VOLUME ["/app/data"]

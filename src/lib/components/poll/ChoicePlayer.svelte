@@ -73,9 +73,9 @@
 	const timerProgress = $derived(timed ? Math.max(0, Math.min(1, remaining / timerTotal)) : 1);
 	const timerText = $derived(
 		!timed
-			? 'Tanpa timer · menunggu dosen memulai timer'
+			? 'No timer · waiting for the teacher to start it'
 			: remaining === 0
-				? 'Waktu habis'
+				? 'Time is up'
 				: live.timerDeadline == null
 					? `Timer dijeda · ${remaining}s`
 					: `${remaining}s`
@@ -153,7 +153,7 @@
 				body: JSON.stringify({ questionId: id, optionIds: selected })
 			});
 			const data = await res.json();
-			if (!res.ok) throw new Error(data.message ?? 'Jawaban gagal dikirim.');
+			if (!res.ok) throw new Error(data.message ?? 'Could not submit answer.');
 			saved = [
 				...saved.filter((a) => a.questionId !== id),
 				{
@@ -169,7 +169,7 @@
 			celebration = true;
 			await refreshAnswers();
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Jawaban gagal dikirim.';
+			error = err instanceof Error ? err.message : 'Could not submit answer.';
 		} finally {
 			loading = false;
 		}
@@ -180,26 +180,26 @@
 	<CelebrationBurst
 		active={celebration}
 		variant="neutral"
-		label="Jawaban tersimpan"
+		label="Answer saved"
 		emojis={['✨', '⚡', '🌟', '🎉', '💫', '🔥']}
 	/>
 	<div class="arena-lights" aria-hidden="true"></div>
 	<header class="hud">
 		<div>
-			<p class="mode-chip">{guided ? 'Terpandu presenter' : 'Mode mandiri'}</p>
+			<p class="mode-chip">{guided ? 'Presenter-guided' : 'Self-paced'}</p>
 			<p class="status" data-testid="session-state">
 				{live.state === 'ended'
-					? 'Sesi selesai'
+					? 'Session ended'
 					: live.state === 'closed'
-						? 'Sesi ditutup'
+						? 'Session closed'
 						: live.state === 'draft'
-							? 'Menunggu dosen membuka sesi'
-							: 'Sesi terbuka'}
+							? 'Waiting for the teacher to open the session'
+							: 'Session open'}
 			</p>
 		</div>
-		<span class="connection" data-testid="connection" data-live={connected}
-			><span aria-hidden="true"></span>{connected ? 'Terhubung' : 'Menghubungkan…'}</span
-		>
+		<span class="connection" data-testid="connection" data-live={connected}>
+			<span aria-hidden="true"></span>{connected ? 'Connected' : 'Connecting…'}
+		</span>
 	</header>
 	<div class="progress" aria-hidden="true">
 		<div style:width={`${questionProgress * 100}%`}></div>
@@ -208,13 +208,13 @@
 	{#if finished && !guided}
 		<div class="finish-card" data-testid="quiz-finished">
 			<p class="mode-chip">Final</p>
-			<h2>Quiz selesai</h2>
-			<p>Jawaban Anda sudah tersimpan.</p>
-			<button onclick={() => (finished = false)}>Tinjau jawaban</button>
+			<h2>Quiz complete</h2>
+			<p>Your answers have been saved.</p>
+			<button onclick={() => (finished = false)}>Review answers</button>
 		</div>
 	{:else if question}
 		<div class="question-topline">
-			<p class="round">Ronde {question.position + 1} dari {questions.length}</p>
+			<p class="round">Round {question.position + 1} of {questions.length}</p>
 			{#if guided}
 				<div
 					class="timer-ring"
@@ -233,7 +233,7 @@
 			class="choices"
 			data-testid="answer-grid"
 			role="group"
-			aria-label="Pilihan jawaban; pilih semua jawaban yang benar"
+			aria-label="Answer choices; select all correct answers"
 		>
 			{#each question.options as option}
 				<button
@@ -250,16 +250,16 @@
 			{/each}
 		</div>
 		{#if answer}
-			<p class="answer-saved" role="status">Jawaban tersimpan.</p>
+			<p class="answer-saved" role="status">Answer saved.</p>
 		{:else}
 			<button class="submit" disabled={!selected.length || loading || blocked} onclick={submit}
-				>{loading ? 'Mengirim…' : 'Kirim jawaban'}<span aria-hidden="true">↗</span></button
+				>{loading ? 'Sending…' : 'Submit answer'}<span aria-hidden="true">↗</span></button
 			>
 		{/if}
 		{#if error}<p class="error" role="alert">{error}</p>{/if}
-		<nav class="student-nav" aria-label="Navigasi soal">
-			<span class="student-nav-name" data-testid="student-floating-name" title="Nama tampilan"
-				>👤 {participantName || 'Peserta'}</span
+		<nav class="student-nav" aria-label="Question navigation">
+			<span class="student-nav-name" data-testid="student-floating-name" title="Display name"
+				>👤 {participantName || 'Participant'}</span
 			>
 			{#if !guided}
 				<button
@@ -267,19 +267,19 @@
 					class="student-nav-icon"
 					disabled={current === 0 || loading}
 					onclick={() => current--}
-					aria-label="Soal sebelumnya"
-					title="Soal sebelumnya"
-					><span aria-hidden="true">←</span><span class="sr-only">Soal sebelumnya</span></button
+					aria-label="Previous question"
+					title="Previous question"
+					><span aria-hidden="true">←</span><span class="sr-only">Previous question</span></button
 				>
 				<button
 					type="button"
 					class="student-nav-icon"
 					disabled={loading}
 					onclick={() => (current < questions.length - 1 ? current++ : (finished = true))}
-					aria-label={current < questions.length - 1 ? 'Soal berikutnya' : 'Selesai'}
-					title={current < questions.length - 1 ? 'Soal berikutnya' : 'Selesai'}
+					aria-label={current < questions.length - 1 ? 'Next question' : 'Finish'}
+					title={current < questions.length - 1 ? 'Next question' : 'Finish'}
 					><span aria-hidden="true">{current < questions.length - 1 ? '→' : '✓'}</span><span
-						class="sr-only">{current < questions.length - 1 ? 'Soal berikutnya' : 'Selesai'}</span
+						class="sr-only">{current < questions.length - 1 ? 'Next question' : 'Finish'}</span
 					></button
 				>
 			{/if}
@@ -287,8 +287,8 @@
 	{:else}
 		<div class="finish-card waiting">
 			<p class="mode-chip">Stand by</p>
-			<h2>Menunggu dosen membuka soal.</h2>
-			<p>Siapkan layar. Pertanyaan akan muncul otomatis.</p>
+			<h2>Waiting for the teacher to open a question.</h2>
+			<p>Get ready. Questions will appear automatically.</p>
 		</div>
 	{/if}
 </section>

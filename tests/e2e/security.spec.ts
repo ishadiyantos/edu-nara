@@ -26,17 +26,21 @@ test('JSON CSRF, session isolation, cookie flags, rotation, logout and closed jo
 		await outsider.clearCookies();
 		let p = await admin.newPage();
 		await p.goto('/admin');
-		await p.getByLabel('Judul aktivitas').fill(`Isolasi ${Date.now()}`);
-		await p.getByRole('button', { name: 'Buat aktivitas' }).click();
+		await p.getByRole('button', { name: 'Create Quiz' }).click();
+		const dialog = p.getByRole('dialog', { name: 'Create activity' });
+		await dialog.getByLabel('Activity title').fill(`Isolasi ${Date.now()}`);
+		await dialog.getByRole('button', { name: 'Create activity', exact: true }).click();
+		await expect(p).toHaveURL(/admin\/activities\//);
+		await p.getByRole('link', { name: '← Back to workspace' }).click();
 		const popupPromise = p.context().waitForEvent('page');
-		await p.getByRole('button', { name: 'Luncurkan sesi' }).first().click();
+		await p.getByRole('button', { name: 'Launch session' }).first().click();
 		const presenter = await popupPromise;
 		await presenter.waitForLoadState();
 		await presenter.bringToFront();
 		p = presenter;
 		const id = p.url().split('/').pop()!,
 			code = (await p.getByTestId('session-code').textContent())!.trim();
-		await p.getByRole('button', { name: 'Buka sesi', exact: true }).click();
+		await p.getByRole('button', { name: 'Open session', exact: true }).click();
 		await p.keyboard.press('Escape');
 		for (const hostile of ['https://evil.invalid', 'null']) {
 			expect(
@@ -88,7 +92,7 @@ test('JSON CSRF, session isolation, cookie flags, rotation, logout and closed jo
 				401
 			);
 		expect((await guest.request.get('/api/sessions/not-the-session/events')).status()).toBe(401);
-		await p.getByRole('button', { name: 'Tutup sesi' }).click();
+		await p.getByRole('button', { name: 'Close session' }).click();
 		expect(
 			(
 				await outsider.request.post('/api/join', {

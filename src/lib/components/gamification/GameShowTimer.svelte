@@ -25,7 +25,7 @@
 <div class="timer" data-state={state} data-testid="game-show-timer">
 	<div
 		class="timer-face"
-		aria-label={`Sisa waktu ${seconds} detik`}
+		aria-label={`${seconds} seconds remaining`}
 		style:--progress={`${percentage}%`}
 	>
 		<span>{seconds}</span>
@@ -34,11 +34,11 @@
 	<div class="timer-copy">
 		<span class="timer-label">
 			{#if expired}
-				Waktu Habis
+				Time is up
 			{:else if paused}
 				Dijeda
 			{:else if running}
-				{#if isWarning}Segera!{:else}Sisa Waktu{/if}
+				{#if isWarning}Hurry!{:else}Time left{/if}
 			{:else}
 				Siap
 			{/if}

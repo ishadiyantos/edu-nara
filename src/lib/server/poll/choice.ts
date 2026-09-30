@@ -42,7 +42,7 @@ export function createChoiceQuestion(
 			)
 		)
 		.get();
-	if (!activity) throw new UserError('Aktivitas Quiz tidak ditemukan.');
+	if (!activity) throw new UserError('Quiz activity not found.');
 	const questionId = randomUUID();
 	const position = nextPosition(store, activityId);
 	const now = Date.now();
@@ -114,7 +114,7 @@ export function setActiveChoiceQuestion(
 	const session = ownedChoiceSession(store, ownerId, sessionId);
 	const question = getChoiceQuestion(store, questionId);
 	if (!question || question.activityId !== session.activityId)
-		throw new UserError('Pertanyaan tidak tersedia untuk sesi ini.');
+		throw new UserError('Question not available for this session.');
 	if (
 		session.activeQuestionId !== questionId ||
 		(session.timerDeadline == null && session.timerDuration === 0)
@@ -142,7 +142,7 @@ export function advanceActiveChoiceQuestion(
 ) {
 	const session = ownedChoiceSession(store, ownerId, sessionId);
 	if (!Number.isInteger(direction) || ![-1, 1].includes(direction))
-		throw new UserError('Arah soal tidak valid.');
+		throw new UserError('Invalid question direction.');
 	const questions = getChoiceQuestionsByActivity(store, session.activityId);
 	const current = Math.max(
 		0,
@@ -170,13 +170,13 @@ export function setChoiceTimer(store: Store, ownerId: string, sessionId: string,
 		question.activityId !== session.activityId ||
 		session.activeQuestionId !== question.id
 	)
-		throw new UserError('Soal timer sudah berubah.');
-	if (session.state !== 'open') throw new UserError('Buka sesi sebelum mengatur timer.');
+		throw new UserError('The timer question has changed.');
+	if (session.state !== 'open') throw new UserError('Open the session before setting the timer.');
 	const now = Date.now();
 	const expired = session.timerDeadline != null && session.timerDeadline <= now;
 	// Keep an expired deadline: null + zero represents an untimed question.
 	if (expired && !data.reset) {
-		if (data.running) throw new UserError('Timer habis. Reset timer untuk memulai lagi.');
+		if (data.running) throw new UserError('Timer expired. Reset it to start again.');
 		return timerState(store, sessionId);
 	}
 	if (data.running && session.timerDeadline && !data.reset) return timerState(store, sessionId);
@@ -210,8 +210,9 @@ function ownedChoiceSession(store: Store, ownerId: string, sessionId: string) {
 			)
 		)
 		.get()?.session;
-	if (!session) throw new UserError('Sesi Quiz tidak ditemukan.');
-	if (session.quizMode !== 'guided') throw new UserError('Kontrol ini hanya untuk mode terpandu.');
+	if (!session) throw new UserError('Quiz session not found.');
+	if (session.quizMode !== 'guided')
+		throw new UserError('This control is only available in guided mode.');
 	return session;
 }
 
@@ -234,7 +235,7 @@ export function updateChoiceQuestion(
 			)
 		)
 		.get();
-	if (!row) throw new UserError('Pertanyaan tidak ditemukan.');
+	if (!row) throw new UserError('Question not found.');
 	const currentOptions = store.db
 		.select()
 		.from(pollOptions)
@@ -242,7 +243,7 @@ export function updateChoiceQuestion(
 		.orderBy(asc(pollOptions.position))
 		.all();
 	if (currentOptions.length !== data.options.length)
-		throw new UserError('Jumlah opsi tidak dapat diubah setelah pertanyaan dibuat.');
+		throw new UserError('The option count cannot change after the question is created.');
 	store.db.transaction((tx) => {
 		tx.update(pollQuestions)
 			.set({ prompt: data.prompt, timeLimit: data.timeLimit })
@@ -284,7 +285,7 @@ export function setChoiceCorrectOptions(
 		.all()
 		.map((option) => option.id);
 	if (!row || uniqueIds.length === 0 || uniqueIds.some((id) => !valid.includes(id)))
-		throw new UserError('Pilih minimal satu jawaban benar dari pertanyaan ini.');
+		throw new UserError('Select at least one correct answer from this question.');
 	store.db.transaction((tx) => {
 		tx.update(pollOptions)
 			.set({ isCorrect: false })
@@ -313,7 +314,7 @@ export function setChoiceResults(
 			)
 		)
 		.get();
-	if (!row) throw new UserError('Pertanyaan tidak ditemukan.');
+	if (!row) throw new UserError('Question not found.');
 	return store.db
 		.update(pollQuestions)
 		.set({ showResults })
@@ -381,7 +382,8 @@ export function submitChoiceResponse(
 	optionIds: string[]
 ) {
 	const auth = participantFor(store, sessionId, token);
-	if (!auth || auth.session.state !== 'open') throw new UserError('Sesi tidak menerima jawaban.');
+	if (!auth || auth.session.state !== 'open')
+		throw new UserError('Session is not accepting answers.');
 	const question = store.db
 		.select()
 		.from(pollQuestions)
@@ -400,14 +402,14 @@ export function submitChoiceResponse(
 		selected.length !== uniqueIds.length ||
 		uniqueIds.length === 0
 	)
-		throw new UserError('Pilihan tidak tersedia.');
+		throw new UserError('Choice not available.');
 	if (auth.session.quizMode === 'guided') {
 		if (auth.session.activeQuestionId !== questionId)
-			throw new UserError('Soal ini belum dibuka dosen.');
+			throw new UserError('The teacher has not opened this question yet.');
 		if (auth.session.timerDeadline && auth.session.timerDeadline <= Date.now())
-			throw new UserError('Waktu soal ini sudah habis.');
+			throw new UserError('Time is up for this question.');
 		if (auth.session.timerDeadline == null && auth.session.timerDuration > 0)
-			throw new UserError('Timer sedang dijeda.');
+			throw new UserError('Timer is paused.');
 	}
 	const existing = store.db
 		.select()

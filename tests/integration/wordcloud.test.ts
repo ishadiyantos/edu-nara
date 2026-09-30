@@ -123,12 +123,12 @@ test('opening selects first question, isolates sessions, allows ended review but
 	changeState(store, admin.id, other.id, 'open');
 	expect(activeQuestionId(store, other.id)).toBe(first.id);
 	expect(() => submitWordcloudResponse(store, session.id, second.id, ana.token, 'belum')).toThrow(
-		/aktif/
+		/active yet/
 	);
 	setActiveQuestion(store, admin.id, session.id, second.id);
 	expect(activeQuestionId(store, other.id)).toBe(first.id);
 	expect(() => submitWordcloudResponse(store, session.id, first.id, ana.token, 'lama')).toThrow(
-		/aktif/
+		/active yet/
 	);
 	submitWordcloudResponse(store, session.id, second.id, ana.token, 'baru');
 	const foreign = createActivity(store, admin.id, { title: 'Lain', type: 'wordcloud' });
@@ -142,7 +142,7 @@ test('opening selects first question, isolates sessions, allows ended review but
 	expect(setActiveQuestion(store, admin.id, session.id, first.id)).toBe(first.id);
 	expect(advanceActiveQuestion(store, admin.id, session.id, 1)).toBe(second.id);
 	expect(() => submitWordcloudResponse(store, session.id, second.id, ana.token, 'tambah')).toThrow(
-		/Sesi tidak menerima jawaban\./
+		/Session is not accepting answers\./
 	);
 });
 test('a non-owner cannot advance the active question', async () => {

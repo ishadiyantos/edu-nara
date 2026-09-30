@@ -6,7 +6,7 @@ import { limits, sameOrigin } from './lib/server/security';
 export const handle: Handle = async ({ event, resolve }) => {
 	const mutation = !['GET', 'HEAD', 'OPTIONS'].includes(event.request.method);
 	if (mutation && !sameOrigin(event.request.headers.get('origin'), event.url.origin))
-		return new Response('Origin tidak diizinkan.', { status: 403 });
+		return new Response('Origin not allowed.', { status: 403 });
 	const path = event.url.pathname;
 	const adminRoute = path === '/admin' || path.startsWith('/admin/');
 	if (mutation || path.endsWith('/events')) {
@@ -31,7 +31,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 	event.locals.admin = authenticate(database(), event.cookies.get('edu_admin'));
 	if (adminRoute && path !== '/admin/login' && !event.locals.admin) {
-		if (mutation) return new Response('Silakan masuk.', { status: 401 });
+		if (mutation) return new Response('Please log in.', { status: 401 });
 		redirect(303, '/admin/login');
 	}
 	const response = await resolve(event);

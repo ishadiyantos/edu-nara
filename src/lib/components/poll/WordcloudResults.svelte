@@ -16,13 +16,13 @@
 	data-testid="wordcloud-results"
 	aria-live="polite"
 >
-	<p class="mb-4 text-sm font-bold text-white/65">{total} kata disetujui · live</p>
+	<p class="mb-4 text-sm font-bold text-white/65">{total} approved words · live</p>
 	{#if words.length}
 		<div class="cloud-frame" role="list" aria-label="Word cloud">
 			<svg
 				viewBox={`0 0 ${layout.width} ${layout.height}`}
 				role="img"
-				aria-label="Awan kata berdasarkan frekuensi"
+				aria-label="Word cloud by frequency"
 				preserveAspectRatio="xMidYMid meet"
 			>
 				{#each layout.items as item, index}
@@ -44,15 +44,15 @@
 				{/each}
 			</svg>
 		</div>
-	{:else}<p class="cloud-empty">Belum ada kata disetujui.</p>{/if}
+	{:else}<p class="cloud-empty">No approved words yet.</p>{/if}
 	{#if layout.omitted}
 		<p class="mt-3 text-center text-sm text-amber-200">
-			{layout.omitted} kata terlalu banyak untuk area tayang; buka daftar frekuensi untuk melihat semua.
+			{layout.omitted} words could not fit in this view; open the frequency list to see all words.
 		</p>
 	{/if}
 	{#if !presentation}
 		<details class="mt-5 rounded-xl bg-white/5 p-4 text-sm">
-			<summary class="cursor-pointer font-black">Daftar frekuensi</summary>
+			<summary class="cursor-pointer font-black">Frequency list</summary>
 			<ol class="mt-3 space-y-1">
 				{#each words as item}
 					<li><span class="font-mono">{item.weight}×</span> {item.word}</li>

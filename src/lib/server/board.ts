@@ -20,7 +20,7 @@ function sessionBoard(store: Store, sessionId: string) {
 		.innerJoin(activities, eq(activities.id, sessions.activityId))
 		.where(and(eq(sessions.id, sessionId), eq(activities.type, 'board')))
 		.get();
-	if (!row) throw new UserError('Papan tidak ditemukan.');
+	if (!row) throw new UserError('Board not found.');
 	return row;
 }
 export function ownedBoard(store: Store, adminId: string, activityId: string) {
@@ -35,7 +35,7 @@ export function ownedBoard(store: Store, adminId: string, activityId: string) {
 			)
 		)
 		.get();
-	if (!row) throw new UserError('Aktivitas papan tidak ditemukan.');
+	if (!row) throw new UserError('Board activity not found.');
 	return row;
 }
 function participant(store: Store, sessionId: string, token?: string) {
@@ -83,7 +83,7 @@ export function createBoardColumn(
 	const data = boardColumnSchema.parse(input);
 	ownedBoard(store, adminId, activityId);
 	const columns = boardColumnsForActivity(store, activityId);
-	if (columns.length >= 20) throw new UserError('Maksimal 20 kolom.');
+	if (columns.length >= 20) throw new UserError('Maximum 20 columns.');
 	const row = {
 		id: randomUUID(),
 		activityId,
@@ -106,7 +106,7 @@ export function updateBoardColumn(
 	ownedBoard(store, adminId, activityId);
 	const columns = boardColumnsForActivity(store, activityId);
 	const index = columns.findIndex((c) => c.id === columnId);
-	if (index < 0) throw new UserError('Kolom tidak tersedia.');
+	if (index < 0) throw new UserError('Column not available.');
 	const operation = z.enum(['rename', 'delete', 'left', 'right']).parse(action);
 	store.sqlite.transaction(() => {
 		if (operation === 'rename') {
@@ -124,12 +124,12 @@ export function updateBoardColumn(
 					.get()
 			)
 				throw new UserError(
-					'Kolom berisi kartu tidak dapat dihapus, termasuk kartu dari sesi lama.'
+					'Columns containing cards cannot be deleted, including cards from earlier sessions.'
 				);
 			store.db.delete(boardColumns).where(eq(boardColumns.id, columnId)).run();
 		} else {
 			const target = index + (operation === 'left' ? -1 : 1);
-			if (target < 0 || target >= columns.length) throw new UserError('Urutan kolom tidak valid.');
+			if (target < 0 || target >= columns.length) throw new UserError('Invalid column order.');
 			[columns[index], columns[target]] = [columns[target], columns[index]];
 			columns.forEach((column, position) =>
 				store.db.update(boardColumns).set({ position }).where(eq(boardColumns.id, column.id)).run()
@@ -169,7 +169,7 @@ export function submitBoardPost(
 ) {
 	const { session, activity } = sessionBoard(store, sessionId);
 	const author = participant(store, sessionId, token);
-	if (!author) throw new UserError('Peserta belum terautentikasi.');
+	if (!author) throw new UserError('Participant not authenticated.');
 	const { imageId, previewTitle, previewImageId, ...fields } = extras;
 	const data = boardPostSchema.parse({ columnId, body, ...fields });
 	if (data.requestId) {
@@ -186,9 +186,9 @@ export function submitBoardPost(
 			.get();
 		if (prior) return { ...prior, lastEventId: null };
 	}
-	if (session.state !== 'open') throw new UserError('Sesi tidak menerima post.');
+	if (session.state !== 'open') throw new UserError('Session is not accepting posts.');
 	if (!data.body && !data.title && !data.linkUrl && !imageId)
-		throw new UserError('Isi teks, judul, tautan, atau gambar terlebih dahulu.');
+		throw new UserError('Add text, a title, a link, or an image first.');
 	if (imageId) z.uuid().parse(imageId);
 	if (previewImageId) z.uuid().parse(previewImageId);
 	if (previewTitle) z.string().max(200).parse(previewTitle);
@@ -197,7 +197,7 @@ export function submitBoardPost(
 		.from(boardColumns)
 		.where(and(eq(boardColumns.id, data.columnId), eq(boardColumns.activityId, activity.id)))
 		.get();
-	if (!column) throw new UserError('Kolom tidak tersedia.');
+	if (!column) throw new UserError('Column not available.');
 	const last = store.db
 		.select({ position: max(boardPosts.position) })
 		.from(boardPosts)
@@ -236,9 +236,9 @@ export function moveBoardPost(
 	targetPosition: number
 ) {
 	const { activity } = sessionBoard(store, sessionId);
-	if (activity.ownerId !== adminId) throw new UserError('Akses admin ditolak.');
+	if (activity.ownerId !== adminId) throw new UserError('Admin access denied.');
 	if (!Number.isInteger(targetPosition) || targetPosition < 0) {
-		throw new UserError('Posisi kartu tidak valid.');
+		throw new UserError('Invalid card position.');
 	}
 	const post = store.db
 		.select()
@@ -250,7 +250,7 @@ export function moveBoardPost(
 		.from(boardColumns)
 		.where(and(eq(boardColumns.id, targetColumnId), eq(boardColumns.activityId, activity.id)))
 		.get();
-	if (!post || !target) throw new UserError('Kartu atau kolom tidak tersedia.');
+	if (!post || !target) throw new UserError('Card or column not available.');
 	const sourcePosts = store.db
 		.select()
 		.from(boardPosts)
@@ -305,7 +305,7 @@ export function moderateBoardPost(store: Store, adminId: string, postId: string,
 		.innerJoin(activities, eq(activities.id, sessions.activityId))
 		.where(and(eq(boardPosts.id, postId), eq(activities.type, 'board')))
 		.get();
-	if (!row || row.ownerId !== adminId) throw new UserError('Post tidak ditemukan.');
+	if (!row || row.ownerId !== adminId) throw new UserError('Post not found.');
 	const updated = store.db
 		.update(boardPosts)
 		.set({ status: next, updatedAt: Date.now() })
@@ -328,9 +328,9 @@ export function reorderBoardPosts(
 ) {
 	const order = boardOrderSchema.parse({ ids }).ids;
 	const { activity } = sessionBoard(store, sessionId);
-	if (activity.ownerId !== adminId) throw new UserError('Akses admin ditolak.');
+	if (activity.ownerId !== adminId) throw new UserError('Admin access denied.');
 	if (!boardColumnsForActivity(store, activity.id).some((c) => c.id === columnId))
-		throw new UserError('Kolom tidak tersedia.');
+		throw new UserError('Column not available.');
 	const rows = store.db
 		.select({ id: boardPosts.id })
 		.from(boardPosts)
@@ -342,7 +342,7 @@ export function reorderBoardPosts(
 		new Set(order).size !== order.length ||
 		order.some((id) => !rows.includes(id))
 	)
-		throw new UserError('Urutan post tidak valid. Muat ulang papan.');
+		throw new UserError('Invalid post order. Reload the board.');
 	store.sqlite.transaction(() =>
 		order.forEach((id, position) =>
 			store.db

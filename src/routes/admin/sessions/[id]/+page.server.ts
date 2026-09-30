@@ -78,7 +78,7 @@ export const load: import('./$types').PageServerLoad = (event) => {
 			leaderboard: quizLeaderboard(store, session.id)
 		};
 	} catch {
-		error(404, 'Sesi tidak ditemukan.');
+		error(404, 'Session not found.');
 	}
 };
 
@@ -102,9 +102,9 @@ export const actions = {
 					.where(eq(pollQuestions.id, questionId))
 					.get();
 				if (!question || question.activityId !== session.activityId)
-					throw new Error('Pertanyaan bukan milik sesi ini.');
+					throw new Error('Question does not belong to this session.');
 				if (!['true', 'false'].includes(String(data.showResults)))
-					throw new Error('Status hasil tidak valid.');
+					throw new Error('Invalid results state.');
 				const row =
 					activity?.type === 'wordcloud'
 						? setWordcloudResults(store, owner, questionId, String(data.showResults) === 'true')
@@ -117,7 +117,7 @@ export const actions = {
 						questionId,
 						showResults: row.showResults
 					}),
-					message: row.showResults ? 'Hasil dibuka.' : 'Hasil disembunyikan.'
+					message: row.showResults ? 'Results shown.' : 'Results hidden.'
 				};
 			}
 			if (data.action === 'question') {
@@ -134,7 +134,7 @@ export const actions = {
 					return {
 						ok: true,
 						lastEventId,
-						message: questionId ? undefined : 'Tidak ada pertanyaan lain.'
+						message: questionId ? undefined : 'No other questions.'
 					};
 				}
 				const { advanceActiveQuestion, setActiveQuestion } =
@@ -143,7 +143,7 @@ export const actions = {
 					data.questionId != null && data.questionId !== ''
 						? setActiveQuestion(store, owner, event.params.id, String(data.questionId))
 						: advanceActiveQuestion(store, owner, event.params.id, direction);
-				return { ok: true, message: questionId ? undefined : 'Tidak ada pertanyaan lain.' };
+				return { ok: true, message: questionId ? undefined : 'No other questions.' };
 			}
 			if (data.action === 'timer') {
 				const { setChoiceTimer } = await import('$lib/server/poll/choice');
@@ -151,7 +151,7 @@ export const actions = {
 					!['true', 'false'].includes(String(data.running)) ||
 					(data.reset != null && !['true', 'false'].includes(String(data.reset)))
 				)
-					throw new Error('Timer tidak valid.');
+					throw new Error('Invalid timer.');
 				const row = setChoiceTimer(store, owner, event.params.id, {
 					questionId: String(data.questionId ?? ''),
 					running: String(data.running) === 'true',
@@ -176,7 +176,7 @@ export const actions = {
 					String(data.responseId),
 					String(data.status) as 'approved' | 'rejected'
 				);
-				return { ok: true, lastEventId: row.lastEventId, message: 'Moderasi diperbarui.' };
+				return { ok: true, lastEventId: row.lastEventId, message: 'Moderation updated.' };
 			}
 			const row = changeState(store, owner, event.params.id, data.state);
 			return {

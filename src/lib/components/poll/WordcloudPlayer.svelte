@@ -88,7 +88,7 @@
 			void refresh();
 		};
 		source.onerror = () => {
-			message = 'Menghubungkan ulang…';
+			message = 'Reconnecting…';
 		};
 		return () => {
 			source.close();
@@ -108,7 +108,7 @@
 				body: JSON.stringify({ questionId: id, word: value })
 			});
 			const result = await response.json();
-			if (!response.ok || !result.ok) throw new Error(result.message ?? 'Kiriman gagal.');
+			if (!response.ok || !result.ok) throw new Error(result.message ?? 'Submission failed.');
 			try {
 				sessionStorage.removeItem(key);
 			} catch {
@@ -118,11 +118,12 @@
 			revision++;
 			if (!result.alreadySubmitted)
 				saved = [...saved, { questionId: id, word: result.word, status: result.status }];
-			message = result.status === 'approved' ? 'Kiriman tampil.' : 'Kiriman menunggu moderasi.';
+			message =
+				result.status === 'approved' ? 'Submission displayed.' : 'Submission awaiting moderation.';
 			value = '';
 			void refresh();
 		} catch (err) {
-			if (question?.id === id) message = err instanceof Error ? err.message : 'Kiriman gagal.';
+			if (question?.id === id) message = err instanceof Error ? err.message : 'Submission failed.';
 		} finally {
 			sending = false;
 		}
@@ -138,7 +139,7 @@
 			Word Cloud · {current + 1}/{questions.length}
 		</p>
 		<span class="rounded-full bg-white/10 px-3 py-1 text-xs font-bold"
-			>{submitted.length}/{maxWords} kiriman</span
+			>{submitted.length}/{maxWords} submissions</span
 		>
 	</div>
 	<h1 class="mt-4 text-2xl font-black leading-tight sm:text-4xl">{question?.prompt}</h1>
@@ -149,7 +150,7 @@
 			void submit();
 		}}
 	>
-		<label class="sr-only" for="wordcloud-input">Kata atau frasa</label>
+		<label class="sr-only" for="wordcloud-input">Word or phrase</label>
 		<input
 			id="wordcloud-input"
 			bind:value
@@ -162,37 +163,37 @@
 			}}
 			maxlength="80"
 			autocomplete="off"
-			placeholder="Tulis kata atau frasa…"
+			placeholder="Type a word or phrase…"
 			class="min-h-12 min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950/60 px-4 text-base text-white placeholder-white/45 outline-none focus:border-cyan-300"
 			disabled={sending || submitted.length >= maxWords}
 		/>
 		<button
 			class="min-h-12 rounded-xl bg-cyan-400 px-5 font-black text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
 			disabled={sending || submitted.length >= maxWords || !value.trim()}
-			>{sending ? 'Mengirim…' : 'Kirim'}</button
+			>{sending ? 'Sending…' : 'Submit'}</button
 		>
 	</form>
 	<p class="mt-3 min-h-6 text-sm font-semibold text-cyan-100" role="status">{message}</p>
 	{#if submitted.length}
-		<ul class="mt-3 flex flex-wrap gap-2" aria-label="Kiriman Anda">
+		<ul class="mt-3 flex flex-wrap gap-2" aria-label="Your submissions">
 			{#each submitted as item}<li
 					class="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-sm"
 				>
 					<span>{item.word}</span>
 					<span class="text-white/55"
 						>({item.status === 'approved'
-							? 'tampil'
+							? 'displayed'
 							: item.status === 'pending'
-								? 'menunggu'
-								: 'ditolak'})</span
+								? 'awaiting moderation'
+								: 'rejected'})</span
 					>
 				</li>{/each}
 		</ul>
 	{/if}
 	<div class="mt-6"><WordcloudResults {words} /></div>
-	<nav class="student-nav" aria-label="Navigasi soal">
-		<span class="student-nav-name" data-testid="student-floating-name" title="Nama tampilan"
-			>👤 {participantName || 'Peserta'}</span
+	<nav class="student-nav" aria-label="Question navigation">
+		<span class="student-nav-name" data-testid="student-floating-name" title="Display name"
+			>👤 {participantName || 'Participant'}</span
 		>
 	</nav>
 </section>

@@ -1,11 +1,17 @@
 import { expect, test, vi, afterEach } from 'vitest';
 import { SseHub } from '../../src/lib/server/events';
 afterEach(() => vi.useRealTimers());
-test('replay overflow closes without leaking heartbeat timer',async()=>{
- vi.useFakeTimers(); const hub=new SseHub();const first=hub.publish('overflow','participant.count',{count:0});
- for(let i=1;i<=40;i++)hub.publish('overflow','participant.count',{count:i});
- const reader=hub.subscribe('overflow',()=>({count:40}),new AbortController().signal,first).getReader();
- expect(hub.connections).toBe(0);expect(vi.getTimerCount()).toBe(0);await reader.cancel();
+test('replay overflow closes without leaking heartbeat timer', async () => {
+	vi.useFakeTimers();
+	const hub = new SseHub();
+	const first = hub.publish('overflow', 'participant.count', { count: 0 });
+	for (let i = 1; i <= 40; i++) hub.publish('overflow', 'participant.count', { count: i });
+	const reader = hub
+		.subscribe('overflow', () => ({ count: 40 }), new AbortController().signal, first)
+		.getReader();
+	expect(hub.connections).toBe(0);
+	expect(vi.getTimerCount()).toBe(0);
+	await reader.cancel();
 });
 test('snapshot first, bounded replay, resync on expired cursor/restart; abort cleans heartbeat', async () => {
 	vi.useFakeTimers();
@@ -62,7 +68,9 @@ test('clear removes private events from later replay', async () => {
 	const hub = new SseHub();
 	const id = hub.publish('room', 'poll.tally', { counts: { secret: 1 } });
 	hub.clear('room');
-	const reader = hub.subscribe('room', () => ({ safe: true }), new AbortController().signal, id).getReader();
+	const reader = hub
+		.subscribe('room', () => ({ safe: true }), new AbortController().signal, id)
+		.getReader();
 	expect(new TextDecoder().decode((await reader.read()).value)).toContain('event: resync');
 	await reader.cancel();
 });

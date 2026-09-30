@@ -17,7 +17,7 @@
 			{
 				id: `local-${Date.now()}`,
 				columnId: payload.columnId,
-				author: 'Kamu',
+				author: 'You',
 				body: payload.body,
 				title: payload.title,
 				linkUrl: payload.linkUrl,
@@ -35,13 +35,13 @@
 	<Container>
 		<header class="mb-6 flex flex-wrap items-end justify-between gap-3">
 			<div>
-				<p class="eyebrow">Papan kelas</p>
-				<h1 class="mt-1 text-2xl font-black text-text">Ide proyek akhir</h1>
-				<p class="mt-1 text-sm text-text-muted">Bagikan ide, pertanyaan, dan pertimbanganmu.</p>
+				<p class="eyebrow">Class board</p>
+				<h1 class="mt-1 text-2xl font-black text-text">Final project ideas</h1>
+				<p class="mt-1 text-sm text-text-muted">Share your ideas, questions, and considerations.</p>
 			</div>
 			<span
 				class="rounded-full border border-emerald-300/60 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800"
-				>● Terhubung</span
+				>● Connected</span
 			>
 		</header>
 		<BoardView columns={SAMPLE_COLUMNS} {posts} onpost={addPost} />

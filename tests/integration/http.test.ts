@@ -20,5 +20,5 @@ test('request reader bounds streamed bodies rather than trusting content length'
 	expect(reads).toBeLessThan(5);
 });
 test('internal exception text never reflected to clients', () => {
-	expect(message(new Error('SQL failed /private/db secret'))).toBe('Permintaan gagal.');
+	expect(message(new Error('SQL failed /private/db secret'))).toBe('Request failed.');
 });

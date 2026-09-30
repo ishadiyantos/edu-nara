@@ -1,94 +1,180 @@
 <script lang="ts">
 	import '../../app.css';
-	import { Container, Button, Badge } from '$components/ui';
 	import { page } from '$app/stores';
-
 	let { children } = $props();
-	const isLogin = $derived($page.url.pathname === '/admin/login');
+	let drawer = $state<HTMLDialogElement>();
+	const bare = $derived(
+		$page.url.pathname === '/admin/login' ||
+			/^\/admin\/sessions\/[^/]+\/?$/.test($page.url.pathname)
+	);
+	const links = [
+		['/admin', 'My Activities'],
+		['/admin/templates', 'Templates'],
+		['/admin/sessions', 'Class Sessions']
+	];
 </script>
 
-{#if isLogin || $page.url.pathname.startsWith('/admin/sessions/')}
-	{@render children()}
-{:else}
-	<div
-		class="min-h-dvh bg-gradient-to-br from-[#0b1120] via-[#111827] to-[#0b1120] text-white relative overflow-hidden flex flex-col"
+{#snippet navigation()}
+	<a href="/admin" class="brand" onclick={() => drawer?.close()}
+		><span aria-hidden="true">N</span> Edu Nara</a
 	>
-		<!-- Background ambient game glow -->
-		<div
-			class="pointer-events-none absolute -left-24 -top-24 h-80 w-80 rounded-full bg-indigo-600/15 blur-3xl"
-			aria-hidden="true"
-		></div>
-		<div
-			class="pointer-events-none absolute -right-24 top-1/4 h-96 w-96 rounded-full bg-purple-600/15 blur-3xl"
-			aria-hidden="true"
-		></div>
-		<div
-			class="pointer-events-none absolute left-1/3 bottom-0 h-80 w-80 rounded-full bg-amber-500/10 blur-3xl"
-			aria-hidden="true"
-		></div>
-
-		<header
-			class="sticky top-0 z-40 border-b border-white/10 bg-[#0f172a]/80 backdrop-blur-xl shadow-lg"
-		>
-			<Container class="!max-w-none">
-				<div class="flex h-16 min-w-0 items-center justify-between gap-3">
-					<a href="/admin" class="flex shrink-0 items-center gap-2.5 group">
-						<span
-							class="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-tr from-amber-400 via-amber-500 to-yellow-400 text-slate-950 font-black shadow-[0_3px_0_#b45309] group-hover:scale-105 transition-transform"
-							aria-hidden="true"
-						>
-							<svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-								<path
-									d="M4 7l8-4 8 4-8 4-8-4zM4 12l8 4 8-4M4 17l8 4 8-4"
-									stroke="currentColor"
-									stroke-width="2.5"
-									stroke-linejoin="round"
-								/>
-							</svg>
-						</span>
-						<span class="hidden font-black text-lg tracking-tight sm:inline text-white"
-							>Edu Nara</span
-						>
-						<span class="hidden sm:inline">
-							<Badge
-								tone="warning"
-								class="bg-amber-400/20 text-amber-300 border border-amber-400/30 font-black text-[10px] tracking-wider uppercase"
-								>Admin</Badge
-							>
-						</span>
-					</a>
-					<nav class="flex shrink-0 items-center gap-2 overflow-x-auto">
-						<Button
-							variant="ghost"
-							size="sm"
-							href="/admin"
-							class="text-white/80 hover:text-white hover:bg-white/10 font-bold rounded-xl"
-							>Dashboard</Button
-						>
-						<Button
-							variant="ghost"
-							size="sm"
-							href="/design"
-							class="hidden sm:inline-flex text-white/80 hover:text-white hover:bg-white/10 font-bold rounded-xl"
-							>Design</Button
-						>
-						<form method="POST" action="/admin/logout">
-							<Button
-								variant="ghost"
-								size="sm"
-								type="submit"
-								class="text-rose-300 hover:text-rose-200 hover:bg-rose-500/20 font-bold rounded-xl"
-								>Keluar</Button
-							>
-						</form>
-					</nav>
-				</div>
-			</Container>
+	<a class="create" href="/admin?create=choice" onclick={() => drawer?.close()}>+ Create activity</a
+	>
+	<nav aria-label="Workspace">
+		{#each links as [href, label]}<a
+				{href}
+				aria-current={$page.url.pathname === href ? 'page' : undefined}
+				onclick={() => drawer?.close()}>{label}</a
+			>{/each}
+	</nav>
+	<div class="account">
+		<p>Teacher workspace</p>
+		<form method="POST" action="/admin/logout"><button>Log out</button></form>
+	</div>
+{/snippet}
+{#if bare}{@render children()}
+{:else}
+	<div class="workspace-shell">
+		<aside class="sidebar" data-testid="workspace-sidebar">{@render navigation()}</aside>
+		<header class="mobile-bar">
+			<a href="/admin">Edu Nara</a><button
+				onclick={() => drawer?.showModal()}
+				aria-label="Open navigation">Menu</button
+			>
 		</header>
-		<main class="py-8 relative z-10 flex-1">
-			<Container class="!max-w-none">
-				{@render children()}
-			</Container>
-		</main>
+		<dialog bind:this={drawer} class="drawer" aria-label="Workspace navigation">
+			<button class="close" onclick={() => drawer?.close()} aria-label="Close navigation"
+				>Close ×</button
+			>{@render navigation()}
+		</dialog>
+		<main class="workspace-main">{@render children()}</main>
 	</div>
 {/if}
+
+<style>
+	.workspace-shell {
+		min-height: 100dvh;
+		background: #151922;
+		color: #f1f5f9;
+	}
+	.sidebar {
+		position: fixed;
+		inset: 0 auto 0 0;
+		width: 232px;
+		padding: 24px 18px;
+		background: #1c212c;
+		border-right: 1px solid #343b48;
+		display: flex;
+		flex-direction: column;
+		gap: 24px;
+	}
+	.brand {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		font-size: 1.25rem;
+		font-weight: 850;
+	}
+	.brand span {
+		display: grid;
+		place-items: center;
+		width: 36px;
+		height: 36px;
+		border-radius: 10px;
+		background: #f5cd62;
+		color: #1c212c;
+	}
+	.create {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 10px;
+		padding: 10px;
+		background: #f5cd62;
+		color: #20232b;
+		font-weight: 750;
+	}
+	nav {
+		display: grid;
+		gap: 6px;
+	}
+	nav a,
+	.account button {
+		display: flex;
+		align-items: center;
+		padding: 10px 12px;
+		border-radius: 8px;
+		color: #cbd5e1;
+		font-weight: 650;
+	}
+	nav a:hover,
+	nav a[aria-current] {
+		background: #303747;
+		color: white;
+	}
+	.account {
+		margin-top: auto;
+		border-top: 1px solid #394150;
+		padding-top: 16px;
+		font-size: 0.875rem;
+	}
+	.account p {
+		color: #aeb9ca;
+		padding-left: 12px;
+	}
+	.account button {
+		text-decoration: underline;
+	}
+	.workspace-main {
+		margin-left: 232px;
+		padding: 28px;
+		min-width: 0;
+	}
+	.mobile-bar {
+		display: none;
+	}
+	.drawer {
+		margin: 0;
+		height: 100dvh;
+		max-height: 100dvh;
+		width: min(300px, calc(100% - 36px));
+		padding: 18px;
+		border: 1px solid #475569;
+		background: #1c212c;
+		color: white;
+	}
+	.drawer[open] {
+		display: flex;
+		flex-direction: column;
+		gap: 24px;
+	}
+	.drawer::backdrop {
+		background: #020617aa;
+	}
+	.close {
+		align-self: flex-end;
+		padding: 8px 12px;
+	}
+	@media (max-width: 900px) {
+		.sidebar {
+			display: none;
+		}
+		.workspace-main {
+			margin-left: 0;
+			padding: 20px 16px;
+		}
+		.mobile-bar {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			border-bottom: 1px solid #343b48;
+			padding: 8px 16px;
+			font-weight: 750;
+		}
+		.mobile-bar button {
+			padding: 8px 12px;
+			border: 1px solid #475569;
+			border-radius: 8px;
+		}
+	}
+</style>

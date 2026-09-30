@@ -46,14 +46,14 @@
 				try {
 					const res = await fetch(`/api/boards/${sessionCode}/posts`, { cache: 'no-store' });
 					const data = await res.json();
-					if (!res.ok || !data.ok) throw new Error(data.message || 'Papan gagal dimuat.');
+					if (!res.ok || !data.ok) throw new Error(data.message || 'Could not load board.');
 					if (!disposed) {
 						board = data;
 						error = '';
 					}
 				} catch (err) {
 					if (!disposed)
-						error = err instanceof Error ? err.message : 'Koneksi terputus. Coba muat ulang.';
+						error = err instanceof Error ? err.message : 'Connection lost. Try reloading.';
 				}
 			} while (again && !disposed);
 		})();
@@ -74,9 +74,9 @@
 		try {
 			data = await res.json();
 		} catch {
-			throw new Error(`Permintaan gagal (${res.status}). Coba lagi.`);
+			throw new Error(`Request failed (${res.status}). Try again.`);
 		}
-		if (!res.ok || !data.ok) throw new Error(data.message || 'Permintaan gagal.');
+		if (!res.ok || !data.ok) throw new Error(data.message || 'Request failed.');
 		await refresh();
 		return data;
 	}
@@ -127,7 +127,7 @@
 				moderationEnabled: !board.moderationEnabled
 			});
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Pengaturan gagal disimpan.';
+			error = err instanceof Error ? err.message : 'Could not save settings.';
 		} finally {
 			saving = false;
 		}
@@ -169,17 +169,17 @@
 	});
 </script>
 
-<section class="live-board" aria-label="Papan kolaborasi">
+<section class="live-board" aria-label="Shared board">
 	{#if title}<h1>{title}</h1>{/if}
 	{#if board.state !== 'open'}<p role="status" class="hint">
 			{board.state === 'draft'
-				? 'Menunggu dosen membuka sesi.'
+				? 'Waiting for the teacher to open the session.'
 				: board.state === 'ended'
-					? 'Sesi selesai. Papan tetap dapat dibaca.'
-					: 'Kiriman ditutup sementara.'}
+					? 'Session ended. You can still read the board.'
+					: 'Submissions are temporarily closed.'}
 		</p>{/if}
 	{#if error}<div role="alert" class="error">
-			{error} <button onclick={() => void refresh()}>Muat ulang</button>
+			{error} <button onclick={() => void refresh()}>Reload</button>
 		</div>{/if}
 	<BoardView
 		columns={board.columns}

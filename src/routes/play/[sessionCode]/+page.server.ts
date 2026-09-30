@@ -21,7 +21,7 @@ export const load: import('./$types').PageServerLoad = ({ params, cookies, local
 		!session ||
 		!authorizeSession(store, session.id, locals.admin?.id, cookies.get(`edu_p_${session.id}`))
 	)
-		error(401, 'Bergabung melalui kode sesi terlebih dahulu.');
+		error(401, 'Join using the session code first.');
 	const current = snapshot(store, session.id);
 	const activityType = store.db
 		.select({ type: activities.type })

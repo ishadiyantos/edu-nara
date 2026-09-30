@@ -10,11 +10,11 @@
 	let loading = $state(false);
 </script>
 
-<svelte:head><title>Bergabung — Edu Nara</title></svelte:head>
+<svelte:head><title>Join — Edu Nara</title></svelte:head>
 <main class="min-h-dvh bg-bg py-10">
 	<Container size="narrow"
-		><a class="link mb-6 inline-block" href="/">← Kembali</a><Card
-			><h1 class="mb-4 text-2xl font-bold">Perkenalkan dirimu</h1>
+		><a class="link mb-6 inline-block" href="/">← Back</a><Card
+			><h1 class="mb-4 text-2xl font-bold">Introduce yourself</h1>
 			<form
 				method="POST"
 				use:enhance={({ cancel }) => {
@@ -34,24 +34,24 @@
 				class="grid gap-5"
 				novalidate
 			>
-				<Input label="Kode sesi" name="code" bind:value={code} required maxlength={6} />
+				<Input label="Session code" name="code" bind:value={code} required maxlength={6} />
 				<Input
-					label="Nama tampilan"
+					label="Display name"
 					name="displayName"
 					bind:value={displayName}
 					required
 					maxlength={24}
 					autocomplete="nickname"
-					hint="Boleh nama panggilan. 2–24 karakter."
+					hint="A nickname is fine. 2–24 characters."
 				/>
 				{#if validation || form?.message}<p role="alert" class="text-danger">
 						{validation || form?.message}
-					</p>{/if}<Button type="submit" {loading}>Bergabung</Button>
+					</p>{/if}<Button type="submit" {loading}>Join session</Button>
 			</form></Card
 		>
 		<p class="mt-6 text-sm text-muted">
-			Dengan bergabung kamu setuju menjaga percakapan tetap sopan. Nama disimpan selama sesi; nama
-			bukan kata sandi untuk memulihkan akses.
+			By joining, you agree to keep the conversation respectful. Your name is stored for this
+			session; it is not a password for recovering access.
 		</p></Container
 	>
 </main>

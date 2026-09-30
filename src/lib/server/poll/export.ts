@@ -26,13 +26,13 @@ export function choiceExportRows(store: Store, sessionId: string) {
 	}[];
 
 	return [
-		['Peserta', 'Soal', 'Jawaban', 'Poin', 'Benar'],
+		['Participant', 'Question', 'Answer', 'Points', 'Correct'],
 		...rows.map((row) => [
 			row.participant,
 			row.prompt,
 			row.answer,
 			Number(row.points),
-			row.is_correct ? 'Ya' : 'Tidak'
+			row.is_correct ? 'Yes' : 'No'
 		])
 	];
 }

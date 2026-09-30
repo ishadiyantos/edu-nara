@@ -39,14 +39,14 @@
 <main class="min-h-dvh bg-bg pb-24 pt-6">
 	<Container size="narrow">
 		<div class="mb-4 flex items-center justify-between">
-			<Badge tone="success" dot>Terhubung</Badge>
+			<Badge tone="success" dot>Connected</Badge>
 			<span class="text-xs text-muted">Waktu: 02:14</span>
 		</div>
 		<Card>
-			<h1 class="mb-4 text-xl font-bold">Teka-teki: Web Dev</h1>
+			<h1 class="mb-4 text-xl font-bold">Crossword: Web Dev</h1>
 			<div
 				role="grid"
-				aria-label="Papan teka-teki silang"
+				aria-label="Crossword grid"
 				class="mx-auto grid w-fit gap-0.5"
 				style="grid-template-columns: repeat({grid[0].length}, 44px);"
 			>
@@ -63,7 +63,7 @@
 									type="text"
 									inputmode="text"
 									maxlength="1"
-									aria-label="baris {r + 1} kolom {c + 1}"
+									aria-label="row {r + 1} column {c + 1}"
 									value={filled[key(r, c)] ?? ''}
 									oninput={(e) => setCell(r, c, (e.target as HTMLInputElement).value)}
 									onfocus={() => (active = [r, c])}
@@ -101,8 +101,8 @@
 			</div>
 
 			<div class="mt-6 flex gap-2">
-				<Button size="md">Cek jawaban</Button>
-				<Button size="md" variant="ghost">Petunjuk huruf</Button>
+				<Button size="md">Check answers</Button>
+				<Button size="md" variant="ghost">Letter hint</Button>
 			</div>
 		</Card>
 	</Container>

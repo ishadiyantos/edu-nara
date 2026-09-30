@@ -1,25 +1,25 @@
 import { z } from 'zod';
-const optionLabel = z.string().trim().min(1, 'Opsi tidak boleh kosong.').max(200);
+const optionLabel = z.string().trim().min(1, 'Option cannot be empty.').max(200);
 export const choiceQuestionSchema = z
 	.object({
-		prompt: z.string().trim().min(1, 'Pertanyaan tidak boleh kosong.').max(1000),
-		options: z.array(optionLabel).min(2, 'Minimal dua opsi diperlukan.').max(8),
+		prompt: z.string().trim().min(1, 'Question cannot be empty.').max(1000),
+		options: z.array(optionLabel).min(2, 'At least two options are required.').max(8),
 		correctOptions: z
 			.array(z.number().int().min(0))
-			.min(1, 'Pilih minimal satu jawaban benar.')
+			.min(1, 'Select at least one correct answer.')
 			.max(8),
 		timeLimit: z.coerce
 			.number()
 			.int()
-			.min(5, 'Waktu minimal 5 detik.')
-			.max(300, 'Waktu maksimal 300 detik.')
+			.min(5, 'Time must be at least 5 seconds.')
+			.max(300, 'Time must be at most 300 seconds.')
 			.default(20)
 	})
 	.strict()
 	.superRefine(({ options, correctOptions }, ctx) => {
 		const normalized = options.map((option) => option.toLocaleLowerCase());
 		if (new Set(normalized).size !== normalized.length)
-			ctx.addIssue({ code: 'custom', path: ['options'], message: 'Opsi tidak boleh duplikat.' });
+			ctx.addIssue({ code: 'custom', path: ['options'], message: 'Options cannot be duplicates.' });
 		if (
 			new Set(correctOptions).size !== correctOptions.length ||
 			correctOptions.some((index) => index >= options.length)
@@ -27,7 +27,7 @@ export const choiceQuestionSchema = z
 			ctx.addIssue({
 				code: 'custom',
 				path: ['correctOptions'],
-				message: 'Jawaban benar tidak valid.'
+				message: 'Invalid correct answer.'
 			});
 	});
 export const choiceResponseSchema = z
@@ -38,12 +38,12 @@ export const choiceResponseSchema = z
 	.strict()
 	.superRefine(({ optionIds }, ctx) => {
 		if (new Set(optionIds).size !== optionIds.length)
-			ctx.addIssue({ code: 'custom', path: ['optionIds'], message: 'Pilihan jawaban duplikat.' });
+			ctx.addIssue({ code: 'custom', path: ['optionIds'], message: 'Duplicate answer choices.' });
 	});
 export type ChoiceQuestionInput = z.infer<typeof choiceQuestionSchema>;
 export const wordcloudQuestionSchema = z
 	.object({
-		prompt: z.string().trim().min(1, 'Pertanyaan tidak boleh kosong.').max(1000),
+		prompt: z.string().trim().min(1, 'Question cannot be empty.').max(1000),
 		wordLimit: z.coerce.number().int().min(1).max(5).default(3),
 		moderationEnabled: z.boolean().default(true)
 	})

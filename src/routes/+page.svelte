@@ -8,7 +8,7 @@
 	function submit(e?: SubmitEvent) {
 		e?.preventDefault();
 		if (!/^[A-HJ-NP-Z2-9]{6}$/.test(code)) {
-			error = 'Kode sesi harus 6 karakter.';
+			error = 'Session code must have 6 characters.';
 			return;
 		}
 		error = '';
@@ -17,10 +17,10 @@
 </script>
 
 <svelte:head>
-	<title>Edu Nara — Masuk kelas</title>
+	<title>Edu Nara — Join your class</title>
 	<meta
 		name="description"
-		content="Masuk ke aktivitas kelas game-show interaktif dengan kode sesi dosen."
+		content="Join interactive classroom activities with your teacher’s session code."
 	/>
 </svelte:head>
 
@@ -61,7 +61,7 @@
 				</a>
 				<a
 					class="text-sm font-bold text-cyan-100 underline-offset-4 hover:underline"
-					href="/admin/login">Masuk sebagai dosen <span aria-hidden="true">→</span></a
+					href="/admin/login">Teacher login <span aria-hidden="true">→</span></a
 				>
 			</header>
 
@@ -80,11 +80,11 @@
 						<h1
 							class="mx-auto mt-4 max-w-2xl text-3xl font-black leading-[1.05] tracking-[-0.04em] text-white sm:text-5xl lg:mx-0 lg:text-7xl"
 						>
-							Masuk ke kelasmu.
+							Join your class.
 						</h1>
 						<p class="mx-auto mt-4 max-w-xl text-sm leading-6 text-cyan-50/80 sm:text-lg lg:mx-0">
-							Masukkan kode sesi dari dosenmu untuk mulai. Ikuti kuis, word cloud, dan aktivitas
-							kelas dengan tampilan baru yang lebih ramai.
+							Enter your teacher’s session code to get started. Take part in quizzes, word clouds,
+							and shared classroom activities.
 						</p>
 						<div
 							class="mx-auto mt-5 hidden max-w-full grid-cols-3 gap-3 text-center text-xs font-bold sm:grid lg:mx-0"
@@ -116,7 +116,7 @@
 								<p class="text-xs font-black uppercase tracking-[0.18em] text-amber-200">
 									Student pass
 								</p>
-								<p class="mt-1 text-sm text-white/70">Siap masuk kelas</p>
+								<p class="mt-1 text-sm text-white/70">Ready to join your class</p>
 							</div>
 							<span
 								class="shrink-0 rounded-full bg-emerald-300/15 px-3 py-1 text-xs font-black text-emerald-100"
@@ -134,7 +134,7 @@
 							<div
 								class="min-w-0 rounded-2xl bg-white p-3 text-slate-900 shadow-[0_0_30px_rgba(34,211,238,0.18)] sm:p-4"
 							>
-								<CodeInput bind:value={code} label="Kode sesi" />
+								<CodeInput bind:value={code} label="Session code" />
 							</div>
 							{#if error}
 								<p role="alert" class="text-sm font-semibold text-rose-200">{error}</p>
@@ -143,10 +143,10 @@
 								type="submit"
 								block
 								size="lg"
-								ariaLabel="Masuk"
+								ariaLabel="Join"
 								class="!bg-amber-300 !text-slate-950 hover:!shadow-[0_0_26px_rgba(251,191,36,0.55)]"
 							>
-								Masuk ke kelas <span aria-hidden="true">→</span>
+								Join class <span aria-hidden="true">→</span>
 							</Button>
 							<Button
 								variant="ghost"
@@ -164,13 +164,13 @@
 										stroke-linejoin="round"
 									/>
 								</svg>
-								Pindai QR belum tersedia
+								QR scanner not available yet
 							</Button>
 						</form>
 						<p
 							class="mt-4 border-t border-white/10 pt-3 text-center text-xs leading-5 text-white/60"
 						>
-							Tidak perlu membuat akun. Gunakan nama panggilan yang mudah dikenali dosen.
+							No account needed. Use a display name your teacher will recognize.
 						</p>
 					</div>
 				</div>

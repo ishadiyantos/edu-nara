@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
 
-test('menghapus dan mengganti karakter tengah tidak menggeser kode sesi', async ({ page }) => {
+test('replacing a middle character keeps the rest of the session code', async ({ page }) => {
 	await page.goto('/');
-	const cells = page.getByLabel(/karakter \d+ dari 6/i);
+	const cells = page.getByLabel(/Character \d+ of 6/i);
 	await cells.first().click();
 	await page.keyboard.type('ABC7XK');
 	await expect(cells.nth(5)).toHaveValue('K');

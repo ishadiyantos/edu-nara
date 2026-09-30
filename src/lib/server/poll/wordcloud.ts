@@ -19,7 +19,7 @@ export type WordcloudStatus = 'pending' | 'approved' | 'rejected';
 export function normalizeWordcloudText(raw: string) {
 	const word = raw.normalize('NFC').trim().toLowerCase().replace(/\s+/gu, ' ').normalize('NFC');
 	if (!word || [...word].length > 80 || /[\p{Cc}\p{Cf}]/u.test(raw))
-		throw new UserError('Kata atau frasa tidak valid.');
+		throw new UserError('Invalid word or phrase.');
 	return word;
 }
 
@@ -44,7 +44,7 @@ function ownedActivity(store: Store, ownerId: string, activityId: string) {
 			)
 		)
 		.get();
-	if (!activity) throw new UserError('Aktivitas Word Cloud tidak ditemukan.');
+	if (!activity) throw new UserError('Word Cloud activity not found.');
 	return activity;
 }
 
@@ -114,7 +114,7 @@ export function activeQuestionId(store: Store, sessionId: string) {
 		.from(sessions)
 		.where(eq(sessions.id, sessionId))
 		.get();
-	if (!row) throw new UserError('Sesi tidak ditemukan.');
+	if (!row) throw new UserError('Session not found.');
 	return (
 		row.activeQuestionId ?? getWordcloudQuestionsByActivity(store, row.activityId)[0]?.id ?? null
 	);
@@ -126,7 +126,7 @@ export function advanceActiveQuestion(
 	sessionId: string,
 	direction: number
 ) {
-	if (direction !== 1 && direction !== -1) throw new UserError('Arah perpindahan tidak valid.');
+	if (direction !== 1 && direction !== -1) throw new UserError('Invalid navigation direction.');
 	const current = ownedSession(store, ownerId, sessionId);
 	ownedActivity(store, ownerId, current.activityId);
 	const questions = getWordcloudQuestionsByActivity(store, current.activityId);
@@ -154,7 +154,7 @@ export function setActiveQuestion(
 	ownedActivity(store, ownerId, current.activityId);
 	const questions = getWordcloudQuestionsByActivity(store, current.activityId);
 	if (!questions.some((question) => question.id === questionId))
-		throw new UserError('Pertanyaan tidak ditemukan.');
+		throw new UserError('Question not found.');
 	if (current.activeQuestionId === questionId) return questionId;
 	store.db
 		.update(sessions)
@@ -184,7 +184,7 @@ export function updateWordcloudQuestion(
 			)
 		)
 		.get();
-	if (!row || row.question.kind !== 'wordcloud') throw new UserError('Pertanyaan tidak ditemukan.');
+	if (!row || row.question.kind !== 'wordcloud') throw new UserError('Question not found.');
 	return store.db
 		.update(pollQuestions)
 		.set({
@@ -215,7 +215,7 @@ export function setWordcloudResults(
 			)
 		)
 		.get();
-	if (!row) throw new UserError('Pertanyaan tidak ditemukan.');
+	if (!row) throw new UserError('Question not found.');
 	return store.db
 		.update(pollQuestions)
 		.set({ showResults })
@@ -267,7 +267,7 @@ export function submitWordcloudResponse(
 		.transaction(() => {
 			const auth = participantFor(store, sessionId, token);
 			if (!auth || auth.session.state !== 'open' || auth.activity.type !== 'wordcloud')
-				throw new UserError('Sesi tidak menerima jawaban.');
+				throw new UserError('Session is not accepting answers.');
 			const question = store.db
 				.select()
 				.from(pollQuestions)
@@ -279,9 +279,9 @@ export function submitWordcloudResponse(
 					)
 				)
 				.get();
-			if (!question) throw new UserError('Pertanyaan tidak tersedia.');
+			if (!question) throw new UserError('Question not available.');
 			if (activeQuestionId(store, sessionId) !== questionId)
-				throw new UserError('Pertanyaan belum aktif.');
+				throw new UserError('Question is not active yet.');
 			const existing = store.db
 				.select()
 				.from(wordcloudResponses)
@@ -302,7 +302,7 @@ export function submitWordcloudResponse(
 				)
 				.get(questionId, sessionId, auth.participant.id) as { n: number };
 			if (Number(count.n) >= question.wordLimit)
-				throw new UserError('Batas kiriman untuk pertanyaan ini sudah tercapai.');
+				throw new UserError('Submission limit reached for this question.');
 			const row = {
 				id: randomUUID(),
 				questionId,
@@ -363,7 +363,7 @@ export function moderationQueue(
 			)
 		)
 		.get();
-	if (!owned) throw new UserError('Sesi tidak ditemukan.');
+	if (!owned) throw new UserError('Session not found.');
 	return store.db
 		.select({
 			id: wordcloudResponses.id,
@@ -389,7 +389,7 @@ export function moderateWordcloudResponse(
 	status: WordcloudStatus
 ) {
 	if (status !== 'approved' && status !== 'rejected')
-		throw new UserError('Status moderasi tidak valid.');
+		throw new UserError('Invalid moderation status.');
 	const row = store.db
 		.select({ response: wordcloudResponses })
 		.from(wordcloudResponses)
@@ -403,7 +403,7 @@ export function moderateWordcloudResponse(
 			)
 		)
 		.get();
-	if (!row) throw new UserError('Kiriman tidak ditemukan.');
+	if (!row) throw new UserError('Submission not found.');
 	// Drop published snapshots so a reconnecting client cannot replay a withdrawn word.
 	events.clear(row.response.sessionId);
 	const updated = store.db

@@ -38,7 +38,7 @@
 </script>
 
 <div class="mt-4" aria-live="polite" data-testid="choice-results-live">
-	<p class="mb-3 text-sm text-muted">{total} jawaban · {connected ? 'Live' : 'Menghubungkan…'}</p>
+	<p class="mb-3 text-sm text-muted">{total} answers · {connected ? 'Live' : 'Connecting…'}</p>
 	{#each options as option, i}
 		{@const value = tally[option.id] ?? 0}
 		{@const width = total ? (value / total) * 100 : 0}

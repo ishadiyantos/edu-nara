@@ -11,7 +11,7 @@
 		label?: string;
 	};
 
-	let { length = 6, value = $bindable(''), onchange, label = 'Kode sesi' }: Props = $props();
+	let { length = 6, value = $bindable(''), onchange, label = 'Session code' }: Props = $props();
 
 	const ALPHABET = /^[A-HJ-NP-Z2-9]$/;
 	let refs: HTMLInputElement[] = $state([]);
@@ -77,7 +77,7 @@
 				autocapitalize="characters"
 				maxlength="1"
 				value={ch}
-				aria-label={`Karakter ${i + 1} dari ${length}`}
+				aria-label={`Character ${i + 1} of ${length}`}
 				class="h-12 min-w-0 rounded-xl border-2 border-border bg-surface text-center font-mono
 				       text-xl font-bold uppercase tracking-widest sm:h-14 sm:text-2xl
 				       focus:border-primary focus:ring-4 focus:ring-primary/15 focus:outline-none"
@@ -88,6 +88,6 @@
 		{/each}
 	</div>
 	<p class="text-xs text-muted">
-		Contoh: <span class="font-mono font-semibold">A B 3 C 7 K</span> — gunakan huruf & angka.
+		Example: <span class="font-mono font-semibold">A B 3 C 7 K</span> — use letters and numbers.
 	</p>
 </fieldset>

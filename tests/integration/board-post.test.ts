@@ -38,7 +38,7 @@ async function fixture(path = ':memory:') {
 		email: 'board@example.test',
 		password: 'test-board-password-long'
 	});
-	const activity = createActivity(store, admin.id, { title: 'Papan kelas', type: 'board' });
+	const activity = createActivity(store, admin.id, { title: 'Class board', type: 'board' });
 	const firstColumn = createBoardColumn(store, admin.id, activity.id, { title: 'Ide' });
 	const secondColumn = createBoardColumn(store, admin.id, activity.id, { title: 'Aksi' });
 	const session = launchSession(store, admin.id, activity.id);

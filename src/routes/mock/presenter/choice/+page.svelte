@@ -23,7 +23,7 @@
 				<span class="text-slate-400">·</span>
 				<span class="font-mono text-lg">Ruang: A B 7 X K</span>
 			</div>
-			<Badge tone="success" dot>87 peserta</Badge>
+			<Badge tone="success" dot>87 participants</Badge>
 		</header>
 
 		<h1 class="mb-8 text-4xl font-black leading-tight sm:text-5xl">{question}</h1>
@@ -48,7 +48,7 @@
 		</div>
 
 		<div class="fixed bottom-8 right-8">
-			<QRCode value="ABC7XK" size={160} label="QR bergabung ke ruang ABC7XK" />
+			<QRCode value="ABC7XK" size={160} label="QR code to join room ABC7XK" />
 		</div>
 	</Container>
 </main>

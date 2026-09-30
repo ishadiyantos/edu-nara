@@ -25,11 +25,11 @@ function removeGeneratedImage(directory: string, id?: string) {
 export const GET: import('./$types').RequestHandler = (event) => {
 	const store = database();
 	const session = sessionByCode(store, event.params.sessionCode);
-	if (!session) return json({ ok: false, message: 'Sesi tidak tersedia.' }, { status: 404 });
+	if (!session) return json({ ok: false, message: 'Session not available.' }, { status: 404 });
 	try {
 		const token = event.cookies.get(`edu_p_${session.id}`);
 		if (!boardSession(store, session.id, token, event.locals.admin?.id))
-			return json({ ok: false, message: 'Akses papan ditolak.' }, { status: 401 });
+			return json({ ok: false, message: 'Board access denied.' }, { status: 401 });
 		return json(
 			{ ok: true, ...listBoard(store, session.id, event.locals.admin?.id, token) },
 			{ headers: { 'Cache-Control': 'no-store' } }
@@ -42,18 +42,18 @@ export const GET: import('./$types').RequestHandler = (event) => {
 export const POST: import('./$types').RequestHandler = async (event) => {
 	const store = database();
 	const session = sessionByCode(store, event.params.sessionCode);
-	if (!session) return json({ ok: false, message: 'Sesi tidak tersedia.' }, { status: 404 });
+	if (!session) return json({ ok: false, message: 'Session not available.' }, { status: 404 });
 	const token = event.cookies.get(`edu_p_${session.id}`);
 	let imageId: string | undefined;
 	let previewImageId: string | undefined;
 	const directory = uploadDirectory();
 	try {
 		if (!token || !boardSession(store, session.id, token))
-			return json({ ok: false, message: 'Peserta belum terautentikasi.' }, { status: 401 });
+			return json({ ok: false, message: 'Participant not authenticated.' }, { status: 401 });
 		const retry = limits.take(`board:${session.id}:${token}`, 20, 60000);
 		if (retry)
 			return json(
-				{ ok: false, message: 'Terlalu banyak kiriman. Coba lagi nanti.' },
+				{ ok: false, message: 'Too many submissions. Try again later.' },
 				{ status: 429, headers: { 'Retry-After': String(retry) } }
 			);
 		let input: unknown;
@@ -71,7 +71,7 @@ export const POST: import('./$types').RequestHandler = async (event) => {
 						size += value.byteLength;
 						if (size > MAX_IMAGE_BYTES + 65536) {
 							await reader.cancel();
-							throw new UserError('Ukuran file terlalu besar.');
+							throw new UserError('File is too large.');
 						}
 						chunks.push(value);
 					}
@@ -92,22 +92,22 @@ export const POST: import('./$types').RequestHandler = async (event) => {
 			]);
 			for (const key of form.keys())
 				if (!allowed.has(key) || form.getAll(key).length !== 1)
-					throw new UserError('Form tidak valid.');
+					throw new UserError('Invalid form.');
 			const file = form.get('image');
 			if (file && typeof file !== 'string' && file.size) {
-				if (file.size > MAX_IMAGE_BYTES) throw new UserError('Ukuran file terlalu besar.');
+				if (file.size > MAX_IMAGE_BYTES) throw new UserError('File is too large.');
 				image = new Uint8Array(await file.arrayBuffer());
 				const validation = validateImageUpload(image);
 				if (!validation.ok) throw new UserError(validation.error);
-			} else if (typeof file === 'string' && file) throw new UserError('Gambar tidak valid.');
+			} else if (typeof file === 'string' && file) throw new UserError('Invalid image.');
 			form.delete('image');
 			input = Object.fromEntries(form);
 		} else input = await body(event);
 		let data = boardPostSchema.parse(input);
-		if (session.state !== 'open') throw new UserError('Sesi tidak menerima post.');
+		if (session.state !== 'open') throw new UserError('Session is not accepting posts.');
 		const snapshot = listBoard(store, session.id, undefined, token);
 		if (!snapshot.columns.some((column) => column.id === data.columnId))
-			throw new UserError('Kolom tidak tersedia.');
+			throw new UserError('Column not available.');
 		const bodyLink = linkifyBody(data.body).find((segment) => segment.type === 'link');
 		data.linkUrl ||= bodyLink?.type === 'link' ? bodyLink.href : '';
 		data = boardPostSchema.parse(data);

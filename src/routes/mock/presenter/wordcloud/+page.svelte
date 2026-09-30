@@ -9,7 +9,7 @@
 		{ w: 'kolaboratif', c: 24 },
 		{ w: 'mobile', c: 22 },
 		{ w: 'cepat', c: 18 },
-		{ w: 'mahasiswa', c: 15 },
+		{ w: 'students', c: 15 },
 		{ w: 'realtime', c: 13 },
 		{ w: 'produktif', c: 10 },
 		{ w: 'menarik', c: 8 },
@@ -45,13 +45,13 @@
 			<div class="flex items-center gap-3">
 				<span class="text-xl font-black">Edu Nara</span>
 				<span class="text-slate-400">·</span>
-				<span class="font-mono text-lg">Ruang: A B 7 X K</span>
+				<span class="font-mono text-lg">Room: A B 7 X K</span>
 			</div>
-			<Badge tone="success" dot>102 peserta</Badge>
+			<Badge tone="success" dot>102 participants</Badge>
 		</header>
 
 		<h1 class="mb-8 text-3xl font-black leading-tight">
-			Sebutkan 1–3 kata yang menggambarkan kelas ini.
+			Share 1–3 words that describe this class.
 		</h1>
 
 		<div class="min-h-[400px] rounded-3xl bg-slate-900 p-8" role="list" aria-label="Word cloud">
@@ -71,7 +71,7 @@
 
 		<!-- Alternatif untuk screen reader / accessibility -->
 		<details class="mt-4 rounded-lg bg-slate-900 p-4 text-sm">
-			<summary class="cursor-pointer font-semibold">Daftar kata (untuk pembaca layar)</summary>
+			<summary class="cursor-pointer font-semibold">Word list (for screen readers)</summary>
 			<ol class="mt-2 space-y-1">
 				{#each words as w}
 					<li><span class="font-mono">{w.c}×</span> {w.w}</li>
@@ -80,7 +80,7 @@
 		</details>
 
 		<div class="fixed bottom-8 right-8">
-			<QRCode value="ABC7XK" size={160} label="QR bergabung ke ruang ABC7XK" />
+			<QRCode value="ABC7XK" size={160} label="QR code to join room ABC7XK" />
 		</div>
 	</Container>
 </main>

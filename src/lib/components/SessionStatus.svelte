@@ -4,18 +4,18 @@
 		snapshot: { id: string; code: string; title: string; state: string; count: number };
 	}>();
 	let live = $state(untrack(() => snapshot));
-	let connection = $state('Menghubungkan…');
+	let connection = $state('Connecting…');
 	const labels: Record<string, string> = {
-		draft: 'Menunggu dosen membuka sesi',
-		open: 'Sesi terbuka',
-		closed: 'Sesi ditutup',
-		ended: 'Sesi selesai'
+		draft: 'Waiting for the teacher to open the session',
+		open: 'Session open',
+		closed: 'Session closed',
+		ended: 'Session ended'
 	};
 	const messages: Record<string, string> = {
-		draft: 'Siapkan diri. Begitu dosen membuka sesi, soal akan muncul otomatis di layar ini.',
-		open: 'Sesi sedang berlangsung. Soal akan muncul otomatis saat ronde dimulai.',
-		closed: 'Sesi sudah ditutup. Hubungi dosen jika kamu belum sempat bergabung.',
-		ended: 'Sesi sudah selesai. Terima kasih sudah ikut bermain.'
+		draft: 'Get ready. Questions will appear automatically when the teacher opens the session.',
+		open: 'Session in progress. Questions appear automatically when the round starts.',
+		closed: 'Session closed. Contact your teacher if you have not joined yet.',
+		ended: 'Session ended. Thank you for taking part.'
 	};
 	onMount(() => {
 		const stream = new EventSource(`/api/sessions/${snapshot.id}/events`);
@@ -34,8 +34,8 @@
 			if (snapshot.state !== 'open' && next === 'open') window.location.reload();
 			live = { ...live, state: next };
 		});
-		stream.onopen = () => (connection = 'Terhubung');
-		stream.onerror = () => (connection = 'Koneksi terputus. Menghubungkan ulang…');
+		stream.onopen = () => (connection = 'Connected');
+		stream.onerror = () => (connection = 'Connection lost. Reconnecting…');
 		return () => stream.close();
 	});
 </script>
@@ -54,12 +54,12 @@
 	<div class="participant-card">
 		<span aria-hidden="true">👥</span>
 		<div>
-			<p>Total peserta bergabung</p>
+			<p>Total participants</p>
 			<strong data-testid="participant-count">{live.count}</strong>
 		</div>
 	</div>
 </section>
-<noscript>JavaScript nonaktif. Muat ulang halaman untuk memperbarui status.</noscript>
+<noscript>JavaScript is disabled. Reload to update the status.</noscript>
 
 <style>
 	.waiting-room {

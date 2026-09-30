@@ -142,15 +142,18 @@ function decodeHtml(value: string): string {
 		gt: '>',
 		nbsp: ' '
 	};
-	return value
-		.replace(/&#(x[\da-f]+|\d+);?/gi, (_, raw: string) => {
-			const code = raw[0].toLowerCase() === 'x' ? parseInt(raw.slice(1), 16) : parseInt(raw, 10);
-			return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : '';
-		})
-		.replace(/&([a-z]+);/gi, (match, name: string) => named[name.toLowerCase()] ?? match)
-		.replace(/[\u0000-\u001f\u007f]/g, ' ')
-		.replace(/\s+/g, ' ')
-		.trim();
+	return (
+		value
+			.replace(/&#(x[\da-f]+|\d+);?/gi, (_, raw: string) => {
+				const code = raw[0].toLowerCase() === 'x' ? parseInt(raw.slice(1), 16) : parseInt(raw, 10);
+				return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : '';
+			})
+			.replace(/&([a-z]+);/gi, (match, name: string) => named[name.toLowerCase()] ?? match)
+			// eslint-disable-next-line no-control-regex -- control chars must be stripped from fetched metadata
+			.replace(/[\u0000-\u001f\u007f]/g, ' ')
+			.replace(/\s+/g, ' ')
+			.trim()
+	);
 }
 function meta(html: string, property: string): string {
 	// ponytail: bound candidate count and tag length; a single oversized attribute token costs quadratic regex time.

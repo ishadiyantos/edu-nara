@@ -28,7 +28,7 @@
 	<Container>
 		<h1 class="mb-2 text-3xl font-black">Design Kitchen Sink</h1>
 		<p class="mb-8 text-muted">
-			Semua primitive UI. Uji di 360/768/1440 px, keyboard, dan reduced motion.
+			All UI primitives. Test at 360/768/1440 px, with keyboard and reduced motion.
 		</p>
 
 		<section class="mb-10">
@@ -54,10 +54,10 @@
 			<h2 class="mb-4 text-xl font-bold">Inputs</h2>
 			<div class="grid gap-4 sm:grid-cols-2">
 				<Card>
-					<Input label="Nama" bind:value={name} placeholder="Isha D." hint="Nama tampilan" />
+					<Input label="Name" bind:value={name} placeholder="Isha D." hint="Display name" />
 				</Card>
 				<Card>
-					<Input label="Email" type="email" error="Format email tidak valid" value="isha@" />
+					<Input label="Email" type="email" error="Invalid email format" value="isha@" />
 				</Card>
 				<Card>
 					<CodeInput bind:value={code} />
@@ -72,8 +72,8 @@
 					<Badge>Neutral</Badge>
 					<Badge tone="success" dot>Live</Badge>
 					<Badge tone="warning" dot>Draft</Badge>
-					<Badge tone="danger">Ditutup</Badge>
-					<Badge tone="info" dot>Terhubung</Badge>
+					<Badge tone="danger">Closed</Badge>
+					<Badge tone="info" dot>Connected</Badge>
 				</div>
 			</Card>
 		</section>
@@ -82,15 +82,15 @@
 			<h2 class="mb-4 text-xl font-bold">Modal + Toast</h2>
 			<Card>
 				<div class="flex flex-wrap gap-3">
-					<Button onclick={() => (modalOpen = true)}>Buka Modal</Button>
-					<Button variant="accent" onclick={() => (toastOpen = true)}>Tampilkan Toast</Button>
+					<Button onclick={() => (modalOpen = true)}>Open modal</Button>
+					<Button variant="accent" onclick={() => (toastOpen = true)}>Show toast</Button>
 				</div>
 			</Card>
-			<Modal bind:open={modalOpen} title="Konfirmasi">
-				<p class="mb-4">Ini contoh dialog dengan focus trap dan Escape untuk tutup.</p>
+			<Modal bind:open={modalOpen} title="Confirmation">
+				<p class="mb-4">This sample dialog traps focus. Press Escape to close.</p>
 				<div class="flex justify-end gap-2">
-					<Button variant="ghost" onclick={() => (modalOpen = false)}>Batal</Button>
-					<Button onclick={() => (modalOpen = false)}>Konfirmasi</Button>
+					<Button variant="ghost" onclick={() => (modalOpen = false)}>Cancel</Button>
+					<Button onclick={() => (modalOpen = false)}>Confirm</Button>
 				</div>
 			</Modal>
 			{#if toastOpen}
@@ -123,11 +123,11 @@
 			<h2 class="mb-4 text-xl font-bold">Empty state</h2>
 			<Card>
 				<EmptyState
-					title="Belum ada aktivitas"
-					description="Buat aktivitas pertama untuk memulai."
+					title="No activities yet"
+					description="Create your first activity to get started."
 					icon="sparkles"
 				>
-					<Button>+ Aktivitas baru</Button>
+					<Button>+ New activity</Button>
 				</EmptyState>
 			</Card>
 		</section>

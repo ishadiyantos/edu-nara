@@ -23,7 +23,7 @@ export const load: import('./$types').PageServerLoad = (event) => {
 			)
 		)
 		.get();
-	if (!activity) error(404, 'Aktivitas tidak ditemukan.');
+	if (!activity) error(404, 'Activity not found.');
 	return { activity, questions: getChoiceQuestionsByActivity(store, activity.id) };
 };
 export const actions = {
@@ -40,7 +40,7 @@ export const actions = {
 				correctOptions: [0, 1, 2, 3].filter((index) => data[`correct${index}`] === 'on'),
 				timeLimit: data.timeLimit
 			});
-			return { ok: true, message: `Pertanyaan ${question.position + 1} tersimpan.` };
+			return { ok: true, message: `Question ${question.position + 1} saved.` };
 		} catch (err) {
 			return fail(400, { message: message(err) });
 		}
@@ -53,7 +53,7 @@ export const actions = {
 				.map((index) => data[`option${index}`])
 				.filter((value): value is string => typeof value === 'string');
 			setChoiceCorrectOptions(database(), owner, String(data.questionId), optionIds);
-			return { ok: true, message: 'Jawaban benar diperbarui.' };
+			return { ok: true, message: 'Correct answers updated.' };
 		} catch (err) {
 			return fail(400, { message: message(err) });
 		}
@@ -71,7 +71,7 @@ export const actions = {
 				correctOptions: [0, 1, 2, 3].filter((index) => data[`correct${index}`] === 'on'),
 				timeLimit: data.timeLimit
 			});
-			return { ok: true, message: 'Pertanyaan diperbarui.' };
+			return { ok: true, message: 'Question updated.' };
 		} catch (err) {
 			return fail(400, { message: message(err) });
 		}

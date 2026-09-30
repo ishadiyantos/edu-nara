@@ -12,7 +12,7 @@ import {
 export const GET: import('./$types').RequestHandler = (event) => {
 	const store = database();
 	const session = sessionByCode(store, event.params.sessionCode);
-	if (!session) return json({ ok: false, message: 'Sesi tidak tersedia.' }, { status: 404 });
+	if (!session) return json({ ok: false, message: 'Session not available.' }, { status: 404 });
 	const token = event.cookies.get(`edu_p_${session.id}`);
 	if (!authorizeSession(store, session.id, event.locals.admin?.id, token))
 		return json({ ok: false }, { status: 401 });
@@ -32,9 +32,10 @@ export const GET: import('./$types').RequestHandler = (event) => {
 export const POST: import('./$types').RequestHandler = async (event) => {
 	const store = database();
 	const session = sessionByCode(store, event.params.sessionCode);
-	if (!session) return json({ ok: false, message: 'Sesi tidak tersedia.' }, { status: 404 });
+	if (!session) return json({ ok: false, message: 'Session not available.' }, { status: 404 });
 	const token = event.cookies.get(`edu_p_${session.id}`);
-	if (!token) return json({ ok: false, message: 'Peserta belum terautentikasi.' }, { status: 401 });
+	if (!token)
+		return json({ ok: false, message: 'Participant not authenticated.' }, { status: 401 });
 	try {
 		const data = wordcloudResponseSchema.parse(await body(event));
 		const result = submitWordcloudResponse(store, session.id, data.questionId, token, data.word);

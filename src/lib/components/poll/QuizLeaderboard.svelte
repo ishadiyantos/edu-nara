@@ -71,19 +71,19 @@
 	</div>
 	<div class="text-center">
 		<p class="text-xs font-black uppercase tracking-[0.25em] text-amber-300">Quiz final</p>
-		<h2 class="mt-2 text-3xl font-black sm:text-5xl">Juara kelas</h2>
-		<p class="mt-2 text-sm text-white/60">Papan peringkat lengkap sesi ini</p>
+		<h2 class="mt-2 text-3xl font-black sm:text-5xl">Class champions</h2>
+		<p class="mt-2 text-sm text-white/60">Full leaderboard for this session</p>
 	</div>
 	{#if entries.length}
 		<div
 			class="quiz-leaderboard-scroll mx-auto mt-8 max-w-3xl"
 			data-testid="quiz-leaderboard-scroll"
 			bind:this={sheet}
-			aria-label="Daftar peringkat peserta"
+			aria-label="Participant rankings"
 		>
 			<div
 				class="mx-auto grid max-w-3xl grid-cols-3 items-end gap-2 sm:gap-5"
-				aria-label="Podium tiga peserta teratas"
+				aria-label="Top three participants"
 			>
 				{#each podiumOrder as podiumIndex}
 					{@const entry = entries[podiumIndex]}
@@ -98,7 +98,7 @@
 							>
 							<p class="mt-2 w-full truncate text-sm font-black sm:text-lg">{entry.displayName}</p>
 							<p class="text-xs font-bold text-amber-200 sm:text-sm">
-								{entry.score.toLocaleString('id-ID')} poin
+								{entry.score.toLocaleString('en-US')} points
 							</p>
 							<div
 								class="podium-block mt-3 grid w-full place-items-center rounded-t-2xl border border-white/10 bg-white/10 font-black backdrop-blur {podiumIndex ===
@@ -116,12 +116,12 @@
 			</div>
 			<div class="mt-8 overflow-x-auto rounded-2xl border border-white/10 bg-black/15">
 				<table class="w-full min-w-[420px] text-left text-sm">
-					<caption class="sr-only">Peringkat dan hasil seluruh peserta Quiz</caption><thead
+					<caption class="sr-only">Rankings and results for all quiz participants</caption><thead
 						class="bg-white/10 text-xs uppercase tracking-wider text-white/60"
 						><tr
-							><th class="px-4 py-3">#</th><th class="px-4 py-3">Peserta</th><th
-								class="px-4 py-3 text-right">Dijawab</th
-							><th class="px-4 py-3 text-right">Skor</th></tr
+							><th class="px-4 py-3">#</th><th class="px-4 py-3">Participant</th><th
+								class="px-4 py-3 text-right">Answered</th
+							><th class="px-4 py-3 text-right">Score</th></tr
 						></thead
 					><tbody
 						>{#each entries as entry}<tr
@@ -131,7 +131,7 @@
 								><td class="px-4 py-3 font-bold">{entry.displayName}</td><td
 									class="px-4 py-3 text-right text-white/70">{entry.answered}</td
 								><td class="px-4 py-3 text-right font-black"
-									>{entry.score.toLocaleString('id-ID')}</td
+									>{entry.score.toLocaleString('en-US')}</td
 								></tr
 							>{/each}</tbody
 					>
@@ -144,11 +144,11 @@
 				aria-pressed={paused}
 				onclick={() => (paused = !paused)}
 			>
-				{paused ? 'Lanjutkan gulir' : 'Jeda gulir'}
+				{paused ? 'Resume scrolling' : 'Pause scrolling'}
 			</button>{/if}
 	{:else}
 		<p class="mt-8 rounded-2xl bg-white/10 p-6 text-center font-semibold text-white/70">
-			Belum ada peserta yang mengikuti Quiz ini.
+			No participants have joined this quiz yet.
 		</p>
 	{/if}
 </section>

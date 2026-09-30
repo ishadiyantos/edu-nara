@@ -4,13 +4,13 @@
 		total: number;
 		label?: string;
 	};
-	let { current, total, label = 'Pertanyaan' }: Props = $props();
+	let { current, total, label = 'Question' }: Props = $props();
 	let pct = $derived(Math.min(100, Math.round((current / total) * 100)));
 </script>
 
 <div class="flex flex-col gap-1.5" role="group" aria-label="{label} progress">
 	<div class="flex justify-between text-xs font-medium text-muted">
-		<span>{label} {current} dari {total}</span>
+		<span>{label} {current} of {total}</span>
 		<span>{pct}%</span>
 	</div>
 	<div

@@ -10,7 +10,7 @@
 		size?: number;
 		label?: string;
 	};
-	let { value, size = 200, label = 'QR code sesi' }: Props = $props();
+	let { value, size = 200, label = 'Session QR code' }: Props = $props();
 	let matrix = $derived.by(() => {
 		try {
 			const cells = QRCode.create(value, { errorCorrectionLevel: 'M' }).modules;
@@ -42,7 +42,7 @@
 			{/each}
 		</svg>
 	{:else}
-		<p class="p-4 text-sm text-danger">Gagal membuat QR.</p>
+		<p class="p-4 text-sm text-danger">Could not generate QR code.</p>
 	{/if}
 </div>
 

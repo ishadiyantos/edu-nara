@@ -20,7 +20,7 @@ test('seed validates credentials, stores no plaintext, is idempotent and never r
 	const session = await login(s, credentials, undefined, 1000);
 	expect(authenticate(s, session.token, 1001)?.id).toBe(admin.id);
 	await expect(login(s, { ...credentials, password: 'incorrect' })).rejects.toThrow(
-		'Email atau kata sandi salah.'
+		'Incorrect email or password.'
 	);
 });
 test('login rotates opaque persisted sessions, expiry and logout revoke access', async () => {

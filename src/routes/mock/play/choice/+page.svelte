@@ -23,13 +23,13 @@
 </script>
 
 <svelte:head>
-	<title>Pertanyaan — Edu Nara</title>
+	<title>Question — Edu Nara</title>
 </svelte:head>
 
 <main class="min-h-dvh bg-bg pb-24 pt-6">
 	<Container size="narrow">
 		<div class="mb-4 flex items-center justify-between">
-			<Badge tone="success" dot>Terhubung</Badge>
+			<Badge tone="success" dot>Connected</Badge>
 			<span class="font-mono text-xs text-muted">ABC7XK</span>
 		</div>
 		<div class="mb-4">
@@ -56,12 +56,12 @@
 			</div>
 			<div class="mt-6">
 				<Button block size="lg" onclick={submit} disabled={!selected || submitted}>
-					{submitted ? '✓ Terkirim' : 'Kirim jawaban'}
+					{submitted ? '✓ Terkirim' : 'Submit answer'}
 				</Button>
 			</div>
 		</Card>
 	</Container>
 	{#if submitted}
-		<Toast tone="success" message="Jawaban terkirim — terima kasih!" />
+		<Toast tone="success" message="Answer submitted — thank you!" />
 	{/if}
 </main>

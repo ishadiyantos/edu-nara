@@ -10,12 +10,12 @@ export const POST: import('./$types').RequestHandler = async (event) => {
 	try {
 		adminId = requireAdmin(event);
 	} catch {
-		return json({ ok: false, message: 'Silakan masuk.' }, { status: 401 });
+		return json({ ok: false, message: 'Please log in.' }, { status: 401 });
 	}
 	try {
 		const store = database();
 		const session = sessionByCode(store, event.params.sessionCode);
-		if (!session) return json({ ok: false, message: 'Sesi tidak tersedia.' }, { status: 404 });
+		if (!session) return json({ ok: false, message: 'Session not available.' }, { status: 404 });
 		const data = boardOrderSchema.parse(await body(event));
 		const order = reorderBoardPosts(store, adminId, session.id, event.params.columnId, data.ids);
 		return json({ ok: true, columnId: event.params.columnId, ids: order });

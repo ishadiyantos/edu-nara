@@ -30,25 +30,25 @@
 				class="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-white/10 px-4 py-2 text-sm font-black text-white/80 shadow-[0_0_24px_rgba(34,211,238,0.18)] backdrop-blur-md transition hover:bg-white/20 hover:text-white sm:mb-6"
 				href="/"
 			>
-				← Exit session <span class="sr-only">Keluar dari sesi</span>
+				← Exit session <span class="sr-only">Exit session</span>
 			</a>{/if}
 
 		{#if data.activityType === 'board' && data.board}
 			<div class="student-board-header">
 				<div class="student-board-copy">
 					<div class="student-board-identity">
-						<p>Edu Nara · Papan diskusi</p>
+						<p>Edu Nara · Discussion board</p>
 						<strong>{data.snapshot.code}</strong>
 					</div>
 					<h1 class="student-board-title">{data.snapshot.title}</h1>
 				</div>
 				<div class="student-board-actions">
-					<a class="student-board-pill" href="/" aria-label="Exit session" title="Keluar dari sesi"
+					<a class="student-board-pill" href="/" aria-label="Exit session" title="Exit session"
 						><span aria-hidden="true">←</span><span class="exit-label">Exit session</span></a
 					>
 					<div class="student-board-toolbar-host" bind:this={studentToolbarHost}></div>
 					<p class="student-board-status">
-						<span aria-hidden="true"></span><b>{data.snapshot.count}</b> peserta · Live · {data
+						<span aria-hidden="true"></span><b>{data.snapshot.count}</b> participants · Live · {data
 							.snapshot.state}
 					</p>
 				</div>
@@ -66,7 +66,7 @@
 					<p
 						class="text-xs font-black uppercase tracking-[0.22em] text-[#67e8f9] drop-shadow-[0_0_12px_rgba(34,211,238,0.55)]"
 					>
-						{data.snapshot.code} · SESSION LIVE <span class="sr-only">sesi berlangsung</span>
+						{data.snapshot.code} · SESSION LIVE <span class="sr-only">session in progress</span>
 					</p>
 					<h1
 						class="mt-2 text-2xl font-black tracking-[-0.04em] text-white drop-shadow-[0_0_24px_rgba(168,85,247,0.32)] sm:text-4xl"

@@ -30,7 +30,7 @@ describe('saveImageUpload', () => {
 	it('rejects invalid bytes before creating upload directory or file', () => {
 		const directory = join(uploadDir(), 'uploads');
 		expect(() => saveImageUpload(new Uint8Array([0x7f, 0x45, 0x4c, 0x46]), directory)).toThrow(
-			'Format gambar tidak didukung.'
+			'Image format not supported.'
 		);
 		expect(existsSync(directory)).toBe(false);
 	});

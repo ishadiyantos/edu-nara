@@ -31,7 +31,7 @@
 		<h2 id={`${id}-title`} class="text-xl font-bold text-text">{title}</h2>
 		<button
 			type="button"
-			aria-label="Tutup"
+			aria-label="Close"
 			onclick={() => dialog?.close()}
 			class="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-muted hover:bg-slate-100"
 		>

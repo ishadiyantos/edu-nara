@@ -15,12 +15,12 @@ import { z } from 'zod';
  * src/lib/validation.ts milik worker lain (hotspot bersama).
  */
 
-const message = 'Tautan harus berupa URL http atau https yang valid.';
+const message = 'Link must be a valid http or https URL.';
 
 export const linkUrlSchema = z
 	.string()
 	.trim()
-	.min(1, 'Tautan wajib diisi.')
+	.min(1, 'Link is required.')
 	.transform((value, ctx) => {
 		try {
 			if (!/^https?:\/\/[^/\s\\]+(\/[^\s\\]*)?$/i.test(value) || /%(?![0-9a-f]{2})/i.test(value))
@@ -42,5 +42,5 @@ export const validateLinkUrl = (value: unknown): LinkUrlResult => {
 	const result = linkUrlSchema.safeParse(value);
 	return result.success
 		? ({ ok: true, url: result.data } as const)
-		: ({ ok: false, error: result.error.issues[0]?.message ?? 'Tautan tidak valid.' } as const);
+		: ({ ok: false, error: result.error.issues[0]?.message ?? 'Invalid link.' } as const);
 };

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { openDatabase } from '../../src/lib/server/db/client';
+// ponytail: spawn + tsx boot can exceed default 5s under parallel suite load.
 test('startup fails closed with missing seed, valid env initializes once without leaking password', () => {
 	const dir = mkdtempSync(join(tmpdir(), 'edu-start-'));
 	const path = join(dir, 'test.db');
@@ -25,4 +26,4 @@ test('startup fails closed with missing seed, valid env initializes once without
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}
-});
+}, 20000);

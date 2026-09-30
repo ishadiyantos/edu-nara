@@ -17,7 +17,7 @@ function owned(store: ReturnType<typeof database>, ownerId: string, id: string) 
 			and(eq(activities.id, id), eq(activities.ownerId, ownerId), eq(activities.type, 'wordcloud'))
 		)
 		.get();
-	if (!activity) error(404, 'Aktivitas tidak ditemukan.');
+	if (!activity) error(404, 'Activity not found.');
 	return activity;
 }
 
@@ -55,12 +55,12 @@ export const actions = {
 						)
 					)
 					.get();
-				if (!row) return fail(404, { message: 'Pertanyaan tidak ditemukan.' });
+				if (!row) return fail(404, { message: 'Question not found.' });
 				updateWordcloudQuestion(store, owner, row.id, input);
 			} else {
 				createWordcloudQuestion(store, owner, event.params.id, input);
 			}
-			return { message: 'Pertanyaan tersimpan.' };
+			return { message: 'Question saved.' };
 		} catch (err) {
 			return fail(400, { message: message(err) });
 		}

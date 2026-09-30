@@ -7,32 +7,33 @@ test('word cloud edit, submit, moderate, reconnect, native fullscreen and fallba
 	test.setTimeout(60000);
 	await page.goto('/admin/login');
 	await page.getByLabel('Email').fill('phase1@example.test');
-	await page.getByLabel('Kata sandi').fill('phase1-test-only-password-2026');
-	await page.getByRole('button', { name: 'Masuk', exact: true }).click();
-	await page.getByLabel('Judul aktivitas').fill(`Cloud flow ${Date.now()}`);
-	await page.getByLabel('Jenis aktivitas').selectOption('wordcloud');
-	await page.getByRole('button', { name: 'Buat aktivitas' }).click();
-	await page.getByRole('link', { name: 'Buka editor' }).first().click();
+	await page.getByLabel('Password').fill('phase1-test-only-password-2026');
+	await page.getByRole('button', { name: 'Log in', exact: true }).click();
+	await page.getByRole('button', { name: 'Create Word Cloud' }).click();
+	const dialog = page.getByRole('dialog', { name: 'Create activity' });
+	await dialog.getByLabel('Activity title').fill(`Cloud flow ${Date.now()}`);
+	await dialog.getByRole('button', { name: 'Create activity', exact: true }).click();
+	await expect(page).toHaveURL(/admin\/activities\//);
 	await page.getByTestId('wordcloud-add-question').click();
-	await page.getByLabel('Pertanyaan', { exact: true }).fill('Bagaimana kelas ini?');
-	await expect(page.getByLabel('Moderasi sebelum tampil')).toBeChecked();
-	await page.getByLabel('Batas kiriman per peserta').selectOption('2');
-	await page.getByRole('button', { name: 'Simpan pertanyaan' }).click();
-	await expect(page.getByRole('status')).toHaveText('Pertanyaan tersimpan.');
+	await page.getByLabel('Question', { exact: true }).fill('Bagaimana kelas ini?');
+	await expect(page.getByLabel('Moderate before display')).toBeChecked();
+	await page.getByLabel('Submission limit per participant').selectOption('2');
+	await page.getByRole('button', { name: 'Save question' }).click();
+	await expect(page.getByRole('status')).toHaveText('Question saved.');
 	await page.getByTestId('wordcloud-add-question').click();
-	await page.getByLabel('Pertanyaan', { exact: true }).fill('Satu kata untuk dosen?');
-	await page.getByRole('button', { name: 'Simpan pertanyaan' }).click();
-	await expect(page.getByRole('status')).toHaveText('Pertanyaan tersimpan.');
+	await page.getByLabel('Question', { exact: true }).fill('Satu kata untuk dosen?');
+	await page.getByRole('button', { name: 'Save question' }).click();
+	await expect(page.getByRole('status')).toHaveText('Question saved.');
 	await page.reload();
 	await expect(page.getByTestId('wordcloud-question-item')).toHaveCount(2);
 	const popupPromise = page.context().waitForEvent('page');
-	await page.getByRole('button', { name: 'Luncurkan Word Cloud' }).click();
+	await page.getByRole('button', { name: 'Launch Word Cloud' }).click();
 	const presenter = await popupPromise;
 	await presenter.waitForLoadState();
 	await presenter.bringToFront();
 	page = presenter;
 	await expect(page.getByTestId('joining-instructions')).toBeVisible();
-	await expect(page.getByRole('img', { name: 'QR code sesi' })).toBeVisible();
+	await expect(page.getByRole('img', { name: 'Session QR code' })).toBeVisible();
 	await expect(page.getByTestId('presenter-stage')).toHaveCount(0);
 	const screen = page.getByTestId('session-screen');
 	const bounds = await screen.boundingBox();
@@ -50,7 +51,7 @@ test('word cloud edit, submit, moderate, reconnect, native fullscreen and fallba
 			return native.apply(this, args);
 		};
 	});
-	await page.getByRole('button', { name: 'Buka sesi', exact: true }).click();
+	await page.getByRole('button', { name: 'Open session', exact: true }).click();
 	await expect(page.locator('header')).toContainText('open');
 	await page.getByTestId('fullscreen-button').click();
 	await expect(page.getByTestId('session-screen')).toHaveClass(/presentation/);
@@ -65,14 +66,14 @@ test('word cloud edit, submit, moderate, reconnect, native fullscreen and fallba
 	try {
 		const student = await context.newPage();
 		await student.goto(`/join?code=${code}`);
-		await student.getByLabel('Nama tampilan').fill('Cloud participant');
-		await student.getByRole('button', { name: 'Bergabung', exact: true }).click();
+		await student.getByLabel('Display name').fill('Cloud participant');
+		await student.getByRole('button', { name: 'Join session', exact: true }).click();
 		await expect(student.getByTestId('wordcloud-player')).toBeVisible();
-		await student.getByLabel('Kata atau frasa', { exact: true }).fill('  SÉRU  ');
-		await student.getByRole('button', { name: 'Kirim', exact: true }).click();
-		await expect(student.getByRole('list', { name: 'Kiriman Anda' })).toContainText('séru');
+		await student.getByLabel('Word or phrase', { exact: true }).fill('  SÉRU  ');
+		await student.getByRole('button', { name: 'Submit', exact: true }).click();
+		await expect(student.getByRole('list', { name: 'Your submissions' })).toContainText('séru');
 		await student.reload();
-		await expect(student.getByRole('list', { name: 'Kiriman Anda' })).toContainText('séru');
+		await expect(student.getByRole('list', { name: 'Your submissions' })).toContainText('séru');
 		await expect(student.getByTestId('wordcloud-results')).not.toContainText('séru');
 		await expect(page.getByTestId('wordcloud-results')).not.toContainText('séru');
 		// Observer participant cannot see other participant's pending text in SSR, JSON or SSE snapshot/replay.
@@ -80,8 +81,8 @@ test('word cloud edit, submit, moderate, reconnect, native fullscreen and fallba
 		try {
 			const observer = await observerContext.newPage();
 			await observer.goto(`/join?code=${code}`);
-			await observer.getByLabel('Nama tampilan').fill('Observer');
-			await observer.getByRole('button', { name: 'Bergabung', exact: true }).click();
+			await observer.getByLabel('Display name').fill('Observer');
+			await observer.getByRole('button', { name: 'Join session', exact: true }).click();
 			await expect(observer.getByTestId('wordcloud-player')).toBeVisible();
 			expect(await (await observer.request.get(`/play/${code}`)).text()).not.toContain('séru');
 			expect(
@@ -106,7 +107,7 @@ test('word cloud edit, submit, moderate, reconnect, native fullscreen and fallba
 		await page.keyboard.press('Escape');
 		await expect(page.getByTestId('session-controls')).toBeVisible();
 		await expect(page.getByTestId('moderation-item')).toContainText('séru');
-		await page.getByRole('button', { name: 'Setujui', exact: true }).click();
+		await page.getByRole('button', { name: 'Approve', exact: true }).click();
 		await expect(page.getByTestId('wordcloud-results')).toContainText('séru');
 		await expect(student.getByTestId('wordcloud-results')).toContainText('séru');
 		await student.reload();
@@ -147,10 +148,10 @@ test('word cloud edit, submit, moderate, reconnect, native fullscreen and fallba
 		await page.setViewportSize(viewport);
 		await page.keyboard.press('Escape');
 		await expect(page.getByTestId('session-screen')).not.toHaveClass(/presentation/);
-		await page.getByRole('button', { name: 'Tolak', exact: true }).click();
+		await page.getByRole('button', { name: 'Reject', exact: true }).click();
 		await expect(student.getByTestId('wordcloud-results')).not.toContainText('séru');
 		// Teacher advances to the second question; both screens follow the same active question.
-		await page.getByRole('button', { name: 'Soal 2: Satu kata untuk dosen?', exact: true }).click();
+		await page.getByRole('button', { name: 'Next', exact: true }).click();
 		await expect(page.getByRole('heading', { level: 1 })).toContainText('Satu kata untuk dosen?');
 		await expect(
 			student.getByTestId('wordcloud-player').getByRole('heading', { level: 1 })
@@ -168,38 +169,23 @@ test('word cloud edit, submit, moderate, reconnect, native fullscreen and fallba
 		await expect(page.getByTestId('session-screen')).toHaveClass(/presentation/);
 		await expect(page.getByTestId('session-controls')).toHaveCSS('opacity', '0');
 		await page.mouse.move(20, 20);
-		await expect(page.getByRole('navigation', { name: 'Kontrol presentasi' })).toHaveCSS(
-			'opacity',
-			'1'
-		);
-		await expect(page.getByRole('navigation', { name: 'Kontrol presentasi' })).toHaveCSS(
-			'opacity',
-			'0'
-		);
+		await expect(page.getByTestId('session-controls')).toHaveCSS('opacity', '0.92');
+		await expect(page.getByTestId('session-controls')).toHaveCSS('opacity', '0');
 		await page.keyboard.press('Tab');
 		await page.getByTestId('exit-fullscreen').focus();
 		await expect(page.getByTestId('exit-fullscreen')).toBeFocused();
 		await page.keyboard.press('Enter');
 		await expect(page.getByTestId('session-controls')).toBeVisible();
-		await page.getByRole('button', { name: 'Akhiri sesi', exact: true }).click();
+		await page.getByRole('button', { name: 'End session', exact: true }).click();
 		await expect(page.locator('header')).toContainText('ended');
-		const firstQuestion = page.getByRole('button', {
-			name: 'Soal 1: Bagaimana kelas ini?',
-			exact: true
-		});
-		await expect(firstQuestion).toBeEnabled();
-		await firstQuestion.click();
-		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bagaimana kelas ini?');
-		await page.reload();
-		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bagaimana kelas ini?');
 		await page.getByTestId('fullscreen-button').click();
 		await page.keyboard.press('ArrowRight');
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Satu kata untuk dosen?');
-		await expect(page.getByRole('button', { name: 'Sebelumnya', exact: true })).toBeEnabled();
+		await expect(page.getByRole('button', { name: 'Previous', exact: true })).toBeEnabled();
 		await page.keyboard.press('ArrowLeft');
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bagaimana kelas ini?');
 		await page.keyboard.press('Escape');
-		await expect(page.getByRole('button', { name: 'Buka sesi', exact: true })).toBeDisabled();
+		await expect(page.getByRole('button', { name: 'Open session', exact: true })).toBeDisabled();
 		await student.setViewportSize({ width: 360, height: 780 });
 		expect(await student.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
 			true

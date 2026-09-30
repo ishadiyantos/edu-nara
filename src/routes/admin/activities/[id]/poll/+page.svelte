@@ -7,26 +7,26 @@
 	const editing = $derived(data.questions.find((question) => question.id === editingId));
 </script>
 
-<svelte:head><title>Editor kuis — {data.activity.title}</title></svelte:head>
+<svelte:head><title>Quiz editor — {data.activity.title}</title></svelte:head>
 <main class="min-h-dvh bg-[#f7f4ec] py-6 sm:py-10">
 	<Container size="app">
-		<a class="link mb-6 inline-flex" href="/admin">← Kembali ke workspace</a>
+		<a class="link mb-6 inline-flex" href="/admin">← Back to workspace</a>
 		<div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
 			<section>
 				<div class="mb-5 flex items-end justify-between gap-4">
 					<div>
-						<p class="eyebrow text-[#5967e8]">Quiz · bank pertanyaan</p>
+						<p class="eyebrow text-[#5967e8]">Quiz · question bank</p>
 						<h1 class="mt-2 text-3xl font-black tracking-tight text-primary sm:text-4xl">
-							Bangun kuismu
+							Build your quiz
 						</h1>
 						<p class="mt-2 text-sm leading-6 text-muted">
-							Tambahkan beberapa pertanyaan dan tandai semua jawaban yang benar.
+							Add questions and mark all correct answers.
 						</p>
 					</div>
 					<span
 						class="hidden rounded-2xl bg-primary px-4 py-3 text-center text-white shadow-[0_5px_0_#0d1d2b] sm:block"
 						><strong class="block text-2xl">{data.questions.length}</strong><small
-							class="text-white/60">pertanyaan</small
+							class="text-white/60">questions</small
 						></span
 					>
 				</div>
@@ -64,16 +64,16 @@
 														name={`option${optionIndex}`}
 														value={option.id}
 														checked={option.isCorrect}
-														aria-label={`Tandai opsi ${String.fromCharCode(65 + optionIndex)} sebagai jawaban benar`}
+														aria-label={`Mark option ${String.fromCharCode(65 + optionIndex)} as correct`}
 													/><span class="font-black text-[#5967e8]"
 														>{String.fromCharCode(65 + optionIndex)}</span
 													>{option.label}{#if option.isCorrect}<span
-															class="ml-auto text-xs font-black text-[#18733c]">BENAR</span
+															class="ml-auto text-xs font-black text-[#18733c]">CORRECT</span
 														>{/if}</label
 												>{/each}
 										</div>
 										<Button class="mt-3" type="submit" variant="ghost" size="sm"
-											>Simpan jawaban benar</Button
+											>Save correct answers</Button
 										>
 									</form>
 									<Button
@@ -83,7 +83,7 @@
 										onclick={() => {
 											editingId = question.id;
 											showForm = true;
-										}}>Ubah soal</Button
+										}}>Edit question</Button
 									>
 								</div>
 							</div></Card
@@ -95,10 +95,10 @@
 						><div class="flex items-center justify-between gap-3">
 							<div>
 								<p class="eyebrow text-[#5967e8]">
-									{editing ? 'Ubah pertanyaan' : 'Pertanyaan baru'}
+									{editing ? 'Edit question' : 'New question'}
 								</p>
 								<h2 class="mt-1 text-xl font-black text-primary">
-									{editing ? 'Sunting tantangan' : 'Tambah tantangan'}
+									{editing ? 'Edit challenge' : 'Add challenge'}
 								</h2>
 							</div>
 							<button
@@ -107,29 +107,36 @@
 								onclick={() => {
 									showForm = false;
 									editingId = null;
-								}}>Tutup</button
+								}}>Close</button
 							>
 						</div>
 						{#key editingId}
 							<form
 								method="POST"
 								action={editing ? '?/editQuestion' : '?/addQuestion'}
-								use:enhance
+								use:enhance={() =>
+									async ({ result, update }) => {
+										await update();
+										if (result.type === 'success') {
+											showForm = false;
+											editingId = null;
+										}
+									}}
 								class="mt-6 grid gap-5"
 							>
 								<input type="hidden" name="questionId" value={editingId ?? ''} />
 								<Input
-									label="Pertanyaan"
+									label="Question"
 									name="prompt"
 									value={editing?.prompt ?? ''}
 									required
 									maxlength={1000}
-									placeholder="Contoh: Apa ibu kota Indonesia?"
+									placeholder="Example: What is the capital of Indonesia?"
 								/>
 								<fieldset>
 									<legend class="mb-3 text-sm font-bold text-primary"
-										>Pilihan jawaban <span class="font-normal text-muted"
-											>— centang semua jawaban yang benar</span
+										>Answer choices <span class="font-normal text-muted"
+											>— select all correct answers</span
 										></legend
 									>
 									<div class="grid gap-3 sm:grid-cols-2">
@@ -143,32 +150,32 @@
 														name={`correct${i}`}
 														value="on"
 														checked={editing?.options[i]?.isCorrect ?? false}
-														aria-label={`Tandai opsi ${letter} sebagai jawaban benar`}
+														aria-label={`Mark option ${letter} as correct`}
 													/><span
 														class="grid h-8 w-8 place-items-center rounded-lg bg-[#5967e8] text-sm font-black text-white"
 														>{letter}</span
 													><input
 														class="min-w-0 flex-1 border-0 bg-transparent text-sm font-semibold text-primary outline-none"
 														name={`option${letter}`}
-														aria-label={`Jawaban ${letter}`}
+														aria-label={`Answer ${letter}`}
 														value={editing?.options[i]?.label ?? ''}
 														required={i < 2}
 														maxlength="200"
-														placeholder={`Jawaban ${letter}`}
+														placeholder={`Answer ${letter}`}
 													/></label
 												>
 												<p
 													class="mt-2 pl-11 text-[11px] font-bold uppercase tracking-wider text-muted"
 												>
-													Centang untuk jawaban benar
+													Select for a correct answer
 												</p>
 											</div>{/each}
 									</div>
 								</fieldset>
 								<fieldset>
 									<legend class="mb-3 text-sm font-bold text-primary"
-										>Waktu jawab <span class="font-normal text-muted"
-											>— berapa detik mahasiswa punya waktu untuk soal ini</span
+										>Answer time <span class="font-normal text-muted"
+											>— seconds students have to answer this question</span
 										></legend
 									>
 									<div class="flex flex-wrap gap-2">
@@ -186,7 +193,7 @@
 									</div>
 								</fieldset>
 								<Button type="submit" block size="lg"
-									>{editing ? 'Simpan perubahan' : 'Simpan pertanyaan'}
+									>{editing ? 'Save changes' : 'Save question'}
 									<span aria-hidden="true">→</span></Button
 								>
 							</form>{/key}</Card
@@ -198,7 +205,7 @@
 						onclick={() => {
 							editingId = null;
 							showForm = true;
-						}}>+ Tambah pertanyaan</Button
+						}}>+ Add question</Button
 					>{/if}
 				{#if data.questions.length}<form
 						class="mt-4"
@@ -209,15 +216,15 @@
 					>
 						<input type="hidden" name="activityId" value={data.activity.id} /><label
 							class="mb-3 grid gap-1 text-sm font-bold text-primary"
-							>Mode kuis<select
+							>Quiz mode<select
 								name="quizMode"
 								class="rounded-xl border border-border bg-white px-3 py-2 text-sm"
-								><option value="guided">Terpandu presenter</option><option value="self_paced"
-									>Mandiri tanpa timer</option
+								><option value="guided">Presenter-guided</option><option value="self_paced"
+									>Self-paced, no timer</option
 								></select
 							></label
 						><Button type="submit" variant="ghost" block
-							>Luncurkan kuis <span aria-hidden="true">⚡</span></Button
+							>Launch quiz <span aria-hidden="true">⚡</span></Button
 						>
 					</form>{/if}
 			</section>
@@ -229,14 +236,14 @@
 							aria-hidden="true"
 						></div>
 						<p class="relative text-xs font-black uppercase tracking-[0.2em] text-[#9fe7dd]">
-							Preview mahasiswa
+							Student preview
 						</p>
 						<p class="relative mt-5 text-xs font-bold text-white/60">
-							RONDE 1 · Pilih semua jawaban yang benar
+							ROUND 1 · Select all correct answers
 						</p>
-						<p class="relative mt-2 text-xl font-black leading-7">Apa yang ingin kamu jawab?</p>
+						<p class="relative mt-2 text-xl font-black leading-7">What is your answer?</p>
 						<div class="relative mt-5 grid gap-2">
-							{#each ['Pilihan pertama', 'Pilihan kedua', 'Pilihan ketiga', 'Pilihan keempat'] as option, i}<div
+							{#each ['First choice', 'Second choice', 'Third choice', 'Fourth choice'] as option, i}<div
 									class="flex min-h-12 items-center gap-3 rounded-xl {[
 										'bg-[#ff6b4a]',
 										'bg-[#2ab7a9]',
@@ -253,7 +260,7 @@
 					<div
 						class="border-t border-white/10 px-5 py-4 text-center text-sm font-bold text-white/60"
 					>
-						Kunci jawaban → dapatkan poin
+						Lock in your answer → earn points
 					</div></Card
 				>
 			</aside>

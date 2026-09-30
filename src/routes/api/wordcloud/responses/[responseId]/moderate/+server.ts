@@ -9,7 +9,7 @@ export const POST: import('./$types').RequestHandler = async (event) => {
 	try {
 		adminId = requireAdmin(event);
 	} catch {
-		return json({ ok: false, message: 'Silakan masuk.' }, { status: 401 });
+		return json({ ok: false, message: 'Please log in.' }, { status: 401 });
 	}
 	try {
 		const data = await body(event);

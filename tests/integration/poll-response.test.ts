@@ -99,7 +99,7 @@ test('response cannot target another activity and closed sessions reject', async
 	});
 	expect(() =>
 		submitChoiceResponse(store, session.id, question.id, ana.token, [question.options[0].id])
-	).toThrow('Pilihan tidak tersedia.');
+	).toThrow('Choice not available.');
 	changeState(store, admin.id, session.id, 'closed');
 });
 test('penilaian tetap privat untuk peserta meskipun hasil dibuka', async () => {

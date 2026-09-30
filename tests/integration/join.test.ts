@@ -37,7 +37,7 @@ test('owner launches unique draft, controls lifecycle, and cannot reopen ended s
 	expect(attempts).toBe(3);
 	expect(second.code).toBe('DEF567');
 	expect(() => launchSession(s, a.id, activity.id, () => 'ABC234')).toThrow(
-		'Kode sesi tidak tersedia.'
+		'Session code not available.'
 	);
 	expect(() => changeState(s, 'other', session.id, 'open')).toThrow();
 	for (const state of ['open', 'closed', 'open', 'ended'] as const)

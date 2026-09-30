@@ -9,7 +9,7 @@ import { cookieOptions } from './security';
 import { events } from './events';
 import { snapshot } from './sessions';
 export function requireAdmin(event: RequestEvent) {
-	if (!event.locals.admin) error(401, 'Silakan masuk.');
+	if (!event.locals.admin) error(401, 'Please log in.');
 	return event.locals.admin.id;
 }
 export function message(err: unknown) {
@@ -17,7 +17,7 @@ export function message(err: unknown) {
 		? err.issues[0].message
 		: err instanceof UserError
 			? err.message
-			: 'Permintaan gagal.';
+			: 'Request failed.';
 }
 export async function body(event: RequestEvent) {
 	const content = event.request.headers.get('content-type') ?? '';
@@ -32,7 +32,7 @@ export async function body(event: RequestEvent) {
 				size += value.byteLength;
 				if (size > 4096) {
 					await reader.cancel();
-					error(413, 'Permintaan terlalu besar.');
+					error(413, 'Request is too large.');
 				}
 				chunks.push(value);
 			}
@@ -45,10 +45,10 @@ export async function body(event: RequestEvent) {
 		try {
 			return JSON.parse(text);
 		} catch {
-			error(400, 'JSON tidak valid.');
+			error(400, 'Invalid JSON.');
 		}
 	}
-	if (!content.includes('application/x-www-form-urlencoded')) error(415, 'Format tidak didukung.');
+	if (!content.includes('application/x-www-form-urlencoded')) error(415, 'Format not supported.');
 	return Object.fromEntries(new URLSearchParams(text));
 }
 export function join(event: RequestEvent, input: unknown) {

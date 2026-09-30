@@ -3,13 +3,13 @@ import { expect, test } from '@playwright/test';
 test('modal keeps keyboard focus inside and restores opener after Escape', async ({ page }) => {
 	await page.goto('/design', { waitUntil: 'networkidle' });
 	await expect(page.getByRole('heading', { name: 'Design Kitchen Sink' })).toBeVisible();
-	const opener = page.getByRole('button', { name: 'Buka Modal', exact: true });
-	const modal = page.getByRole('dialog', { name: 'Konfirmasi', exact: true });
+	const opener = page.getByRole('button', { name: 'Open modal', exact: true });
+	const modal = page.getByRole('dialog', { name: 'Confirmation', exact: true });
 	await opener.click();
 	await expect(modal).toBeVisible();
 
-	const close = modal.getByRole('button', { name: 'Tutup', exact: true });
-	const confirm = modal.getByRole('button', { name: 'Konfirmasi', exact: true });
+	const close = modal.getByRole('button', { name: 'Close', exact: true });
+	const confirm = modal.getByRole('button', { name: 'Confirm', exact: true });
 	await confirm.focus();
 	await page.keyboard.press('Tab');
 	// Native dialogs allow browser chrome in the tab order, never background page controls.
@@ -33,7 +33,7 @@ test('modal keeps keyboard focus inside and restores opener after Escape', async
 	const closeBounds = await close.boundingBox();
 	expect(closeBounds?.width).toBeGreaterThanOrEqual(44);
 	expect(closeBounds?.height).toBeGreaterThanOrEqual(44);
-	await modal.getByRole('button', { name: 'Batal', exact: true }).click();
+	await modal.getByRole('button', { name: 'Cancel', exact: true }).click();
 	await expect(modal).toBeHidden();
 	await expect(opener).toBeFocused();
 });

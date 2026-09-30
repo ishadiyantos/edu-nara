@@ -6,7 +6,7 @@ import { boardImageAccess } from '$lib/server/board';
 import { readStoredImage, uploadDirectory } from '$lib/server/media-storage';
 export const GET: import('./$types').RequestHandler = (event) => {
 	const id = event.params.imageId;
-	if (!/^[0-9a-f-]{36}$/.test(id)) error(404, 'Gambar tidak ditemukan.');
+	if (!/^[0-9a-f-]{36}$/.test(id)) error(404, 'Image not found.');
 	const store = database();
 	const row = store.db
 		.select({ sessionId: boardPosts.sessionId })
@@ -22,9 +22,9 @@ export const GET: import('./$types').RequestHandler = (event) => {
 			event.cookies.get(`edu_p_${row.sessionId}`)
 		)
 	)
-		error(404, 'Gambar tidak ditemukan.');
+		error(404, 'Image not found.');
 	const image = readStoredImage(uploadDirectory(), id);
-	if (!image) error(404, 'Gambar tidak ditemukan.');
+	if (!image) error(404, 'Image not found.');
 	return new Response(new Uint8Array(image.bytes), {
 		headers: {
 			'Content-Type': image.contentType,

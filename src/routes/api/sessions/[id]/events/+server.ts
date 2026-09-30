@@ -15,10 +15,10 @@ export const GET: import('./$types').RequestHandler = (event) => {
 		adminCookie = event.cookies.get('edu_admin');
 	const admin = authenticate(store, adminCookie);
 	const valid = () => authorizeSession(store, id, authenticate(store, adminCookie)?.id, guest);
-	if (!valid()) error(401, 'Akses sesi ditolak.');
+	if (!valid()) error(401, 'Session access denied.');
 	const retry = limits.take(`stream:${admin?.id ?? guest}`, 30, 60000);
 	if (retry)
-		return new Response('Terlalu banyak koneksi.', {
+		return new Response('Too many connections.', {
 			status: 429,
 			headers: { 'Retry-After': String(retry) }
 		});
@@ -28,7 +28,7 @@ export const GET: import('./$types').RequestHandler = (event) => {
 		.innerJoin(activities, eq(activities.id, sessions.activityId))
 		.where(eq(sessions.id, id))
 		.get();
-	if (!joined) error(404, 'Sesi tidak ditemukan.');
+	if (!joined) error(404, 'Session not found.');
 	const isOwner = !!admin && joined.activity.ownerId === admin.id;
 	const streamSnapshot = () =>
 		sessionEventSnapshot(store, id, joined.activity.type, joined.session.activityId, isOwner);

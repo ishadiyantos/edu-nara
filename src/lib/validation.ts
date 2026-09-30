@@ -5,7 +5,7 @@ export const codeSchema = z
 	.string()
 	.trim()
 	.toUpperCase()
-	.regex(/^[A-HJ-NP-Z2-9]{6}$/, 'Kode sesi harus 6 karakter tanpa 0/O/1/I.');
+	.regex(/^[A-HJ-NP-Z2-9]{6}$/, 'Session code must have 6 characters without 0/O/1/I.');
 
 export const joinSchema = z
 	.object({
@@ -13,11 +13,11 @@ export const joinSchema = z
 		displayName: z
 			.string()
 			.trim()
-			.min(2, 'Nama minimal 2 karakter.')
-			.max(24, 'Nama maksimal 24 karakter.')
+			.min(2, 'Name must have at least 2 characters.')
+			.max(24, 'Name must have at most 24 characters.')
 			.refine(
 				(v) => [...v].every((char) => char.charCodeAt(0) >= 32 && char.charCodeAt(0) !== 127),
-				'Nama tidak valid.'
+				'Invalid name.'
 			)
 	})
 	.strict();
@@ -25,7 +25,7 @@ export const joinSchema = z
 export const activitySchema = z
 	.object({
 		type: z.enum(['choice', 'wordcloud', 'board', 'crossword']).default('choice'),
-		title: z.string().trim().min(1, 'Judul wajib diisi.').max(120)
+		title: z.string().trim().min(1, 'Title is required.').max(120)
 	})
 	.strict();
 
@@ -34,15 +34,15 @@ const boardText = z
 	.string()
 	.trim()
 
-	.refine((value) => [...value].length <= 500, 'Teks maksimal 500 karakter.')
+	.refine((value) => [...value].length <= 500, 'Text must have at most 500 characters.')
 	.refine(
 		(value) =>
 			[...value].every(
 				(char) =>
-					['\n', '\r', '\t'].includes(char) ||
+					['\n', '\r', '	'].includes(char) ||
 					(char.charCodeAt(0) >= 32 && char.charCodeAt(0) !== 127)
 			),
-		'Teks tidak valid.'
+		'Invalid text.'
 	);
 
 export const boardCardColors = ['cream', 'rose', 'amber', 'mint', 'sky', 'lavender'] as const;
@@ -55,7 +55,7 @@ export const boardPostSchema = z
 			.string()
 			.trim()
 			.max(2048)
-			.refine((v) => !v || isSafeHttpUrl(v), 'Tautan harus http/https.')
+			.refine((v) => !v || isSafeHttpUrl(v), 'Link must use http/https.')
 			.default(''),
 		cardColor: z.enum(boardCardColors).default('cream'),
 		requestId: z.string().min(1).max(100).optional()
@@ -70,7 +70,7 @@ export const boardColumnSchema = z
 			.max(120)
 			.refine(
 				(v) => [...v].every((char) => char.charCodeAt(0) >= 32 && char.charCodeAt(0) !== 127),
-				'Judul kolom tidak valid.'
+				'Invalid column title.'
 			)
 	})
 	.strict();

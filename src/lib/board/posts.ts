@@ -30,7 +30,7 @@ export type TextSegment =
 export const SAMPLE_COLUMNS: BoardColumn[] = [
 	{ id: 'pro', title: '👍 Pro', position: 0 },
 	{ id: 'kontra', title: '👎 Kontra', position: 1 },
-	{ id: 'tanya', title: '❓ Pertanyaan', position: 2 }
+	{ id: 'tanya', title: '❓ Questions', position: 2 }
 ];
 
 export const SAMPLE_POSTS: BoardPost[] = [
@@ -77,9 +77,13 @@ export function validatePostBody(
 ): { ok: true; value: string; length: number } | { ok: false; message: string; length: number } {
 	const trimmed = value.trim();
 	const length = postLength(trimmed);
-	if (!trimmed) return { ok: false, message: 'Tulis isi kartu terlebih dahulu.', length: 0 };
+	if (!trimmed) return { ok: false, message: 'Write the card content first.', length: 0 };
 	if (length > MAX_POST_BODY) {
-		return { ok: false, message: `Isi kartu maksimal ${MAX_POST_BODY} karakter.`, length };
+		return {
+			ok: false,
+			message: `Card content must have at most ${MAX_POST_BODY} characters.`,
+			length
+		};
 	}
 	return { ok: true, value: trimmed, length };
 }
@@ -145,10 +149,10 @@ export function sortPosts(posts: BoardPost[]): BoardPost[] {
 
 export function statusLabel(status: PostStatus): string {
 	return {
-		pending: 'Menunggu moderasi',
-		approved: 'Tampil',
-		rejected: 'Ditolak',
-		hidden: 'Disembunyikan'
+		pending: 'Awaiting moderation',
+		approved: 'Approved',
+		rejected: 'Rejected',
+		hidden: 'Hidden'
 	}[status];
 }
 

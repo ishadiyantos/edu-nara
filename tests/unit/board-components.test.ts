@@ -55,9 +55,9 @@ describe('board components unit logic', () => {
 	});
 
 	it('provides labels and tones for all post statuses', () => {
-		expect(statusLabel('pending')).toBe('Menunggu moderasi');
-		expect(statusLabel('approved')).toBe('Tampil');
-		expect(statusLabel('rejected')).toBe('Ditolak');
+		expect(statusLabel('pending')).toBe('Awaiting moderation');
+		expect(statusLabel('approved')).toBe('Approved');
+		expect(statusLabel('rejected')).toBe('Rejected');
 
 		expect(statusTone('pending')).toContain('amber');
 		expect(statusTone('approved')).toContain('emerald');

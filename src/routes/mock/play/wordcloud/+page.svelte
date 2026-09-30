@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Container, Card, Button, Input, Badge } from '$components/ui';
 
-	const question = 'Sebutkan 1–3 kata yang menggambarkan kelas ini.';
+	const question = 'Share 1–3 words that describe this class.';
 	const maxWords = 3;
 	let current = $state('');
 	let words: string[] = $state([]);
@@ -12,11 +12,11 @@
 		const w = current.trim();
 		if (!w) return;
 		if (w.length > 30) {
-			error = 'Kata terlalu panjang (maks 30 karakter).';
+			error = 'Word is too long (30 characters maximum).';
 			return;
 		}
 		if (words.length >= maxWords) {
-			error = `Batas ${maxWords} kata per orang.`;
+			error = `Limit: ${maxWords} words per person.`;
 			return;
 		}
 		words = [...words, w];
@@ -35,7 +35,7 @@
 <main class="min-h-dvh bg-bg pb-24 pt-6">
 	<Container size="narrow">
 		<div class="mb-4 flex items-center justify-between">
-			<Badge tone="success" dot>Terhubung</Badge>
+			<Badge tone="success" dot>Connected</Badge>
 			<span class="text-xs text-muted">{words.length}/{maxWords} kata</span>
 		</div>
 		<Card>
@@ -49,7 +49,7 @@
 			>
 				<div class="flex-1">
 					<Input
-						label="Kata / frasa pendek"
+						label="Word / short phrase"
 						bind:value={current}
 						placeholder="mis. seru"
 						maxlength={30}
@@ -62,9 +62,11 @@
 			</form>
 
 			<div class="mt-6" aria-live="polite">
-				<h2 class="mb-2 text-sm font-semibold uppercase tracking-wider text-muted">Kirimanmu</h2>
+				<h2 class="mb-2 text-sm font-semibold uppercase tracking-wider text-muted">
+					Your submissions
+				</h2>
 				{#if words.length === 0}
-					<p class="text-sm text-muted">Belum ada kata. Ketik lalu tekan +.</p>
+					<p class="text-sm text-muted">No words yet. Type a word, then press +.</p>
 				{:else}
 					<ul class="flex flex-wrap gap-2">
 						{#each words as w, i}
@@ -75,7 +77,7 @@
 									class="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1.5 text-sm font-semibold text-primary hover:bg-primary/10"
 								>
 									{w}
-									<span aria-label="hapus">✕</span>
+									<span aria-label="Remove">✕</span>
 								</button>
 							</li>
 						{/each}

@@ -3,14 +3,14 @@ export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 export type ImageFormat = 'jpeg' | 'png' | 'webp';
 export type ImageValidation =
 	| { ok: true; format: ImageFormat; contentType: `image/${'jpeg' | 'png' | 'webp'}` }
-	| { ok: false; error: 'Ukuran file terlalu besar.' | 'Format gambar tidak didukung.' };
+	| { ok: false; error: 'File is too large.' | 'Image format not supported.' };
 
 const startsWith = (bytes: Uint8Array, signature: readonly number[]) =>
 	signature.every((byte, index) => bytes[index] === byte);
 
 /** Validate untrusted image bytes before storage or serving. */
 export function validateImageUpload(input: Uint8Array | ArrayBuffer): ImageValidation {
-	if (input.byteLength > MAX_IMAGE_BYTES) return { ok: false, error: 'Ukuran file terlalu besar.' };
+	if (input.byteLength > MAX_IMAGE_BYTES) return { ok: false, error: 'File is too large.' };
 	const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
 
 	if (startsWith(bytes, [0xff, 0xd8, 0xff]))
@@ -23,5 +23,5 @@ export function validateImageUpload(input: Uint8Array | ArrayBuffer): ImageValid
 	)
 		return { ok: true, format: 'webp', contentType: 'image/webp' };
 
-	return { ok: false, error: 'Format gambar tidak didukung.' };
+	return { ok: false, error: 'Image format not supported.' };
 }

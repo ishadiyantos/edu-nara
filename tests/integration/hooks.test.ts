@@ -48,9 +48,12 @@ test('every response carries CSP, nosniff and X-Frame-Options DENY', async () =>
 test('mutation schemas reject unknown keys so payloads stay strict', async () => {
 	const { joinSchema, boardPostSchema } = await import('../../src/lib/validation');
 	expect(
-		joinSchema.safeParse({ code: 'ABC234', displayName: 'Peserta', unexpected: true }).error!.issues[0]
+		joinSchema.safeParse({ code: 'ABC234', displayName: 'Peserta', unexpected: true }).error!
+			.issues[0]
 	).toMatchObject({ code: 'unrecognized_keys', keys: ['unexpected'] });
-	expect(boardPostSchema.safeParse({ columnId: 'col', body: 'halo', extra: 1 }).error!.issues[0]).toMatchObject({
+	expect(
+		boardPostSchema.safeParse({ columnId: 'col', body: 'halo', extra: 1 }).error!.issues[0]
+	).toMatchObject({
 		code: 'unrecognized_keys',
 		keys: ['extra']
 	});

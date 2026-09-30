@@ -28,7 +28,7 @@ export const POST: import('./$types').RequestHandler = async (event) => {
 	const session = event.params.sessionCode
 		? sessionByCode(store, event.params.sessionCode)
 		: undefined;
-	if (!session) return json({ ok: false, message: 'Sesi tidak tersedia.' }, { status: 404 });
+	if (!session) return json({ ok: false, message: 'Session not available.' }, { status: 404 });
 	try {
 		const { questionId, optionIds } = choiceResponseSchema.parse(await body(event));
 		const question = store.db
@@ -37,10 +37,10 @@ export const POST: import('./$types').RequestHandler = async (event) => {
 			.where(eq(pollQuestions.id, questionId))
 			.get();
 		if (!question || question.activityId !== session.activityId)
-			return json({ ok: false, message: 'Pertanyaan tidak tersedia.' }, { status: 404 });
+			return json({ ok: false, message: 'Question not available.' }, { status: 404 });
 		const token = event.cookies.get(`edu_p_${session.id}`);
 		if (!token)
-			return json({ ok: false, message: 'Peserta belum terautentikasi.' }, { status: 401 });
+			return json({ ok: false, message: 'Participant not authenticated.' }, { status: 401 });
 		const before = store.sqlite
 			.prepare(
 				'SELECT id FROM poll_responses WHERE question_id = ? AND participant_id IN (SELECT id FROM participants WHERE token_hash = ?)'

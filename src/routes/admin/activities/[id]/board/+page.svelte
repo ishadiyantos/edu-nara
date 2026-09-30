@@ -19,38 +19,38 @@
 	<a href="/admin">← Workspace</a>
 	<p class="eyebrow">Edu Nara · Board</p>
 	<h1>{data.activity.title}</h1>
-	<p>Susun kolom diskusi. Kartu mahasiswa tersimpan per sesi.</p>
+	<p>Organize discussion columns. Student cards are stored per session.</p>
 	{#if form?.message}<p role={form.ok ? 'status' : 'alert'}>{form.message}</p>{/if}
 	<section>
-		<h2>Moderasi kartu</h2>
+		<h2>Card moderation</h2>
 		<p>
-			Aktif: kartu baru menunggu persetujuan. Nonaktif: kartu baru langsung tampil. Antrean lama
-			tetap menunggu.
+			Enabled: new cards await approval. Disabled: new cards appear immediately. Earlier pending
+			cards still await approval.
 		</p>
 		<form method="POST" use:enhance={submit}>
 			<input type="hidden" name="action" value="moderation" />
 			<label
-				>Pengaturan moderasi<select name="enabled" value={String(data.activity.boardModeration)}
+				>Moderation settings<select name="enabled" value={String(data.activity.boardModeration)}
 					><option value="true">Aktif</option><option value="false">Nonaktif</option></select
 				></label
 			>
-			<button disabled={busy}>Simpan moderasi</button>
+			<button disabled={busy}>Save moderation</button>
 		</form>
 	</section>
 	<section>
-		<h2>Kolom papan</h2>
-		<p>Maksimal 20 kolom. Kolom hanya dapat dihapus jika kosong di semua sesi.</p>
+		<h2>Board columns</h2>
+		<p>Maximum 20 columns. A column can only be deleted if it is empty in all sessions.</p>
 		<form method="POST" use:enhance={submit}>
 			<input type="hidden" name="action" value="create" />
 			<label
-				>Nama kolom baru<input
+				>New column name<input
 					name="title"
 					required
 					maxlength="120"
-					placeholder="Contoh: Ide, Pertanyaan, Refleksi"
+					placeholder="Example: Ideas, Questions, Reflection"
 				/></label
 			>
-			<button disabled={busy || data.columns.length >= 20}>Tambah kolom</button>
+			<button disabled={busy || data.columns.length >= 20}>Add column</button>
 		</form>
 		<ol>
 			{#each data.columns as column, index (column.id)}
@@ -58,35 +58,35 @@
 					<form method="POST" use:enhance={submit}>
 						<input type="hidden" name="columnId" value={column.id} />
 						<label
-							>Nama kolom {index + 1}<input
+							>Column name {index + 1}<input
 								name="title"
 								value={column.title}
 								required
 								maxlength="120"
 							/></label
 						>
-						<button name="action" value="rename" disabled={busy}>Simpan nama</button>
+						<button name="action" value="rename" disabled={busy}>Save name</button>
 						<button
 							name="action"
 							value="left"
 							disabled={busy || index === 0}
-							aria-label={`Pindahkan ${column.title} ke kiri`}>←</button
+							aria-label={`Move ${column.title} left`}>←</button
 						>
 						<button
 							name="action"
 							value="right"
 							disabled={busy || index === data.columns.length - 1}
-							aria-label={`Pindahkan ${column.title} ke kanan`}>→</button
+							aria-label={`Move ${column.title} right`}>→</button
 						>
-						<button name="action" value="delete" disabled={busy}>Hapus kolom kosong</button>
+						<button name="action" value="delete" disabled={busy}>Delete empty column</button>
 					</form>
 				</li>
-			{:else}<li>Belum ada kolom. Tambahkan satu untuk memulai.</li>{/each}
+			{:else}<li>No columns yet. Add one to get started.</li>{/each}
 		</ol>
 	</section>
 	<form method="POST" action="/admin?/launch" target="_blank" rel="noopener">
 		<input type="hidden" name="activityId" value={data.activity.id} />
-		<button disabled={!data.columns.length}>Luncurkan sesi Board</button>
+		<button disabled={!data.columns.length}>Launch Board session</button>
 	</form>
 </div>
 

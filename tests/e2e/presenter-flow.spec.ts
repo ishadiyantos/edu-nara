@@ -7,16 +7,20 @@ test('launch opens presenter in new tab with joining instructions first', async 
 }) => {
 	await page.goto('/admin');
 	await page.getByLabel('Email').fill('phase1@example.test');
-	await page.getByLabel('Kata sandi').fill('phase1-test-only-password-2026');
-	await page.getByRole('button', { name: 'Masuk', exact: true }).click();
+	await page.getByLabel('Password').fill('phase1-test-only-password-2026');
+	await page.getByRole('button', { name: 'Log in', exact: true }).click();
 	const title = `Presenter QR ${Date.now()}`;
-	await page.getByLabel('Judul aktivitas').fill(title);
-	await page.getByRole('button', { name: 'Buat aktivitas' }).click();
+	await page.getByRole('button', { name: 'Create Quiz' }).click();
+	const dialog = page.getByRole('dialog', { name: 'Create activity' });
+	await dialog.getByLabel('Activity title').fill(title);
+	await dialog.getByRole('button', { name: 'Create activity', exact: true }).click();
+	await expect(page).toHaveURL(/admin\/activities\//);
+	await page.getByRole('link', { name: '← Back to workspace' }).click();
 
 	const launch = page
 		.getByRole('article')
 		.filter({ has: page.getByRole('heading', { name: title, exact: true }) })
-		.getByRole('button', { name: /Luncurkan sesi/ });
+		.getByRole('button', { name: /Launch session/ });
 	const popupPromise = context.waitForEvent('page');
 	await launch.click();
 	const presenter = await popupPromise;
@@ -25,11 +29,11 @@ test('launch opens presenter in new tab with joining instructions first', async 
 	await expect(presenter).toHaveURL(/admin\/sessions\//);
 	await expect(presenter.getByTestId('joining-instructions')).toBeVisible();
 	await expect(presenter.getByTestId('session-code')).toBeVisible();
-	await expect(presenter.getByRole('img', { name: 'QR code sesi' })).toBeVisible();
+	await expect(presenter.getByRole('img', { name: 'Session QR code' })).toBeVisible();
 	await expect(presenter.getByTestId('presenter-stage')).toHaveCount(0);
 	await expect(page).toHaveURL(/\/admin$/);
 	expect(await presenter.evaluate(() => window.opener === null)).toBe(true);
-	const qr = presenter.getByRole('img', { name: 'QR code sesi' });
+	const qr = presenter.getByRole('img', { name: 'Session QR code' });
 	const png = await qr.screenshot();
 	const pixels = await presenter.evaluate(async (bytes) => {
 		const image = await createImageBitmap(new Blob([new Uint8Array(bytes)], { type: 'image/png' }));
@@ -45,9 +49,7 @@ test('launch opens presenter in new tab with joining instructions first', async 
 		};
 	}, Array.from(png));
 	expect(jsQR(new Uint8ClampedArray(pixels.data), pixels.width, pixels.height)?.data).toBe(
-		await presenter
-			.getByRole('link', { name: 'Tautan bergabung', exact: true })
-			.getAttribute('href')
+		await presenter.getByRole('link', { name: 'Join link', exact: true }).getAttribute('href')
 	);
 	const dock = presenter.getByTestId('session-controls');
 	await expect(dock).toHaveCSS('position', 'fixed');
@@ -68,17 +70,17 @@ test('launch opens presenter in new tab with joining instructions first', async 
 	await presenter.keyboard.press('Escape');
 	await presenter.reload();
 	await expect(presenter.getByTestId('joining-instructions')).toBeVisible();
-	await expect(presenter.getByRole('link', { name: 'Dashboard admin', exact: true })).toBeVisible();
-	await expect(presenter.getByRole('button', { name: 'Buka sesi', exact: true })).toBeVisible();
+	await expect(presenter.getByRole('link', { name: 'Admin dashboard', exact: true })).toBeVisible();
+	await expect(presenter.getByRole('button', { name: 'Open session', exact: true })).toBeVisible();
 	await expect(
-		presenter.getByRole('button', { name: 'Mode layar penuh', exact: true })
+		presenter.getByRole('button', { name: 'Fullscreen mode', exact: true })
 	).toBeVisible();
-	await expect(
-		presenter.getByRole('link', { name: 'Tautan bergabung', exact: true })
-	).toBeVisible();
+	await expect(presenter.getByRole('link', { name: 'Join link', exact: true })).toBeVisible();
 
-	await presenter.getByRole('button', { name: 'Buka sesi', exact: true }).click();
+	await presenter.getByRole('button', { name: 'Open session', exact: true }).click();
 	await expect(presenter.getByTestId('joining-instructions')).toHaveCount(0);
-	await expect(presenter.getByText('Belum ada pertanyaan')).toBeVisible();
+	await expect(
+		presenter.getByText('No questions yet. Return to your workspace and open the editor.')
+	).toBeVisible();
 	await presenter.close();
 });

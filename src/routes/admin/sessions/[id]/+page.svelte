@@ -32,15 +32,7 @@
 	let connected = $state(false);
 	let celebration = $state(false);
 	let celebrationLabel = $state('');
-	let celebrationTimer: ReturnType<typeof setTimeout> | undefined;
 
-	function celebrate(label: string) {
-		celebration = false;
-		celebrationLabel = label;
-		if (celebrationTimer) clearTimeout(celebrationTimer);
-		celebrationTimer = setTimeout(() => (celebration = true), 20);
-		setTimeout(() => (celebration = false), 1700);
-	}
 	const count = $derived(live.count);
 	let errorMessage = $state('');
 	let presenting = $state(false);
@@ -71,9 +63,9 @@
 	const showJoin = $derived(view === 'join');
 	const showTally = $derived(data.activityType === 'choice' && live.state === 'ended');
 	const statusControls = [
-		{ state: 'open', label: 'Buka sesi', icon: 'play' },
-		{ state: 'closed', label: 'Tutup sesi', icon: 'eye-off' },
-		{ state: 'ended', label: 'Akhiri sesi', icon: 'stop' }
+		{ state: 'open', label: 'Open session', icon: 'play' },
+		{ state: 'closed', label: 'Close session', icon: 'eye-off' },
+		{ state: 'ended', label: 'End session', icon: 'stop' }
 	] as const;
 	function applyLive(value: Partial<typeof live>) {
 		live = { ...live, ...value };
@@ -109,12 +101,14 @@
 			const result = deserialize(await response.text());
 			if (result.type !== 'success')
 				throw new Error(
-					result.type === 'failure' ? String(result.data?.message ?? 'Aksi gagal.') : 'Aksi gagal.'
+					result.type === 'failure'
+						? String(result.data?.message ?? 'Action failed.')
+						: 'Action failed.'
 				);
 			await invalidateAll();
 			applyLive(data.snapshot);
 		} catch (err) {
-			errorMessage = err instanceof Error ? err.message : 'Aksi gagal. Coba lagi.';
+			errorMessage = err instanceof Error ? err.message : 'Action failed. Try again.';
 		}
 	}
 	async function select(index: number, direction?: number) {
@@ -274,15 +268,15 @@
 				body: JSON.stringify({ status })
 			});
 			const result = await response.json();
-			if (!response.ok) throw new Error(result.message ?? 'Moderasi gagal.');
+			if (!response.ok) throw new Error(result.message ?? 'Moderation failed.');
 			moderation = moderation.map((item) => (item.id === id ? { ...item, status } : item));
 		} catch (err) {
-			errorMessage = err instanceof Error ? err.message : 'Moderasi gagal.';
+			errorMessage = err instanceof Error ? err.message : 'Moderation failed.';
 		}
 	}
 </script>
 
-<svelte:head><title>Sesi {live.code} — Edu Nara</title></svelte:head>
+<svelte:head><title>Session {live.code} — Edu Nara</title></svelte:head>
 <svelte:window
 	onkeydown={key}
 	onpointermove={() => {
@@ -307,7 +301,9 @@
 		<div class="board-stage-copy">
 			<div class="board-stage-identity">
 				<p class="stage-kicker">
-					{data.activityType === 'board' ? 'Edu Nara · Papan diskusi' : `Edu Nara · ${live.title}`}
+					{data.activityType === 'board'
+						? 'Edu Nara · Discussion board'
+						: `Edu Nara · ${live.title}`}
 				</p>
 				<p class="stage-code" data-testid="session-code">{live.code}</p>
 			</div>
@@ -320,9 +316,9 @@
 				></div>{/if}
 			<p class="stage-status">
 				<span aria-hidden="true"></span>
-				<b data-testid="participant-count">{count}</b> peserta · {connected
+				<b data-testid="participant-count">{count}</b> participants · {connected
 					? 'Live'
-					: 'Menghubungkan…'} ·
+					: 'Connecting…'} ·
 				{live.state}
 			</p>
 		</div>
@@ -334,16 +330,16 @@
 		class="session-toolbar"
 		data-testid="session-controls"
 		role="group"
-		aria-label="Kontrol sesi"
+		aria-label="Session controls"
 	>
-		<a class="floating-control" href="/admin" aria-label="Dashboard admin" title="Dashboard admin"
-			><Icon name="home" /> <span>Dashboard admin</span></a
+		<a class="floating-control" href="/admin" aria-label="Admin dashboard" title="Admin dashboard"
+			><Icon name="home" /> <span>Admin dashboard</span></a
 		>
 		{#if data.activityType === 'board'}<a
 				class="floating-control"
 				href={`/admin/activities/${data.activityId}/board`}
-				aria-label="Editor kolom"
-				title="Editor kolom">✎<span>Editor kolom</span></a
+				aria-label="Column editor"
+				title="Column editor">✎<span>Column editor</span></a
 			>{/if}
 		{#each statusControls as control}
 			<form
@@ -393,10 +389,10 @@
 				type="button"
 				class="floating-control"
 				onclick={() => (view = view === 'leaderboard' ? 'activity' : 'leaderboard')}
-				aria-label={view === 'leaderboard' ? 'Tinjau soal' : 'Leaderboard'}
-				title={view === 'leaderboard' ? 'Tinjau soal' : 'Leaderboard'}
+				aria-label={view === 'leaderboard' ? 'Review questions' : 'Leaderboard'}
+				title={view === 'leaderboard' ? 'Review questions' : 'Leaderboard'}
 				><Icon name="eye" />
-				<span>{view === 'leaderboard' ? 'Tinjau soal' : 'Leaderboard'}</span></button
+				<span>{view === 'leaderboard' ? 'Review questions' : 'Leaderboard'}</span></button
 			>
 		{/if}
 		{#if !presenting}<button
@@ -404,57 +400,57 @@
 				class="floating-control"
 				onclick={present}
 				data-testid="fullscreen-button"
-				aria-label="Mode layar penuh"
-				title="Mode layar penuh"><Icon name="fullscreen" /> <span>Mode layar penuh</span></button
+				aria-label="Fullscreen mode"
+				title="Fullscreen mode"><Icon name="fullscreen" /> <span>Fullscreen mode</span></button
 			>{/if}
 		<button
 			type="button"
 			class="floating-control"
 			onclick={() => (view = showJoin ? 'activity' : 'join')}
-			aria-label={showJoin ? 'Sembunyikan petunjuk bergabung' : 'Tampilkan petunjuk bergabung'}
+			aria-label={showJoin ? 'Hide joining instructions' : 'Show joining instructions'}
 			aria-pressed={showJoin}
-			title={showJoin ? 'Sembunyikan petunjuk (I)' : 'Petunjuk bergabung (I)'}
-			><Icon name="qr" /><span>QR & kode</span></button
+			title={showJoin ? 'Hide instructions (I)' : 'Joining instructions (I)'}
+			><Icon name="qr" /><span>QR & code</span></button
 		>
 		<a
 			class="floating-control"
 			href={data.joinUrl}
 			target="_blank"
 			rel="noopener"
-			aria-label="Tautan bergabung"
-			title="Tautan bergabung"><Icon name="link" /> <span>Tautan bergabung</span></a
+			aria-label="Join link"
+			title="Join link"><Icon name="link" /> <span>Join link</span></a
 		>
 		<nav
 			class:visible={controls}
 			class="presenter-navigation"
-			aria-label="Kontrol presentasi"
+			aria-label="Presentation controls"
 			data-testid="presenter-navigation"
 		>
-			{#if presenting}
+			{#if presenting || data.activityType === 'wordcloud'}
 				{#if data.activityType !== 'board'}<button
 						class="floating-control"
-						aria-label="Sebelumnya"
-						title="Sebelumnya (←)"
+						aria-label="Previous"
+						title="Previous (←)"
 						disabled={showJoin || switching || activeIndex === 0}
 						onclick={() => select(activeIndex - 1, -1)}
-						><Icon name="arrow-left" /><span>Sebelumnya</span></button
+						><Icon name="arrow-left" /><span>Previous</span></button
 					>
 					<button
 						class="floating-control"
-						aria-label="Berikutnya"
-						title="Berikutnya (→)"
+						aria-label="Next"
+						title="Next (→)"
 						disabled={showJoin || switching || activeIndex >= questions.length - 1}
 						onclick={() => select(activeIndex + 1, 1)}
-						><Icon name="arrow-right" /><span>Berikutnya</span></button
+						><Icon name="arrow-right" /><span>Next</span></button
 					>{/if}
-				<button
-					class="floating-control"
-					aria-label="Keluar presentasi (Esc)"
-					title="Keluar presentasi (Esc)"
-					onclick={exit}
-					data-testid="exit-fullscreen"
-					><Icon name="close" /><span>Keluar presentasi (Esc)</span></button
-				>
+				{#if presenting}<button
+						class="floating-control"
+						aria-label="Exit presentation (Esc)"
+						title="Exit presentation (Esc)"
+						onclick={exit}
+						data-testid="exit-fullscreen"
+						><Icon name="close" /><span>Exit presentation (Esc)</span></button
+					>{/if}
 			{/if}
 		</nav>
 	</div>
@@ -467,12 +463,12 @@
 	{#if errorMessage}<p role="alert">{errorMessage}</p>{/if}
 	{#if !showJoin && data.activityType === 'choice' && live.state === 'ended'}
 		<div class="top-navigation" data-testid="post-session-review-nav">
-			{#if questions.length > 1}<nav class="flex flex-wrap gap-2" aria-label="Daftar soal">
+			{#if questions.length > 1}<nav class="flex flex-wrap gap-2" aria-label="Question list">
 					{#each questions as question, i}<button
 							class="control"
 							disabled={switching}
 							aria-current={i === activeIndex ? 'true' : undefined}
-							onclick={() => select(i)}>Soal {i + 1}: {question.prompt}</button
+							onclick={() => select(i)}>Question {i + 1}: {question.prompt}</button
 						>{/each}
 				</nav>{/if}
 		</div>
@@ -480,30 +476,28 @@
 	{#if showJoin}
 		<section class="joining-panel" data-testid="joining-instructions">
 			<div>
-				<p class="text-xs font-black uppercase tracking-[0.25em] text-cyan-300">Cara bergabung</p>
+				<p class="text-xs font-black uppercase tracking-[0.25em] text-cyan-300">How to join</p>
 				<h1 class="mt-3 text-3xl font-black leading-tight sm:text-5xl">
-					Pindai QR atau buka tautan, lalu masukkan kode sesi.
+					Scan the QR code or open the link, then enter the session code.
 				</h1>
 				<p class="mt-4 text-lg text-slate-300">
-					Kode sesi
+					Session code
 					<span class="ml-2 font-mono text-2xl font-black tracking-[0.3em] text-white"
 						>{live.code}</span
 					>
 				</p>
 				<p class="mt-2 text-sm text-slate-400">
-					{live.title} · {count} peserta sudah bergabung
+					{live.title} · {count} participants have joined
 				</p>
 				<div class="mt-6 flex flex-wrap gap-3">
-					<a class="control" href={data.joinUrl} target="_blank" rel="noopener"
-						>Buka halaman bergabung</a
-					>
+					<a class="control" href={data.joinUrl} target="_blank" rel="noopener">Open join page</a>
 					{#if live.state !== 'draft'}<button class="control" onclick={() => (view = 'activity')}
-							><Icon name="arrow-right" /> Kembali ke aktivitas</button
+							><Icon name="arrow-right" /> Back to activity</button
 						>{/if}
 				</div>
 			</div>
 			<div class="joining-qr">
-				<QRCode value={data.joinUrl} size={320} label="QR code sesi" />
+				<QRCode value={data.joinUrl} size={320} label="Session QR code" />
 			</div>
 		</section>
 	{:else if data.activityType === 'board' && data.board}
@@ -531,23 +525,23 @@
 						<span class="round-badge"
 							>{data.activityType === 'wordcloud'
 								? 'Word Cloud'
-								: `Ronde ${activeIndex + 1} / ${questions.length}`}</span
+								: `Round ${activeIndex + 1} / ${questions.length}`}</span
 						>
 					</div>
 					<div class="stage-metrics">
 						<div class="audience-meter">
 							<span>{count}</span>
-							peserta online
+							participants joined
 						</div>
 						{#if showTally}<div class="audience-meter answer-meter" data-testid="answer-total">
 								<span>{total}</span>
-								pilihan masuk
+								answers received
 							</div>{/if}
 					</div>
 				</div>
 				<div class="prompt-deck">
 					<div>
-						<p class="prompt-label">Pertanyaan sekarang</p>
+						<p class="prompt-label">Current question</p>
 						<h1>{active.prompt}</h1>
 					</div>
 					{#if guided && timerUsed}
@@ -577,9 +571,7 @@
 									name="showResults"
 									value={String(!active.showResults)}
 								/><button class="control"
-									>{active.showResults
-										? 'Sembunyikan hasil'
-										: 'Tampilkan hasil ke mahasiswa'}</button
+									>{active.showResults ? 'Hide results' : 'Show results to students'}</button
 								>
 							</form>
 						</div>
@@ -589,7 +581,7 @@
 							<div class="tally-header">
 								<div>
 									<p class="prompt-label">Live answers</p>
-									<h2>{total} pilihan masuk</h2>
+									<h2>{total} answers received</h2>
 								</div>
 								<div class="answer-orb" aria-hidden="true">{total}</div>
 							</div>
@@ -612,7 +604,7 @@
 						</div>
 					{:else}
 						<div class="stage-options" data-testid="presenter-options">
-							<p class="prompt-label">Pilihan jawaban</p>
+							<p class="prompt-label">Answer choices</p>
 							<div class="option-grid">
 								{#each choiceOptions as option, i}
 									{@const picked = tally[option.id] ?? 0}
@@ -631,13 +623,15 @@
 					{/if}
 				{/if}
 			</section>{/if}
-	{:else}<p class="my-10">Belum ada pertanyaan. Kembali ke workspace dan buka editor.</p>{/if}
+	{:else}<p class="my-10">No questions yet. Return to your workspace and open the editor.</p>{/if}
 	{#if !presenting && !showJoin && data.activityType === 'wordcloud'}
-		<aside class="mt-8 rounded-2xl border border-white/20 p-5" aria-label="Antrean moderasi">
+		<aside class="mt-8 rounded-2xl border border-white/20 p-5" aria-label="Moderation queue">
 			<h2 class="text-xl font-bold">
-				Moderasi · {moderation.filter((item) => item.status === 'pending').length} menunggu
+				Moderation · {moderation.filter((item) => item.status === 'pending').length} awaiting
 			</h2>
-			<p class="text-sm text-slate-300">Panel privat dosen. Hanya kata disetujui masuk tayangan.</p>
+			<p class="text-sm text-slate-300">
+				Private teacher panel. Only approved words appear in the presentation.
+			</p>
 			{#each moderation as item}<div
 					class="mt-3 flex flex-wrap items-center gap-3 border-t border-white/10 pt-3"
 					data-testid="moderation-item"
@@ -645,12 +639,12 @@
 					<span class="min-w-0 flex-1 break-words">{item.word} · {item.status}</span
 					>{#if item.status !== 'approved'}<button
 							class="control"
-							onclick={() => moderate(item.id, 'approved')}>Setujui</button
+							onclick={() => moderate(item.id, 'approved')}>Approve</button
 						>{/if}{#if item.status !== 'rejected'}<button
 							class="control"
-							onclick={() => moderate(item.id, 'rejected')}>Tolak</button
+							onclick={() => moderate(item.id, 'rejected')}>Reject</button
 						>{/if}
-				</div>{:else}<p class="mt-4">Belum ada kiriman.</p>{/each}
+				</div>{:else}<p class="mt-4">No submissions yet.</p>{/each}
 		</aside>
 	{/if}
 </main>
@@ -673,7 +667,8 @@
 	.session-screen:not(.presentation) {
 		width: 100%;
 		max-width: 100dvw;
-		padding-bottom: 6rem;
+		/* Keep in-flow controls clear of the floating session toolbar, which wraps taller on narrow screens. */
+		padding-bottom: 10rem;
 	}
 	.presentation {
 		position: fixed;
@@ -870,6 +865,10 @@
 			transform: translateX(-50%);
 			margin: 0;
 			border-radius: 999px;
+		}
+		/* Keep in-flow moderation controls reachable above the floating toolbar. */
+		.session-screen:not(.presentation) aside[aria-label='Moderation queue'] {
+			padding-bottom: 8rem;
 		}
 	}
 	/* Board dock floats in both normal and fullscreen views. */

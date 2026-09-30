@@ -6,58 +6,60 @@ test('quiz supports a question bank, multiple correct answers, and a game-show s
 }) => {
 	await page.goto('/admin/login');
 	await page.getByLabel('Email').fill('phase1@example.test');
-	await page.getByLabel('Kata sandi').fill('phase1-test-only-password-2026');
-	await page.getByRole('button', { name: 'Masuk', exact: true }).click();
-	await page.getByLabel('Judul aktivitas').fill(`Kuis Game Show ${Date.now()}`);
-	await page.getByRole('button', { name: 'Buat aktivitas' }).click();
-	await page.getByRole('link', { name: 'Buka editor' }).first().click();
+	await page.getByLabel('Password').fill('phase1-test-only-password-2026');
+	await page.getByRole('button', { name: 'Log in', exact: true }).click();
+	await page.getByRole('button', { name: 'Create Quiz' }).click();
+	const dialog = page.getByRole('dialog', { name: 'Create activity' });
+	await dialog.getByLabel('Activity title').fill(`Kuis Game Show ${Date.now()}`);
+	await dialog.getByRole('button', { name: 'Create activity', exact: true }).click();
+	await expect(page).toHaveURL(/admin\/activities\//);
 
-	await page.getByLabel('Pertanyaan').fill('Apa ibu kota Indonesia?');
-	await page.getByPlaceholder('Jawaban A').fill('Jakarta');
-	await page.getByPlaceholder('Jawaban B').fill('Bandung');
-	await page.getByPlaceholder('Jawaban C').fill('Surabaya');
-	await page.getByRole('checkbox', { name: 'Tandai opsi A sebagai jawaban benar' }).check();
-	await page.getByRole('checkbox', { name: 'Tandai opsi C sebagai jawaban benar' }).check();
-	await page.getByRole('button', { name: /Simpan pertanyaan/ }).click();
-	await expect(page.getByText('Pertanyaan 1 tersimpan.')).toBeVisible();
+	await page.getByLabel('Question').fill('Apa ibu kota Indonesia?');
+	await page.getByPlaceholder('Answer A').fill('Jakarta');
+	await page.getByPlaceholder('Answer B').fill('Bandung');
+	await page.getByPlaceholder('Answer C').fill('Surabaya');
+	await page.getByRole('checkbox', { name: 'Mark option A as correct' }).check();
+	await page.getByRole('checkbox', { name: 'Mark option C as correct' }).check();
+	await page.getByRole('button', { name: /Save question/ }).click();
+	await expect(page.getByText('Question 1 saved.')).toBeVisible();
 	await expect(page.getByText('Apa ibu kota Indonesia?')).toBeVisible();
-	await expect(page.getByText('BENAR', { exact: true })).toHaveCount(2);
+	await expect(page.getByText('CORRECT', { exact: true })).toHaveCount(2);
 
-	await page.getByRole('button', { name: /Tambah pertanyaan/ }).click();
-	await page.getByLabel('Pertanyaan').fill('2 + 2 berapa?');
-	await page.getByPlaceholder('Jawaban A').fill('3');
-	await page.getByPlaceholder('Jawaban B').fill('4');
+	await page.getByRole('button', { name: /Add question/ }).click();
+	await page.getByLabel('Question').fill('2 + 2 berapa?');
+	await page.getByPlaceholder('Answer A').fill('3');
+	await page.getByPlaceholder('Answer B').fill('4');
 	await page
-		.getByRole('group', { name: 'Pilihan jawaban — centang' })
-		.getByRole('checkbox', { name: 'Tandai opsi B sebagai jawaban benar' })
+		.getByRole('group', { name: 'Answer choices — select all correct answers' })
+		.getByRole('checkbox', { name: 'Mark option B as correct' })
 		.check();
-	await page.getByRole('button', { name: /Simpan pertanyaan/ }).click();
-	await expect(page.getByText('Pertanyaan 2 tersimpan.')).toBeVisible();
+	await page.getByRole('button', { name: /Save question/ }).click();
+	await expect(page.getByText('Question 2 saved.')).toBeVisible();
 	await expect(page.getByText('2 + 2 berapa?')).toBeVisible();
 
-	await page.getByLabel('Mode kuis').selectOption('self_paced');
+	await page.getByLabel('Quiz mode').selectOption('self_paced');
 	const popupPromise = page.context().waitForEvent('page');
-	await page.getByRole('button', { name: /Luncurkan kuis/ }).click();
+	await page.getByRole('button', { name: /Launch quiz/ }).click();
 	const presenter = await popupPromise;
 	await presenter.waitForLoadState();
 	await expect(presenter).toHaveURL(/admin\/sessions\//);
 	await presenter.bringToFront();
 	page = presenter;
 	await expect(page.getByTestId('joining-instructions')).toBeVisible();
-	await expect(page.getByRole('img', { name: 'QR code sesi' })).toBeVisible();
+	await expect(page.getByRole('img', { name: 'Session QR code' })).toBeVisible();
 	await expect(page.getByTestId('presenter-stage')).toHaveCount(0);
 	const code = (await page.getByTestId('session-code').textContent())!.trim();
-	await page.getByRole('button', { name: 'Buka sesi', exact: true }).click();
+	await page.getByRole('button', { name: 'Open session', exact: true }).click();
 
 	const context = await browser.newContext({ viewport: { width: 360, height: 780 } });
 	try {
 		const student = await context.newPage();
 		await student.goto(`/join?code=${code}`);
-		await student.getByLabel('Nama tampilan').fill('Ayu');
-		await student.getByRole('button', { name: 'Bergabung' }).click();
+		await student.getByLabel('Display name').fill('Ayu');
+		await student.getByRole('button', { name: 'Join session' }).click();
 		await expect(student.getByTestId('choice-player')).toBeVisible();
 		await expect(student.getByTestId('student-floating-name')).toHaveText('👤 Ayu');
-		await expect(student.getByText('Ronde 1 dari 2')).toBeVisible();
+		await expect(student.getByText('Round 1 of 2')).toBeVisible();
 		await expect
 			.poll(() =>
 				student
@@ -81,22 +83,22 @@ test('quiz supports a question bank, multiple correct answers, and a game-show s
 			'4px'
 		);
 		await expect(student.getByTestId('student-floating-name')).toHaveText('👤 Ayu');
-		await expect(student.getByRole('button', { name: 'Soal sebelumnya' })).toBeVisible();
-		await expect(student.getByRole('button', { name: 'Soal berikutnya' })).toBeVisible();
-		await student.getByRole('button', { name: /Kirim jawaban/ }).click();
-		await expect(student.getByRole('status')).toHaveText('Jawaban tersimpan.');
-		await expect(student.getByText('Benar', { exact: true })).toHaveCount(0);
-		await expect(student.getByText('Hasil kelas', { exact: true })).toHaveCount(0);
-		await student.getByRole('button', { name: 'Soal berikutnya' }).click();
-		await expect(student.getByText('Ronde 2 dari 2')).toBeVisible();
+		await expect(student.getByRole('button', { name: 'Previous question' })).toBeVisible();
+		await expect(student.getByRole('button', { name: 'Next question' })).toBeVisible();
+		await student.getByRole('button', { name: /Submit answer/ }).click();
+		await expect(student.getByRole('status')).toHaveText('Answer saved.');
+		await expect(student.getByText('Correct', { exact: true })).toHaveCount(0);
+		await expect(student.getByText('Class results', { exact: true })).toHaveCount(0);
+		await student.getByRole('button', { name: 'Next question' }).click();
+		await expect(student.getByText('Round 2 of 2')).toBeVisible();
 		await student.getByRole('button', { name: /4/ }).click();
-		await student.getByRole('button', { name: /Kirim jawaban/ }).click();
-		await expect(student.getByRole('status')).toHaveText('Jawaban tersimpan.');
-		await expect(student.getByText('Benar', { exact: true })).toHaveCount(0);
-		await expect(student.getByText('Hasil kelas', { exact: true })).toHaveCount(0);
-		await student.getByRole('button', { name: 'Selesai' }).click();
+		await student.getByRole('button', { name: /Submit answer/ }).click();
+		await expect(student.getByRole('status')).toHaveText('Answer saved.');
+		await expect(student.getByText('Correct', { exact: true })).toHaveCount(0);
+		await expect(student.getByText('Class results', { exact: true })).toHaveCount(0);
+		await student.getByRole('button', { name: 'Finish', exact: true }).click();
 		await expect(student.getByTestId('quiz-finished')).toContainText(
-			'Jawaban Anda sudah tersimpan.'
+			'Your answers have been saved.'
 		);
 
 		await page.keyboard.press('Escape');
@@ -143,9 +145,9 @@ test('quiz supports a question bank, multiple correct answers, and a game-show s
 			expect(payload).not.toHaveProperty(key);
 		await expect(student.getByTestId('quiz-finished')).toBeVisible();
 		await student.reload();
-		await expect(student.getByRole('status')).toHaveText('Jawaban tersimpan.');
+		await expect(student.getByRole('status')).toHaveText('Answer saved.');
 		await expect(student.locator('.choices button.correct')).toHaveCount(0);
-		await expect(student.getByText('Hasil kelas', { exact: true })).toHaveCount(0);
+		await expect(student.getByText('Class results', { exact: true })).toHaveCount(0);
 
 		const csv = await page.request.get(`/api/polls/${code}/export`);
 		expect(csv.ok()).toBe(true);
@@ -155,16 +157,16 @@ test('quiz supports a question bank, multiple correct answers, and a game-show s
 	} finally {
 		await context.close();
 	}
-	await page.getByRole('button', { name: 'Akhiri sesi', exact: true }).click();
+	await page.getByRole('button', { name: 'End session', exact: true }).click();
 	await expect(page.getByTestId('quiz-leaderboard')).toBeVisible();
 	await expect(page.getByTestId('leaderboard-starfall')).toBeVisible();
-	await expect(page.getByText('Juara kelas')).toBeVisible();
+	await expect(page.getByText('Class champions')).toBeVisible();
 	await expect(page.getByRole('cell', { name: 'Ayu' })).toBeVisible();
 	await expect(
-		page.getByRole('row', { name: /Ayu/ }).getByText('2.000', { exact: true })
+		page.getByRole('row', { name: /Ayu/ }).getByText('2,000', { exact: true })
 	).toBeVisible();
-	await page.getByRole('button', { name: 'Tinjau soal' }).click();
-	await page.getByRole('button', { name: 'Soal 1: Apa ibu kota Indonesia?' }).click();
+	await page.getByRole('button', { name: 'Review questions' }).click();
+	await page.getByRole('button', { name: 'Question 1: Apa ibu kota Indonesia?' }).click();
 	await expect(page.getByTestId('presenter-stage')).toBeVisible();
-	await expect(page.getByRole('button', { name: 'Tampilkan hasil ke mahasiswa' })).toHaveCount(0);
+	await expect(page.getByRole('button', { name: 'Show results to students' })).toHaveCount(0);
 });

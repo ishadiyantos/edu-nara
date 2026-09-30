@@ -9,7 +9,7 @@ export const POST: import('./$types').RequestHandler = async (event) => {
 	try {
 		const store = database();
 		const session = sessionByCode(store, event.params.sessionCode);
-		if (!session) return json({ ok: false, message: 'Sesi tidak ditemukan.' }, { status: 404 });
+		if (!session) return json({ ok: false, message: 'Session not found.' }, { status: 404 });
 		const data = z
 			.object({ moderationEnabled: z.boolean() })
 			.strict()

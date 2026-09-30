@@ -43,7 +43,7 @@ export async function login(store: Store, input: unknown, previous?: string, now
 	const candidate = (await derive(credentials.password, salt, 64)) as Buffer;
 	const expected = Buffer.from(hex, 'hex');
 	if (!admin || expected.length !== candidate.length || !timingSafeEqual(candidate, expected))
-		throw new Error('Email atau kata sandi salah.');
+		throw new Error('Incorrect email or password.');
 	const token = newToken();
 	const expiresAt = now + 8 * 60 * 60 * 1000;
 	store.db.transaction((tx) => {

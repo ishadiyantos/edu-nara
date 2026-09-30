@@ -15,8 +15,8 @@ test('maintenance removes expired credentials and expired ended session data onl
 			INSERT INTO admin_users VALUES ('admin', 'teacher@example.test', 'hash', 1);
 			INSERT INTO admin_sessions VALUES ('old-admin', 'admin', ${now - 1});
 			INSERT INTO admin_sessions VALUES ('live-admin', 'admin', ${now + 1});
-			INSERT INTO activities VALUES ('old-activity', 'admin', 'Old', 'choice', 1);
-			INSERT INTO activities VALUES ('live-activity', 'admin', 'Live', 'choice', 1);
+			INSERT INTO activities (id, owner_id, title, type, created_at, board_moderation) VALUES ('old-activity', 'admin', 'Old', 'choice', 1, 1);
+			INSERT INTO activities (id, owner_id, title, type, created_at, board_moderation) VALUES ('live-activity', 'admin', 'Live', 'choice', 1, 1);
 			INSERT INTO live_sessions (id, activity_id, code, state, created_at, ended_at) VALUES ('old-session', 'old-activity', 'OLD123', 'ended', 1, ${now - 1});
 							INSERT INTO live_sessions (id, activity_id, code, state, created_at, ended_at) VALUES ('live-session', 'live-activity', 'LIVE12', 'ended', 1, ${now + 1});
 			INSERT INTO participants VALUES ('expired-participant', 'old-session', 'Old', 'expired-token', ${now - 1}, 1);

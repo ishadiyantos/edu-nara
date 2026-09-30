@@ -1,11 +1,11 @@
 <script module lang="ts">
 	export const CARD_COLORS = [
-		['cream', 'Krem'],
-		['rose', 'Merah muda'],
-		['amber', 'Kuning'],
-		['mint', 'Hijau mint'],
-		['sky', 'Biru langit'],
-		['lavender', 'Ungu muda']
+		['cream', 'Cream'],
+		['rose', 'Rose'],
+		['amber', 'Amber'],
+		['mint', 'Mint'],
+		['sky', 'Sky'],
+		['lavender', 'Lavender']
 	] as const;
 	export type PostDraft = {
 		columnId: string;
@@ -27,7 +27,7 @@
 		onsubmit,
 		oncancel,
 		disabled = false,
-		placeholder = 'Tulis ide Anda…'
+		placeholder = 'Write your idea…'
 	}: {
 		columnId?: string;
 		columns?: { id: string; title: string }[];
@@ -56,19 +56,19 @@
 		errorMessage = '';
 		sent = false;
 		if (length > MAX_POST_BODY) {
-			errorMessage = 'Isi kartu maksimal 500 karakter.';
+			errorMessage = 'Card content must have at most 500 characters.';
 			return;
 		}
 		if (!body.trim() && !title.trim() && !linkUrl.trim() && !image) {
-			errorMessage = 'Isi teks, judul, tautan, atau gambar terlebih dahulu.';
+			errorMessage = 'Add text, a title, a link, or an image first.';
 			return;
 		}
 		if (linkUrl.trim() && !isSafeHttpUrl(linkUrl.trim())) {
-			errorMessage = 'Tautan harus http/https.';
+			errorMessage = 'Link must use http/https.';
 			return;
 		}
 		if (image && image.size > 5 * 1024 * 1024) {
-			errorMessage = 'Gambar maksimal 5 MB.';
+			errorMessage = 'Image must be at most 5 MB.';
 			return;
 		}
 		const signature = JSON.stringify([
@@ -89,7 +89,7 @@
 		}
 		sending = true;
 		try {
-			if (!onsubmit) throw new Error('Pengiriman belum tersedia.');
+			if (!onsubmit) throw new Error('Submission is not available yet.');
 			await onsubmit({
 				columnId,
 				body: body.trim(),
@@ -108,7 +108,7 @@
 			sent = true;
 			if (fileInput) fileInput.value = '';
 		} catch (err) {
-			errorMessage = err instanceof Error ? err.message : 'Gagal mengirim kartu. Coba lagi.';
+			errorMessage = err instanceof Error ? err.message : 'Could not submit card. Try again.';
 		} finally {
 			sending = false;
 		}
@@ -117,19 +117,19 @@
 
 <form data-testid="post-composer" onsubmit={send} class="composer">
 	<fieldset disabled={sending || disabled}>
-		<legend>Tulis kartu baru</legend>
-		<label for="post-column">Letakkan di kolom</label>
+		<legend>Write a new card</legend>
+		<label for="post-column">Choose a column</label>
 		<select id="post-column" bind:value={columnId} required>
 			{#each columns as column}<option value={column.id}>{column.title}</option>{/each}
 		</select>
-		<label for={`post-title-${columnId}`}>Judul (opsional)</label>
+		<label for={`post-title-${columnId}`}>Title (optional)</label>
 		<input
 			id={`post-title-${columnId}`}
 			bind:value={title}
 			maxlength="120"
-			placeholder="Judul ide"
+			placeholder="Idea title"
 		/>
-		<label for={`post-body-${columnId}`}>Isi kartu</label>
+		<label for={`post-body-${columnId}`}>Card content</label>
 		<textarea
 			id={`post-body-${columnId}`}
 			bind:value={body}
@@ -141,8 +141,8 @@
 			>{length} / {MAX_POST_BODY}</span
 		>
 		<fieldset class="color-picker">
-			<legend>Warna kartu</legend>
-			<div role="group" aria-label="Warna kartu">
+			<legend>Card color</legend>
+			<div role="group" aria-label="Card color">
 				{#each CARD_COLORS as [value, label]}<button
 						type="button"
 						class={`color-swatch ${value}`}
@@ -153,7 +153,7 @@
 					></button>{/each}
 			</div>
 		</fieldset>
-		<label for={`post-link-${columnId}`}>Tautan http/https (opsional)</label>
+		<label for={`post-link-${columnId}`}>http/https link (optional)</label>
 		<input
 			id={`post-link-${columnId}`}
 			type="url"
@@ -161,7 +161,7 @@
 			maxlength="2048"
 			placeholder="https://…"
 		/>
-		<label for={`post-image-${columnId}`}>Gambar (opsional, maksimal 5 MB)</label>
+		<label for={`post-image-${columnId}`}>Image (optional, maximum 5 MB)</label>
 		<input
 			id={`post-image-${columnId}`}
 			bind:this={fileInput}
@@ -171,25 +171,23 @@
 				image = e.currentTarget.files?.[0];
 			}}
 		/>
-		<small
-			>JPEG, PNG, atau WebP. Tautan akan mencoba menampilkan pratinjau aman bila situs mengizinkan.</small
-		>
+		<small>JPEG, PNG, or WebP. Links show a safe preview when the site allows it.</small>
 		{#if image}<button
 				type="button"
 				onclick={() => {
 					image = undefined;
 					fileInput.value = '';
-				}}>Hapus gambar terpilih</button
+				}}>Remove selected image</button
 			>{/if}
 		<div class="actions">
-			{#if oncancel}<button type="button" onclick={oncancel}>Batal</button>{/if}
+			{#if oncancel}<button type="button" onclick={oncancel}>Cancel</button>{/if}
 			<button type="submit" class="send" disabled={length > MAX_POST_BODY}
-				>{sending ? 'Mengirim…' : 'Kirim'}</button
+				>{sending ? 'Sending…' : 'Submit'}</button
 			>
 		</div>
 	</fieldset>
 	{#if errorMessage}<p role="alert">{errorMessage}</p>{/if}
-	{#if sent}<p role="status">Kartu berhasil dikirim.</p>{/if}
+	{#if sent}<p role="status">Card submitted successfully.</p>{/if}
 </form>
 
 <style>

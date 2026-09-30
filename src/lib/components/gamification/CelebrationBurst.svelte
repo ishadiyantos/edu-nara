@@ -11,7 +11,9 @@
 		emojis?: string[];
 	}>();
 
-	let items = $state<{ id: number; emoji: string; left: number; delay: number; scale: number }[]>([]);
+	let items = $state<{ id: number; emoji: string; left: number; delay: number; scale: number }[]>(
+		[]
+	);
 
 	const defaultEmojis: Record<string, string[]> = {
 		neutral: ['✨', '⭐', '🌟', '💫', '🎉'],
@@ -21,7 +23,7 @@
 
 	$effect(() => {
 		if (active) {
-			const pool = emojis.length > 0 ? emojis : defaultEmojis[variant] ?? defaultEmojis.neutral;
+			const pool = emojis.length > 0 ? emojis : (defaultEmojis[variant] ?? defaultEmojis.neutral);
 			const count = variant === 'leaderboard' ? 14 : 8;
 			items = Array.from({ length: count }, (_, i) => ({
 				id: i,
