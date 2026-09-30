@@ -41,27 +41,27 @@
 			return inFlight;
 		}
 		inFlight = (async () => {
-			do {
-				again = false;
-				try {
-					const res = await fetch(`/api/boards/${sessionCode}/posts`, { cache: 'no-store' });
-					const data = await res.json();
-					if (!res.ok || !data.ok) throw new Error(data.message || 'Could not load board.');
-					if (!disposed) {
-						board = data;
-						error = '';
+			try {
+				do {
+					again = false;
+					try {
+						const res = await fetch(`/api/boards/${sessionCode}/posts`, { cache: 'no-store' });
+						const data = await res.json();
+						if (!res.ok || !data.ok) throw new Error(data.message || 'Could not load board.');
+						if (!disposed) {
+							board = data;
+							error = '';
+						}
+					} catch (err) {
+						if (!disposed)
+							error = err instanceof Error ? err.message : 'Connection lost. Try reloading.';
 					}
-				} catch (err) {
-					if (!disposed)
-						error = err instanceof Error ? err.message : 'Connection lost. Try reloading.';
-				}
-			} while (again && !disposed);
+				} while (again && !disposed);
+			} finally {
+				inFlight = null;
+			}
 		})();
-		try {
-			await inFlight;
-		} finally {
-			inFlight = null;
-		}
+		return inFlight;
 	}
 	async function request(path: string, body: FormData | Record<string, unknown>) {
 		const multipart = body instanceof FormData;
@@ -89,6 +89,25 @@
 	}
 	async function moderate(payload: { postId: string; status: PostStatus }) {
 		await request(`/api/boards/posts/${payload.postId}/moderate`, { status: payload.status });
+	}
+	async function comment(payload: { postId: string; body: string }) {
+		await request(`/api/boards/${sessionCode}/posts/${payload.postId}/comments`, {
+			body: payload.body
+		});
+	}
+	async function reaction(payload: { postId: string; emoji: string }) {
+		await request(`/api/boards/${sessionCode}/posts/${payload.postId}/reaction`, {
+			emoji: payload.emoji
+		});
+	}
+	async function copyGroupLink(columnId: string) {
+		try {
+			await navigator.clipboard.writeText(
+				`${window.location.origin}/join?code=${encodeURIComponent(sessionCode)}&column=${encodeURIComponent(columnId)}`
+			);
+		} catch {
+			error = 'Could not copy group link.';
+		}
 	}
 	async function reorder(payload: { columnId: string; posts: BoardPost[] }) {
 		await request(`/api/boards/${sessionCode}/columns/${payload.columnId}/order`, {
@@ -191,6 +210,9 @@
 		disabled={board.state !== 'open'}
 		onpost={admin ? undefined : post}
 		onmoderate={admin ? moderate : undefined}
+		oncomment={!admin && !presentation ? comment : undefined}
+		onreaction={!admin && !presentation ? reaction : undefined}
+		oncopygroup={admin && !presentation ? copyGroupLink : undefined}
 		onreorder={admin ? reorder : undefined}
 		onmove={admin ? move : undefined}
 		onrenamecolumn={admin ? renameColumn : undefined}

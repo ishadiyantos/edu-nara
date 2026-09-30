@@ -182,8 +182,72 @@ test('production Board: columns, private media, moderation toggle, live updates 
 		await author.getByLabel('Card content', { exact: true }).fill('Langsung tampil');
 		await author.getByRole('button', { name: 'Submit', exact: true }).click();
 		await expect(observer.getByText('Langsung tampil', { exact: true })).toBeVisible();
+		const sharedCard = observer.locator('article').filter({ hasText: 'Langsung tampil' });
+		await sharedCard.getByRole('button', { name: /^👍 reaction/ }).click();
+		await expect(sharedCard.getByRole('button', { name: /👍 reaction, 1/ })).toHaveClass(/active/);
+		await sharedCard.getByLabel("Comment on Ana's card").fill('Saya setuju dengan ide ini.');
+		await sharedCard.getByRole('button', { name: 'Comment', exact: true }).click();
+		await expect(
+			sharedCard.getByText('Saya setuju dengan ide ini.', { exact: true })
+		).toBeVisible();
+		await sharedCard.getByRole('button', { name: /^❤️ reaction/ }).click();
+		await expect(sharedCard.getByRole('button', { name: /❤️ reaction, 1/ })).toHaveClass(/active/);
+		await expect(sharedCard.getByRole('button', { name: /^👍 reaction/ })).not.toHaveClass(
+			/active/
+		);
+		await expect(
+			author
+				.locator('article')
+				.filter({ hasText: 'Langsung tampil' })
+				.getByText('Saya setuju dengan ide ini.', { exact: true })
+		).toBeVisible();
+		await expect(
+			presenter
+				.locator('article')
+				.filter({ hasText: 'Langsung tampil' })
+				.getByText('Saya setuju dengan ide ini.', { exact: true })
+		).toBeVisible();
 		await observer.reload();
 		await expect(observer.getByText('Langsung tampil', { exact: true })).toBeVisible();
+
+		const ideSection = presenter.getByRole('region', { name: 'Ide', exact: true });
+		const reflectionSection = presenter.getByRole('region', { name: 'Refleksi', exact: true });
+		const ideColumnId = (await ideSection.getAttribute('data-testid'))!.replace(
+			'board-column-',
+			''
+		);
+		const reflectionColumnId = (await reflectionSection.getAttribute('data-testid'))!.replace(
+			'board-column-',
+			''
+		);
+		await expect(
+			presenter.getByRole('button', { name: 'Copy group link for Ide', exact: true })
+		).toBeVisible();
+		const groupContext = await browser.newContext({ viewport: { width: 360, height: 780 } });
+		try {
+			const group = await groupContext.newPage();
+			await group.goto(`/join?code=${code}&column=${ideColumnId}`);
+			await group.getByLabel('Display name').fill('Citra');
+			await group.getByRole('button', { name: 'Join session', exact: true }).click();
+			await expect(group.getByRole('heading', { name: title, exact: true })).toBeVisible();
+			await expect(group.getByRole('heading', { name: 'Ide', exact: true })).toBeVisible();
+			await expect(group.getByRole('heading', { name: 'Refleksi', exact: true })).toHaveCount(0);
+			const forbidden = await group.evaluate(
+				async ({ code, columnId }) => {
+					const response = await fetch(`/api/boards/${code}/posts`, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ columnId, body: 'Wrong group' })
+					});
+					return response.status;
+				},
+				{ code, columnId: reflectionColumnId }
+			);
+			expect(forbidden).toBe(400);
+		} finally {
+			await groupContext.close();
+		}
+
 		await author.getByRole('button', { name: 'Add card to column Ide' }).click();
 		await author.getByLabel('Card content', { exact: true }).fill('Kartu kedua');
 		await author.getByRole('button', { name: 'Submit', exact: true }).click();

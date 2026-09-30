@@ -19,12 +19,16 @@ test('maintenance removes expired credentials and expired ended session data onl
 			INSERT INTO activities (id, owner_id, title, type, created_at, board_moderation) VALUES ('live-activity', 'admin', 'Live', 'choice', 1, 1);
 			INSERT INTO live_sessions (id, activity_id, code, state, created_at, ended_at) VALUES ('old-session', 'old-activity', 'OLD123', 'ended', 1, ${now - 1});
 							INSERT INTO live_sessions (id, activity_id, code, state, created_at, ended_at) VALUES ('live-session', 'live-activity', 'LIVE12', 'ended', 1, ${now + 1});
-			INSERT INTO participants VALUES ('expired-participant', 'old-session', 'Old', 'expired-token', ${now - 1}, 1);
-			INSERT INTO participants VALUES ('live-participant', 'live-session', 'Live', 'live-token', ${now + 1}, 1);
+			INSERT INTO participants (id, session_id, display_name, token_hash, expires_at, created_at) VALUES ('expired-participant', 'old-session', 'Old', 'expired-token', ${now - 1}, 1);
+			INSERT INTO participants (id, session_id, display_name, token_hash, expires_at, created_at) VALUES ('live-participant', 'live-session', 'Live', 'live-token', ${now + 1}, 1);
 			INSERT INTO poll_questions (id, activity_id, prompt, position, show_results, time_limit, created_at) VALUES ('question', 'old-activity', 'Prompt', 0, 0, 20, 1);
 			INSERT INTO poll_options VALUES ('option', 'question', 'Answer', 0, 1);
 			INSERT INTO poll_responses VALUES ('response', 'question', 'old-session', 'expired-participant', 'option', 1, 100, 1);
 			INSERT INTO poll_response_options VALUES ('response', 'option');
+			INSERT INTO board_columns (id, activity_id, title, position, created_at) VALUES ('old-column', 'old-activity', 'Group', 0, 1);
+			INSERT INTO board_posts (id, session_id, column_id, participant_id, body, status, position, created_at, updated_at) VALUES ('old-post', 'old-session', 'old-column', 'expired-participant', 'Old card', 'approved', 0, 1, 1);
+			INSERT INTO board_comments (id, post_id, participant_id, body, created_at) VALUES ('old-comment', 'old-post', 'expired-participant', 'Old comment', 1);
+			INSERT INTO board_reactions (post_id, participant_id, emoji, created_at) VALUES ('old-post', 'expired-participant', '👍', 1);
 		`);
 		const result = spawnSync(process.execPath, ['--import', 'tsx', 'scripts/maintenance.ts'], {
 			env: {

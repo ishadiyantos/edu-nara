@@ -18,6 +18,8 @@ import {
 	moderateBoardPost,
 	moveBoardPost,
 	reorderBoardPosts,
+	submitBoardComment,
+	toggleBoardReaction,
 	submitBoardPost,
 	updateBoardColumn
 } from '../../src/lib/server/board';
@@ -106,6 +108,61 @@ test('card color and link preview metadata persist and use scoped media access',
 	expect(boardImageAccess(store, post.previewImageId!, undefined, other.token)).not.toBeNull();
 });
 
+test('comments are visible to approved-card viewers and one reaction toggles per participant', async () => {
+	const { store, admin, firstColumn, session, participant } = await fixture();
+	const other = joinSession(store, { code: session.code, displayName: 'Bela' });
+	const post = submitBoardPost(store, session.id, participant.token, firstColumn.id, 'Shared');
+	moderateBoardPost(store, admin.id, post.id, 'approved');
+	const comment = submitBoardComment(store, session.id, other.token, post.id, 'Helpful note');
+	expect(comment.body).toBe('Helpful note');
+	expect(listBoard(store, session.id, undefined, participant.token).posts[0].comments).toEqual([
+		expect.objectContaining({ body: 'Helpful note', author: 'Bela' })
+	]);
+	expect(toggleBoardReaction(store, session.id, other.token, post.id, '👍')).toMatchObject({
+		active: true
+	});
+	expect(toggleBoardReaction(store, session.id, other.token, post.id, '❤️')).toMatchObject({
+		active: true
+	});
+	expect(listBoard(store, session.id, undefined, other.token).posts[0]).toMatchObject({
+		reactions: { '❤️': 1 },
+		myReaction: '❤️'
+	});
+	expect(toggleBoardReaction(store, session.id, other.token, post.id, '❤️')).toMatchObject({
+		active: false
+	});
+	expect(listBoard(store, session.id, undefined, participant.token).posts[0].reactions).toEqual({});
+});
+
+test('column-bound participant can only view and post in assigned column while admin sees all', async () => {
+	const { store, admin, firstColumn, secondColumn, session } = await fixture();
+	setBoardModeration(store, admin.id, session.activityId, false);
+	const first = joinSession(store, {
+		code: session.code,
+		displayName: 'Group One',
+		columnId: firstColumn.id
+	});
+	const second = joinSession(store, {
+		code: session.code,
+		displayName: 'Group Two',
+		columnId: secondColumn.id
+	});
+	submitBoardPost(store, session.id, first.token, firstColumn.id, 'First only');
+	submitBoardPost(store, session.id, second.token, secondColumn.id, 'Second only');
+	expect(listBoard(store, session.id, undefined, first.token).columns.map((c) => c.id)).toEqual([
+		firstColumn.id
+	]);
+	expect(listBoard(store, session.id, undefined, first.token).posts.map((p) => p.body)).toEqual([
+		'First only'
+	]);
+	expect(() => submitBoardPost(store, session.id, first.token, secondColumn.id, 'Blocked')).toThrow(
+		'Participant is assigned to another column.'
+	);
+	expect(listBoard(store, session.id, admin.id).columns).toHaveLength(2);
+	expect(listBoard(store, session.id, admin.id).posts).toHaveLength(2);
+	expect(listBoard(store, session.id, admin.id, first.token).columns).toHaveLength(2);
+});
+
 test('card color rejects arbitrary CSS values', async () => {
 	const { store, firstColumn, session, participant } = await fixture();
 	expect(() =>
@@ -115,20 +172,20 @@ test('card color rejects arbitrary CSS values', async () => {
 	).toThrow();
 });
 
-test('board post validates 500 Unicode characters and persists as pending', async () => {
+test('board post validates 1000 Unicode characters and persists as pending', async () => {
 	const { store, firstColumn, session, participant } = await fixture();
 	const post = submitBoardPost(
 		store,
 		session.id,
 		participant.token,
 		firstColumn.id,
-		'😀'.repeat(500)
+		'😀'.repeat(1000)
 	);
 	expect(post.status).toBe('pending');
-	expect(post.body).toBe('😀'.repeat(500));
+	expect(post.body).toBe('😀'.repeat(1000));
 	expect(listBoard(store, session.id).posts).toHaveLength(0);
 	expect(() =>
-		submitBoardPost(store, session.id, participant.token, firstColumn.id, '😀'.repeat(501))
+		submitBoardPost(store, session.id, participant.token, firstColumn.id, '😀'.repeat(1001))
 	).toThrow();
 });
 

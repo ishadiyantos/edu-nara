@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { randomInt, randomUUID } from 'node:crypto';
 import { and, asc, count, eq, gt } from 'drizzle-orm';
 import type { Store } from './db/client';
-import { activities, participants, pollQuestions, sessions } from './db/schema';
+import { activities, boardColumns, participants, pollQuestions, sessions } from './db/schema';
 import { hashToken, newToken } from './auth';
 import { activitySchema, joinSchema, stateSchema } from '../validation';
 export function generateSessionCode() {
@@ -162,10 +162,28 @@ export function joinSession(store: Store, input: unknown, existing?: string, now
 		const scoped = store;
 		const session = sessionByCode(scoped, data.code);
 		if (!session) throw new UserError('Session not available.');
-		if (participantValid(scoped, session.id, existing, now))
+		if (participantValid(scoped, session.id, existing, now)) {
+			const current = scoped.db
+				.select({ columnId: participants.columnId })
+				.from(participants)
+				.where(eq(participants.tokenHash, hashToken(existing!)))
+				.get();
+			if (data.columnId && current?.columnId !== data.columnId)
+				throw new UserError('Participant is already assigned to another group.');
 			return { sessionId: session.id, code: session.code, token: existing!, created: false };
+		}
 		if (session.state === 'closed' || session.state === 'ended')
 			throw new UserError('Session is not open or has been closed.');
+		if (data.columnId) {
+			const column = store.db
+				.select({ id: boardColumns.id })
+				.from(boardColumns)
+				.where(
+					and(eq(boardColumns.id, data.columnId), eq(boardColumns.activityId, session.activityId))
+				)
+				.get();
+			if (!column) throw new UserError('Board group is not available.');
+		}
 		const token = newToken();
 		store.db
 			.insert(participants)
@@ -173,6 +191,7 @@ export function joinSession(store: Store, input: unknown, existing?: string, now
 				id: randomUUID(),
 				sessionId: session.id,
 				displayName: data.displayName,
+				columnId: data.columnId ?? null,
 				tokenHash: hashToken(token),
 				expiresAt: now + 86400000,
 				createdAt: now

@@ -20,8 +20,8 @@ test('board public view renders approved posts, safe links, composer limit, and 
 		.click();
 	const composer = page.getByTestId('post-composer');
 	await expect(composer).toBeVisible();
-	await composer.getByRole('textbox', { name: 'Card content' }).fill('x'.repeat(501));
-	await expect(composer.getByTestId('char-counter')).toContainText('501 / 500');
+	await composer.getByRole('textbox', { name: 'Card content' }).fill('x'.repeat(1001));
+	await expect(composer.getByTestId('char-counter')).toContainText('1001 / 1000');
 	await expect(composer.getByRole('button', { name: 'Submit' })).toBeDisabled();
 
 	const overflow = await page.evaluate(

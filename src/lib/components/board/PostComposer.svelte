@@ -56,7 +56,7 @@
 		errorMessage = '';
 		sent = false;
 		if (length > MAX_POST_BODY) {
-			errorMessage = 'Card content must have at most 500 characters.';
+			errorMessage = `Card content must have at most ${MAX_POST_BODY} characters.`;
 			return;
 		}
 		if (!body.trim() && !title.trim() && !linkUrl.trim() && !image) {

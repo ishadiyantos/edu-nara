@@ -5,6 +5,7 @@
 	import { joinSchema } from '$lib/validation';
 	let { data, form } = $props();
 	let code = $state(untrack(() => data.code));
+	let column = $state(untrack(() => data.column));
 	let displayName = $state('');
 	let validation = $state('');
 	let loading = $state(false);
@@ -18,7 +19,11 @@
 			<form
 				method="POST"
 				use:enhance={({ cancel }) => {
-					const result = joinSchema.safeParse({ code, displayName });
+					const result = joinSchema.safeParse({
+						code,
+						displayName,
+						...(column ? { columnId: column } : {})
+					});
 					if (!result.success) {
 						validation = result.error.issues[0].message;
 						cancel();
@@ -35,6 +40,7 @@
 				novalidate
 			>
 				<Input label="Session code" name="code" bind:value={code} required maxlength={6} />
+				{#if column}<input type="hidden" name="columnId" value={column} />{/if}
 				<Input
 					label="Display name"
 					name="displayName"

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { and, asc, eq, gt, max, or } from 'drizzle-orm';
+import { and, asc, count, eq, gt, max, or } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Store } from './db/client';
 import { UserError } from './errors';
@@ -7,11 +7,22 @@ import { hashToken } from './auth';
 import { events } from './events';
 import {
 	boardColumnSchema,
+	boardCommentSchema,
 	boardOrderSchema,
 	boardPostSchema,
+	boardReactionSchema,
 	boardStatusSchema
 } from '../validation';
-import { activities, boardColumns, boardPosts, participants, sessions } from './db/schema';
+import {
+	activities,
+	boardComments,
+	boardColumns,
+	boardPosts,
+	boardReactions,
+	participants,
+	sessions
+} from './db/schema';
+import type { BoardReaction } from '../board/posts';
 
 function sessionBoard(store: Store, sessionId: string) {
 	const row = store.db
@@ -198,6 +209,8 @@ export function submitBoardPost(
 		.where(and(eq(boardColumns.id, data.columnId), eq(boardColumns.activityId, activity.id)))
 		.get();
 	if (!column) throw new UserError('Column not available.');
+	if (author.columnId && author.columnId !== data.columnId)
+		throw new UserError('Participant is assigned to another column.');
 	const last = store.db
 		.select({ position: max(boardPosts.position) })
 		.from(boardPosts)
@@ -226,6 +239,91 @@ export function submitBoardPost(
 	// Global replay contains invalidation only, never private content or identifiers.
 	const lastEventId = events.publish(sessionId, 'board.post.new', {});
 	return { ...row, lastEventId };
+}
+export function submitBoardComment(
+	store: Store,
+	sessionId: string,
+	token: string,
+	postId: string,
+	body: unknown
+) {
+	const author = participant(store, sessionId, token);
+	if (!author) throw new UserError('Participant not authenticated.');
+	const data = boardCommentSchema.parse(body);
+	const post = store.db
+		.select({
+			id: boardPosts.id,
+			status: boardPosts.status,
+			columnId: boardPosts.columnId,
+			participantId: boardPosts.participantId
+		})
+		.from(boardPosts)
+		.where(and(eq(boardPosts.id, postId), eq(boardPosts.sessionId, sessionId)))
+		.get();
+	if (
+		!post ||
+		(post.status !== 'approved' && post.participantId !== author.id) ||
+		(author.columnId && author.columnId !== post.columnId)
+	)
+		throw new UserError('Card is not available.');
+	const row = {
+		id: randomUUID(),
+		postId,
+		participantId: author.id,
+		body: data,
+		createdAt: Date.now()
+	};
+	store.db.insert(boardComments).values(row).run();
+	events.publish(sessionId, 'board.post.new', {});
+	return row;
+}
+export function toggleBoardReaction(
+	store: Store,
+	sessionId: string,
+	token: string,
+	postId: string,
+	emoji: unknown
+) {
+	const author = participant(store, sessionId, token);
+	if (!author) throw new UserError('Participant not authenticated.');
+	const next = boardReactionSchema.parse(emoji) as BoardReaction;
+	const post = store.db
+		.select({
+			id: boardPosts.id,
+			status: boardPosts.status,
+			columnId: boardPosts.columnId,
+			participantId: boardPosts.participantId
+		})
+		.from(boardPosts)
+		.where(and(eq(boardPosts.id, postId), eq(boardPosts.sessionId, sessionId)))
+		.get();
+	if (
+		!post ||
+		(post.status !== 'approved' && post.participantId !== author.id) ||
+		(author.columnId && author.columnId !== post.columnId)
+	)
+		throw new UserError('Card is not available.');
+	const current = store.db
+		.select()
+		.from(boardReactions)
+		.where(and(eq(boardReactions.postId, postId), eq(boardReactions.participantId, author.id)))
+		.get();
+	let active = false;
+	store.sqlite.transaction(() => {
+		store.db
+			.delete(boardReactions)
+			.where(and(eq(boardReactions.postId, postId), eq(boardReactions.participantId, author.id)))
+			.run();
+		if (current?.emoji !== next) {
+			store.db
+				.insert(boardReactions)
+				.values({ postId, participantId: author.id, emoji: next, createdAt: Date.now() })
+				.run();
+			active = true;
+		}
+	})();
+	events.publish(sessionId, 'board.post.new', {});
+	return { active, emoji: active ? next : null };
 }
 export function moveBoardPost(
 	store: Store,
@@ -359,7 +457,11 @@ export function listBoard(store: Store, sessionId: string, adminId?: string, tok
 	const { activity, session } = sessionBoard(store, sessionId);
 	const isAdmin = !!adminId && activity.ownerId === adminId;
 	const author = participant(store, sessionId, token);
-	const columns = boardColumnsForActivity(store, activity.id);
+	const allColumns = boardColumnsForActivity(store, activity.id);
+	const columns =
+		!isAdmin && author?.columnId
+			? allColumns.filter((column) => column.id === author.columnId)
+			: allColumns;
 	const posts = store.db
 		.select({
 			id: boardPosts.id,
@@ -383,9 +485,12 @@ export function listBoard(store: Store, sessionId: string, adminId?: string, tok
 				eq(boardPosts.sessionId, sessionId),
 				isAdmin
 					? undefined
-					: or(
-							eq(boardPosts.status, 'approved'),
-							author ? eq(boardPosts.participantId, author.id) : undefined
+					: and(
+							author?.columnId ? eq(boardPosts.columnId, author.columnId) : undefined,
+							or(
+								eq(boardPosts.status, 'approved'),
+								author ? eq(boardPosts.participantId, author.id) : undefined
+							)
 						)
 			)
 		)
@@ -395,7 +500,38 @@ export function listBoard(store: Store, sessionId: string, adminId?: string, tok
 			...post,
 			createdAt: new Date(createdAt).toISOString(),
 			imageUrl: imageId ? `/api/boards/images/${imageId}` : null,
-			previewImageUrl: previewImageId ? `/api/boards/images/${previewImageId}` : null
+			previewImageUrl: previewImageId ? `/api/boards/images/${previewImageId}` : null,
+			comments: store.db
+				.select({
+					id: boardComments.id,
+					author: participants.displayName,
+					body: boardComments.body,
+					createdAt: boardComments.createdAt
+				})
+				.from(boardComments)
+				.innerJoin(participants, eq(participants.id, boardComments.participantId))
+				.where(eq(boardComments.postId, post.id))
+				.orderBy(asc(boardComments.createdAt))
+				.all()
+				.map((comment) => ({ ...comment, createdAt: new Date(comment.createdAt).toISOString() })),
+			reactions: Object.fromEntries(
+				store.db
+					.select({ emoji: boardReactions.emoji, total: count() })
+					.from(boardReactions)
+					.where(eq(boardReactions.postId, post.id))
+					.groupBy(boardReactions.emoji)
+					.all()
+					.map((reaction) => [reaction.emoji, reaction.total])
+			),
+			myReaction: author
+				? (store.db
+						.select({ emoji: boardReactions.emoji })
+						.from(boardReactions)
+						.where(
+							and(eq(boardReactions.postId, post.id), eq(boardReactions.participantId, author.id))
+						)
+						.get()?.emoji ?? null)
+				: null
 		}));
 	return {
 		columns: columns.map(({ id, title, position }) => ({ id, title, position })),
@@ -420,7 +556,9 @@ export function boardImageAccess(store: Store, imageId: string, adminId?: string
 	if (!row) return null;
 	if (adminId && row.ownerId === adminId) return row.post;
 	const author = participant(store, row.post.sessionId, token);
-	return author && (row.post.status === 'approved' || row.post.participantId === author.id)
+	return author &&
+		(!author.columnId || author.columnId === row.post.columnId) &&
+		(row.post.status === 'approved' || row.post.participantId === author.id)
 		? row.post
 		: null;
 }

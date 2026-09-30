@@ -1,7 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { body, join, message } from '$lib/server/http';
 export const load: import('./$types').PageServerLoad = ({ url }) => ({
-	code: url.searchParams.get('code') ?? ''
+	code: url.searchParams.get('code') ?? '',
+	column: url.searchParams.get('column') ?? ''
 });
 export const actions = {
 	default: async (event) => {

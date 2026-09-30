@@ -18,7 +18,8 @@ export const joinSchema = z
 			.refine(
 				(v) => [...v].every((char) => char.charCodeAt(0) >= 32 && char.charCodeAt(0) !== 127),
 				'Invalid name.'
-			)
+			),
+		columnId: z.uuid().optional()
 	})
 	.strict();
 
@@ -34,7 +35,7 @@ const boardText = z
 	.string()
 	.trim()
 
-	.refine((value) => [...value].length <= 500, 'Text must have at most 500 characters.')
+	.refine((value) => [...value].length <= 1000, 'Text must have at most 1000 characters.')
 	.refine(
 		(value) =>
 			[...value].every(
@@ -75,6 +76,8 @@ export const boardColumnSchema = z
 	})
 	.strict();
 export const boardStatusSchema = z.enum(['pending', 'approved', 'rejected', 'hidden']);
+export const boardCommentSchema = z.string().trim().min(1).max(500);
+export const boardReactionSchema = z.enum(['👍', '❤️', '💡', '❓']);
 export const boardOrderSchema = z
 	.object({ ids: z.array(z.string().trim().min(1).max(100)).max(500) })
 	.strict();

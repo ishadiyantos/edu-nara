@@ -1,4 +1,7 @@
-export const MAX_POST_BODY = 500;
+export const MAX_POST_BODY = 1000;
+
+export type BoardReaction = '👍' | '❤️' | '💡' | '❓';
+export const BOARD_REACTIONS: BoardReaction[] = ['👍', '❤️', '💡', '❓'];
 
 export type PostStatus = 'pending' | 'approved' | 'rejected' | 'hidden';
 
@@ -22,6 +25,9 @@ export type BoardPost = {
 	status: PostStatus;
 	position: number;
 	createdAt?: string;
+	comments?: { id: string; author: string; body: string; createdAt: string }[];
+	reactions?: Partial<Record<BoardReaction, number>>;
+	myReaction?: BoardReaction | null;
 };
 
 export type TextSegment =

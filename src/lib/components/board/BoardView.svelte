@@ -8,6 +8,7 @@
 		statusLabel,
 		statusTone,
 		movePost,
+		BOARD_REACTIONS,
 		type BoardColumn,
 		type BoardPost,
 		type PostStatus
@@ -31,6 +32,9 @@
 		onrenamecolumn,
 		onaddcolumn,
 		onshare,
+		oncomment,
+		onreaction,
+		oncopygroup,
 		moderationEnabled = false,
 		ontogglemoderation,
 		saving = false
@@ -55,6 +59,9 @@
 		onrenamecolumn?: (payload: { columnId: string; title: string }) => void | Promise<void>;
 		onaddcolumn?: (title: string) => void | Promise<void>;
 		onshare?: () => void | Promise<void>;
+		oncomment?: (payload: { postId: string; body: string }) => void | Promise<void>;
+		onreaction?: (payload: { postId: string; emoji: string }) => void | Promise<void>;
+		oncopygroup?: (columnId: string) => void | Promise<void>;
 		moderationEnabled?: boolean;
 		ontogglemoderation?: () => void | Promise<void>;
 		saving?: boolean;
@@ -350,6 +357,46 @@
 					></span
 				>
 			</a>{/if}
+		{#if post.comments?.length || (!presentation && (onreaction || oncomment))}
+			<div class="social-actions" aria-label={`Reactions and comments for ${post.author}'s card`}>
+				{#if onreaction}<div class="reactions" aria-label="Reactions">
+						{#each BOARD_REACTIONS as emoji}
+							<button
+								type="button"
+								class:active={post.myReaction === emoji}
+								aria-label={`${emoji} reaction${post.reactions?.[emoji] ? `, ${post.reactions[emoji]}` : ''}`}
+								onclick={() => void onreaction?.({ postId: post.id, emoji })}
+								>{emoji} <span>{post.reactions?.[emoji] ?? 0}</span></button
+							>
+						{/each}
+					</div>{/if}
+				{#if post.comments?.length}<div class="comments" aria-label="Comments">
+						{#each post.comments as comment (comment.id)}<p>
+								<b>{comment.author}</b>
+								<span>{comment.body}</span>
+							</p>{/each}
+					</div>{/if}
+				{#if oncomment}<form
+						class="comment-form"
+						onsubmit={async (event) => {
+							event.preventDefault();
+							const form = event.currentTarget;
+							const body = String(new FormData(form).get('body') ?? '').trim();
+							if (!body) return;
+							await oncomment?.({ postId: post.id, body });
+							form.reset();
+						}}
+					>
+						<input
+							name="body"
+							aria-label={`Comment on ${post.author}'s card`}
+							placeholder="Add a comment…"
+							maxlength="500"
+						/>
+						<button type="submit">Comment</button>
+					</form>{/if}
+			</div>
+		{/if}
 		{#if admin && !presentation && !slideshow}
 			{@const siblings = sortPosts(posts.filter((p) => p.columnId === post.columnId))}
 			<div class="moderation" aria-label={`Moderate card from ${post.author}`}>
@@ -517,6 +564,12 @@
 					<header class="column-heading">
 						<span class="column-count">{cards.length} cards</span>
 						<h2>{column.title}</h2>
+						{#if admin && oncopygroup}<button
+								class="icon-button"
+								aria-label={`Copy group link for ${column.title}`}
+								title="Copy group link"
+								onclick={() => void oncopygroup(column.id)}>↗</button
+							>{/if}
 						{#if admin && onrenamecolumn}<button
 								class="icon-button"
 								aria-label={`Edit title ${column.title}`}
@@ -647,6 +700,66 @@
 	.board-tools.slideshow-mode {
 		top: 0.65rem;
 		right: 0.65rem;
+	}
+	.social-actions {
+		display: grid;
+		gap: 0.6rem;
+		margin-top: 0.85rem;
+		padding-top: 0.7rem;
+		border-top: 1px solid #0f172a1f;
+	}
+	.reactions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.3rem;
+	}
+	.reactions button {
+		min-height: 36px;
+		padding: 0.35rem 0.55rem;
+		border: 1px solid #94a3b866;
+		border-radius: 999px;
+		background: #ffffffb8;
+		color: #334155;
+		font-weight: 700;
+	}
+	.reactions button.active {
+		border-color: #4f46e5;
+		background: #eef2ff;
+		color: #3730a3;
+	}
+	.comments {
+		display: grid;
+		gap: 0.35rem;
+	}
+	.comments p {
+		margin: 0;
+		padding: 0.45rem 0.6rem;
+		border-radius: 0.65rem;
+		background: #ffffff99;
+		font-size: 0.82rem;
+		color: #334155;
+	}
+	.comment-form {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: 0.4rem;
+	}
+	.comment-form input {
+		min-width: 0;
+		min-height: 40px;
+		border: 1px solid #94a3b866;
+		border-radius: 0.65rem;
+		padding: 0.5rem 0.65rem;
+		background: #fff;
+		color: #0f172a;
+	}
+	.comment-form button {
+		min-height: 40px;
+		border-radius: 0.65rem;
+		padding: 0.45rem 0.65rem;
+		background: #4338ca;
+		color: white;
+		font-weight: 700;
 	}
 	label {
 		display: grid;

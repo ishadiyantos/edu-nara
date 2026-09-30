@@ -8,7 +8,7 @@ import {
 } from '../../src/lib/board/posts';
 
 describe('board post validation', () => {
-	it('accepts non-empty body up to 500 characters including unicode', () => {
+	it('accepts non-empty body up to 1000 characters including unicode', () => {
 		expect(validatePostBody('Halo dunia')).toMatchObject({ ok: true });
 		expect(validatePostBody('🙂'.repeat(MAX_POST_BODY))).toMatchObject({ ok: true });
 	});

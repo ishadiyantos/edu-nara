@@ -51,6 +51,7 @@ export const participants = sqliteTable(
 			.notNull()
 			.references(() => sessions.id),
 		displayName: text('display_name').notNull(),
+		columnId: text('column_id'),
 		tokenHash: text('token_hash').notNull().unique(),
 		expiresAt: integer('expires_at').notNull(),
 		createdAt: integer('created_at').notNull()
@@ -182,6 +183,38 @@ export const boardPosts = sqliteTable(
 		uniqueIndex('board_post_request').on(t.sessionId, t.participantId, t.requestId),
 		uniqueIndex('board_post_image').on(t.imageId),
 		uniqueIndex('board_post_preview_image').on(t.previewImageId)
+	]
+);
+export const boardComments = sqliteTable(
+	'board_comments',
+	{
+		id: text().primaryKey(),
+		postId: text('post_id')
+			.notNull()
+			.references(() => boardPosts.id),
+		participantId: text('participant_id')
+			.notNull()
+			.references(() => participants.id),
+		body: text().notNull(),
+		createdAt: integer('created_at').notNull()
+	},
+	(t) => [index('board_comment_post').on(t.postId)]
+);
+export const boardReactions = sqliteTable(
+	'board_reactions',
+	{
+		postId: text('post_id')
+			.notNull()
+			.references(() => boardPosts.id),
+		participantId: text('participant_id')
+			.notNull()
+			.references(() => participants.id),
+		emoji: text({ enum: ['👍', '❤️', '💡', '❓'] }).notNull(),
+		createdAt: integer('created_at').notNull()
+	},
+	(t) => [
+		uniqueIndex('board_reaction_once').on(t.postId, t.participantId),
+		index('board_reaction_post').on(t.postId)
 	]
 );
 export const wordcloudResponses = sqliteTable(
