@@ -832,11 +832,10 @@
 		border-color: #176d65;
 	}
 	.column-actions {
-		position: relative;
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.45rem;
-		margin-top: 0.2rem;
+		position: absolute;
+		top: 0.35rem;
+		right: 0.35rem;
+		z-index: 10;
 	}
 	.column-menu-button {
 		min-height: 40px;
@@ -1004,6 +1003,10 @@
 		background: #164e47ed;
 		padding: 1.1rem 1.25rem 1.25rem;
 		box-shadow: 0 6px 20px #002a2720;
+	}
+	.column-heading h2,
+	.column-heading .column-count {
+		padding-right: 3rem;
 	}
 	h2 {
 		font-size: clamp(1.15rem, 1.6vw, 1.6rem);

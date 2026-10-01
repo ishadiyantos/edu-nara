@@ -348,20 +348,30 @@ test('production Board: columns, private media, moderation toggle, live updates 
 		).toBeLessThan(2);
 		const actionRows = await presenter.locator('.column-actions').evaluateAll((rows) =>
 			rows.map((row) => {
+				const heading = row.closest('.column-heading')!.getBoundingClientRect();
+				const actions = row.getBoundingClientRect();
 				const boxes = [...row.querySelectorAll('button')].map((button) =>
 					button.getBoundingClientRect()
 				);
-				return boxes.every((a, i) =>
-					boxes
-						.slice(i + 1)
-						.every(
-							(b) =>
-								a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top
-						)
-				);
+				return {
+					top: actions.top - heading.top,
+					right: heading.right - actions.right,
+					separate: boxes.every((a, i) =>
+						boxes
+							.slice(i + 1)
+							.every(
+								(b) =>
+									a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top
+							)
+					)
+				};
 			})
 		);
-		expect(actionRows.every(Boolean)).toBe(true);
+		for (const actions of actionRows) {
+			expect(actions.top).toBeLessThan(8);
+			expect(actions.right).toBeLessThan(8);
+			expect(actions.separate).toBe(true);
+		}
 		if (testInfo.project.name === 'desktop-1440') expect(geometry[0].width).toBeGreaterThan(400);
 		const card = presenter.locator('article').filter({ hasText: 'Langsung tampil' });
 		expect(
