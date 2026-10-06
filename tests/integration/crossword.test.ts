@@ -134,6 +134,12 @@ test('crossword progress is scoped by participant and checked server-side', asyn
 	expect(() => checkCrossword(store, session.id, participant.token, { cells: {} })).toThrow(
 		'Session is not accepting answers.'
 	);
+	store.sqlite
+		.prepare('UPDATE participants SET expires_at = 0 WHERE session_id = ?')
+		.run(session.id);
+	expect(() => participantCrosswordProgress(store, session.id, participant.token)).toThrow(
+		'Participant access denied.'
+	);
 });
 
 test('crossword entries can be deleted by owner only', async () => {

@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, gt } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { Store } from './db/client';
@@ -84,12 +84,18 @@ function nextNumber(entries: Array<{ row: number; col: number }>, row: number, c
 	}
 	return number;
 }
-function ensureParticipant(store: Store, sessionId: string, token?: string) {
+function ensureParticipant(store: Store, sessionId: string, token?: string, now = Date.now()) {
 	if (!token) throw new UserError('Participant access denied.');
 	const participant = store.db
 		.select({ id: participants.id, columnId: participants.columnId })
 		.from(participants)
-		.where(and(eq(participants.sessionId, sessionId), eq(participants.tokenHash, hashToken(token))))
+		.where(
+			and(
+				eq(participants.sessionId, sessionId),
+				eq(participants.tokenHash, hashToken(token)),
+				gt(participants.expiresAt, now)
+			)
+		)
 		.get();
 	if (!participant) throw new UserError('Participant access denied.');
 	return participant;
