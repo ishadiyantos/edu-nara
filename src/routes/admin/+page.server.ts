@@ -20,10 +20,10 @@ export const load: import('./$types').PageServerLoad = (event) => {
 				title: activities.title,
 				type: activities.type,
 				createdAt: activities.createdAt,
-				contentCount: sql<number>`CASE WHEN ${activities.type} = 'board' THEN (SELECT COUNT(*) FROM board_columns WHERE activity_id = ${activities.id}) ELSE (SELECT COUNT(*) FROM poll_questions WHERE activity_id = ${activities.id}) END`,
+				contentCount: sql<number>`CASE WHEN ${activities.type} = 'board' THEN (SELECT COUNT(*) FROM board_columns WHERE activity_id = ${activities.id}) WHEN ${activities.type} = 'crossword' THEN (SELECT COUNT(*) FROM crossword_entries WHERE activity_id = ${activities.id}) ELSE (SELECT COUNT(*) FROM poll_questions WHERE activity_id = ${activities.id}) END`,
 				preview: sql<
 					string | null
-				>`CASE WHEN ${activities.type} = 'board' THEN (SELECT title FROM board_columns WHERE activity_id = ${activities.id} ORDER BY position LIMIT 1) ELSE (SELECT prompt FROM poll_questions WHERE activity_id = ${activities.id} ORDER BY position LIMIT 1) END`,
+				>`CASE WHEN ${activities.type} = 'board' THEN (SELECT title FROM board_columns WHERE activity_id = ${activities.id} ORDER BY position LIMIT 1) WHEN ${activities.type} = 'crossword' THEN (SELECT clue FROM crossword_entries WHERE activity_id = ${activities.id} ORDER BY number LIMIT 1) ELSE (SELECT prompt FROM poll_questions WHERE activity_id = ${activities.id} ORDER BY position LIMIT 1) END`,
 				ongoing: sql<number>`(SELECT COUNT(*) FROM live_sessions WHERE activity_id = ${activities.id} AND state != 'ended')`
 			})
 			.from(activities)
@@ -74,7 +74,7 @@ export const actions = {
 				.from(activities)
 				.where(eq(activities.id, String(data.activityId)))
 				.get();
-			if (!activity || activity.ownerId !== owner || activity.type === 'crossword')
+			if (!activity || activity.ownerId !== owner)
 				return fail(400, { message: 'Activity not available.' });
 			id = launchSession(
 				database(),

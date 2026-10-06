@@ -174,9 +174,11 @@ test('copy rolls back all writes on child failure; invalid creation never writes
 			templateId: 'quiz-understanding'
 		})
 	).toThrow();
-	expect(() =>
-		createLibraryActivity(store, 'owner', { title: 'bad', type: 'crossword' })
-	).toThrow();
+	const crossword = createLibraryActivity(store, 'owner', {
+		title: 'Crossword',
+		type: 'crossword'
+	});
+	expect(crossword.type).toBe('crossword');
 	expect(() => renameActivity(store, 'owner', original.id, ' ')).toThrow();
 });
 

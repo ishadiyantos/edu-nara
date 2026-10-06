@@ -23,6 +23,16 @@
 		<text x="34" y="51" fill="#155e75" font-size="15" font-weight="800">ideas</text>
 		<text x="24" y="68" fill="#0e7490" font-size="10" font-weight="700">share</text>
 		<text x="62" y="68" fill="#155e75" font-size="13" font-weight="800">learn</text>
+	{:else if type === 'crossword'}
+		<rect x="17" y="13" width="86" height="74" rx="8" fill="#fde68a" />
+		{#each [0, 1, 2, 3] as row}{#each [0, 1, 2, 3] as col}<rect
+					x={24 + col * 18}
+					y={20 + row * 16}
+					width="14"
+					height="12"
+					rx="2"
+					fill={(row + col) % 3 === 0 ? '#1e3a5f' : '#fff7ed'}
+				/>{/each}{/each}
 	{:else}
 		<rect x="12" y="17" width="96" height="70" rx="10" fill="#99f6e4" />
 		{#each [0, 1, 2] as i}<rect

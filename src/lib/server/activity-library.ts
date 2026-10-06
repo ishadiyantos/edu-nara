@@ -4,7 +4,13 @@ import { z } from 'zod';
 import { activityTemplates } from '../activity-templates';
 import { activitySchema } from '../validation';
 import type { Store } from './db/client';
-import { activities, boardColumns, pollQuestions, pollOptions } from './db/schema';
+import {
+	activities,
+	boardColumns,
+	crosswordEntries,
+	pollQuestions,
+	pollOptions
+} from './db/schema';
 import { UserError } from './errors';
 import { createActivity } from './sessions';
 
@@ -15,7 +21,6 @@ function owned(store: Store, ownerId: string, id: string) {
 		.where(and(eq(activities.id, id), eq(activities.ownerId, ownerId)))
 		.get();
 	if (!row) throw new UserError('Activity not found.');
-	if (row.type === 'crossword') throw new UserError('This activity type is not available yet.');
 	return row;
 }
 export function renameActivity(store: Store, ownerId: string, id: string, input: unknown) {
@@ -31,7 +36,7 @@ export function renameActivity(store: Store, ownerId: string, id: string, input:
 export function createLibraryActivity(store: Store, ownerId: string, input: unknown) {
 	const data = activitySchema
 		.extend({
-			type: z.enum(['choice', 'wordcloud', 'board']),
+			type: z.enum(['choice', 'wordcloud', 'board', 'crossword']),
 			templateId: z.string().max(80).default('')
 		})
 		.parse(input);
@@ -117,6 +122,17 @@ export function duplicateActivity(store: Store, ownerId: string, id: string, inp
 			store.db
 				.insert(boardColumns)
 				.values({ ...column, id: randomUUID(), activityId: copy.id, createdAt: Date.now() })
+				.run();
+		}
+		for (const entry of store.db
+			.select()
+			.from(crosswordEntries)
+			.where(eq(crosswordEntries.activityId, id))
+			.orderBy(asc(crosswordEntries.number))
+			.all()) {
+			store.db
+				.insert(crosswordEntries)
+				.values({ ...entry, id: randomUUID(), activityId: copy.id, createdAt: Date.now() })
 				.run();
 		}
 		return copy;

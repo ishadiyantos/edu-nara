@@ -241,3 +241,45 @@ export const wordcloudResponses = sqliteTable(
 		index('wordcloud_response_question_status').on(t.questionId, t.sessionId, t.status)
 	]
 );
+
+export const crosswordEntries = sqliteTable(
+	'crossword_entries',
+	{
+		id: text().primaryKey(),
+		activityId: text('activity_id')
+			.notNull()
+			.references(() => activities.id),
+		answer: text().notNull(),
+		clue: text().notNull(),
+		row: integer().notNull(),
+		col: integer().notNull(),
+		direction: text({ enum: ['across', 'down'] }).notNull(),
+		number: integer().notNull(),
+		createdAt: integer('created_at').notNull()
+	},
+	(t) => [
+		index('crossword_entry_activity').on(t.activityId, t.number),
+		uniqueIndex('crossword_entry_unique_answer').on(t.activityId, t.answer)
+	]
+);
+
+export const crosswordAttempts = sqliteTable(
+	'crossword_attempts',
+	{
+		id: text().primaryKey(),
+		sessionId: text('session_id')
+			.notNull()
+			.references(() => sessions.id),
+		participantId: text('participant_id')
+			.notNull()
+			.references(() => participants.id),
+		answerStateJson: text('answer_state_json').notNull().default('{}'),
+		score: integer().notNull().default(0),
+		completedAt: integer('completed_at'),
+		updatedAt: integer('updated_at').notNull()
+	},
+	(t) => [
+		uniqueIndex('crossword_attempt_once').on(t.sessionId, t.participantId),
+		index('crossword_attempt_session').on(t.sessionId, t.score)
+	]
+);

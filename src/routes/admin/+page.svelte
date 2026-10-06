@@ -172,14 +172,19 @@
 						</h3>
 						<p class="metadata">
 							{activity.contentCount}
-							{activity.type === 'board' ? 'columns' : 'questions'} · Created {new Date(
-								activity.createdAt
-							).toLocaleDateString('en-US', {
-								month: 'short',
-								day: 'numeric',
-								year: 'numeric',
-								timeZone: 'UTC'
-							})}
+							{activity.type === 'board'
+								? 'columns'
+								: activity.type === 'crossword'
+									? 'clues'
+									: 'questions'} · Created {new Date(activity.createdAt).toLocaleDateString(
+								'en-US',
+								{
+									month: 'short',
+									day: 'numeric',
+									year: 'numeric',
+									timeZone: 'UTC'
+								}
+							)}
 						</p>
 						{#if activity.ongoing}<p class="live-warning">
 								Ongoing sessions: edits affect shared content. Duplicate for safe reuse.

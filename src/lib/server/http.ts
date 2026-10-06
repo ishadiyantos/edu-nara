@@ -30,7 +30,7 @@ export async function body(event: RequestEvent) {
 				const { done, value } = await reader.read();
 				if (done) break;
 				size += value.byteLength;
-				if (size > 4096) {
+				if (size > 16384) {
 					await reader.cancel();
 					error(413, 'Request is too large.');
 				}

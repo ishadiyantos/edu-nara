@@ -3,6 +3,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { onMount, untrack } from 'svelte';
 	import BoardLive from '$lib/components/board/BoardLive.svelte';
+	import CrosswordPlayer from '$lib/components/crossword/CrosswordPlayer.svelte';
 	let boardRefresh = $state(0);
 	import QuizLeaderboard from '$lib/components/poll/QuizLeaderboard.svelte';
 	import WordcloudResults from '$lib/components/poll/WordcloudResults.svelte';
@@ -511,6 +512,8 @@
 			refreshKey={boardRefresh}
 			toolbarHost={boardToolbarHost}
 		/>
+	{:else if data.activityType === 'crossword' && data.crossword}
+		<CrosswordPlayer sessionCode={live.code} puzzle={data.crossword} readonly />
 	{:else if active}
 		{#if view === 'leaderboard'}
 			<QuizLeaderboard

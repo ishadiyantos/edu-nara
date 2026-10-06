@@ -17,6 +17,7 @@ import {
 	setWordcloudResults,
 	wordcloudSnapshot
 } from '$lib/server/poll/wordcloud';
+import { crosswordPlayerPayload } from '$lib/server/crossword';
 
 export const load: import('./$types').PageServerLoad = (event) => {
 	try {
@@ -39,6 +40,18 @@ export const load: import('./$types').PageServerLoad = (event) => {
 				leaderboard: [],
 				joinUrl: `${event.url.origin}/join?code=${current.code}`,
 				board: listBoard(store, session.id, owner),
+				activityId: activity.id
+			};
+		if (activity.type === 'crossword')
+			return {
+				snapshot: current,
+				activityType: activity.type,
+				questions: [],
+				words: [],
+				moderation: [],
+				leaderboard: [],
+				joinUrl: `${event.url.origin}/join?code=${current.code}`,
+				crossword: crosswordPlayerPayload(store, session.id),
 				activityId: activity.id
 			};
 		if (activity.type === 'wordcloud') {

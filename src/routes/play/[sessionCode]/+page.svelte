@@ -4,6 +4,7 @@
 	import SessionStatus from '$lib/components/SessionStatus.svelte';
 	import ChoicePlayer from '$lib/components/poll/ChoicePlayer.svelte';
 	import WordcloudPlayer from '$lib/components/poll/WordcloudPlayer.svelte';
+	import CrosswordPlayer from '$lib/components/crossword/CrosswordPlayer.svelte';
 	let { data } = $props();
 	let studentToolbarHost = $state<HTMLElement | null>(null);
 </script>
@@ -60,6 +61,22 @@
 				title={data.snapshot.title}
 				toolbarHost={studentToolbarHost}
 			/>
+		{:else if data.activityType === 'crossword' && data.crossword && data.snapshot.state === 'open'}
+			<div class="mb-4 flex flex-wrap items-end justify-between gap-3 sm:mb-5">
+				<div>
+					<p
+						class="text-xs font-black uppercase tracking-[0.22em] text-[#67e8f9] drop-shadow-[0_0_12px_rgba(34,211,238,0.55)]"
+					>
+						{data.snapshot.code} · SESSION LIVE <span class="sr-only">session in progress</span>
+					</p>
+					<h1
+						class="mt-2 text-2xl font-black tracking-[-0.04em] text-white drop-shadow-[0_0_24px_rgba(168,85,247,0.32)] sm:text-4xl"
+					>
+						{data.snapshot.title}
+					</h1>
+				</div>
+			</div>
+			<CrosswordPlayer sessionCode={data.snapshot.code} puzzle={data.crossword} />
 		{:else if data.snapshot.state === 'open' && data.questions.length}
 			<div class="mb-4 flex flex-wrap items-end justify-between gap-3 sm:mb-5">
 				<div>

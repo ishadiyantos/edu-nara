@@ -1,4 +1,4 @@
-export type LibraryType = 'choice' | 'wordcloud' | 'board';
+export type LibraryType = 'choice' | 'wordcloud' | 'board' | 'crossword';
 export const activityTypes: Record<LibraryType, { label: string; description: string }> = {
 	choice: {
 		label: 'Quiz',
@@ -11,6 +11,10 @@ export const activityTypes: Record<LibraryType, { label: string; description: st
 	board: {
 		label: 'Board',
 		description: 'Bring ideas, questions, and resources together on a shared board.'
+	},
+	crossword: {
+		label: 'Crossword',
+		description: 'Build a manual crossword puzzle with clues for your class.'
 	}
 };
 type Template = {

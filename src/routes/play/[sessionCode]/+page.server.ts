@@ -14,6 +14,7 @@ import {
 	getWordcloudQuestionsByActivity,
 	participantWordcloudResponses
 } from '$lib/server/poll/wordcloud';
+import { crosswordPlayerPayload } from '$lib/server/crossword';
 export const load: import('./$types').PageServerLoad = ({ params, cookies, locals }) => {
 	const store = database();
 	const session = sessionByCode(store, params.sessionCode);
@@ -39,6 +40,16 @@ export const load: import('./$types').PageServerLoad = ({ params, cookies, local
 			initialScore: 0,
 			participantName,
 			board: listBoard(store, session.id, undefined, token)
+		};
+	if (activityType === 'crossword')
+		return {
+			snapshot: current,
+			activityType,
+			questions: [],
+			responses: [],
+			initialScore: 0,
+			participantName,
+			crossword: crosswordPlayerPayload(store, session.id, token)
 		};
 	if (session.state === 'draft')
 		return {
