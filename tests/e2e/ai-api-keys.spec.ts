@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, request as playwrightRequest, test } from '@playwright/test';
 
 test('owner creates scoped key; local agent creates draft idempotently; revoke blocks it', async ({
 	page,
@@ -11,6 +11,22 @@ test('owner creates scoped key; local agent creates draft idempotently; revoke b
 	await expect(page).toHaveURL(/\/admin\/?$/);
 	await page.goto('/admin/ai-keys');
 	await expect(page.getByRole('heading', { name: 'AI API keys' })).toBeVisible();
+	const skillDownload = await page.request.get(
+		'/admin/ai-keys/download/edu-nara-activity-builder.SKILL.md'
+	);
+	expect(skillDownload.status()).toBe(200);
+	expect(skillDownload.headers()['content-disposition']).toContain('attachment');
+	expect(await skillDownload.text()).toContain('# Edu Nara Activity Builder');
+	const docsDownload = await page.request.get('/admin/ai-keys/download/EDU-NARA-AI-API.md');
+	expect(docsDownload.status()).toBe(200);
+	expect(await docsDownload.text()).toContain('POST /api/v1/admin/activities');
+	const anonymousContext = await playwrightRequest.newContext({ baseURL: 'http://127.0.0.1:4173' });
+	const anonymous = await anonymousContext.get('/admin/ai-keys/download/EDU-NARA-AI-API.md', {
+		maxRedirects: 0
+	});
+	expect(anonymous.status()).toBe(303);
+	expect(anonymous.headers().location).toBe('/admin/login');
+	await anonymousContext.dispose();
 	await page.getByLabel('Key label').fill('E2E local agent');
 	await page.getByRole('button', { name: 'Create key' }).click();
 	const token = (await page.locator('.secret code').textContent())?.trim();

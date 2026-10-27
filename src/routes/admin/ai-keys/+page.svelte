@@ -34,6 +34,17 @@
 		<button>Create key</button>
 	</form>
 
+	<section class="downloads" aria-labelledby="ai-docs-heading">
+		<div>
+			<h2 id="ai-docs-heading">AI integration files</h2>
+			<p>Download these files and provide them to your local AI with its API key.</p>
+		</div>
+		<a href="/admin/ai-keys/download/edu-nara-activity-builder.SKILL.md" download>
+			Download skill.md
+		</a>
+		<a href="/admin/ai-keys/download/EDU-NARA-AI-API.md" download> Download API docs </a>
+	</section>
+
 	{#if form?.message}<p class="notice" role="status">{form.message}</p>{/if}
 	{#if form?.key}
 		<div class="secret" role="alert">
@@ -108,6 +119,45 @@
 		background: #1c212c;
 		border: 1px solid #394150;
 		border-radius: 14px;
+	}
+	.downloads {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		flex-wrap: wrap;
+		margin: 24px 0;
+		padding: 18px;
+		border: 1px solid #394150;
+		border-radius: 14px;
+		background: #151a23;
+	}
+	.downloads div {
+		flex: 1 1 100%;
+	}
+	.downloads h2 {
+		margin: 0;
+	}
+	.downloads p {
+		margin: 6px 0 0;
+		color: #aeb8c9;
+	}
+	.downloads a {
+		display: inline-flex;
+		align-items: center;
+		min-height: 44px;
+		padding: 0 14px;
+		border: 1px solid #5b6575;
+		border-radius: 9px;
+		color: #f1f5f9;
+		text-decoration: none;
+		font-weight: 700;
+	}
+	.downloads a:hover {
+		background: #293243;
+	}
+	.downloads a:focus-visible {
+		outline: 3px solid #f5cd62;
+		outline-offset: 2px;
 	}
 	.create label {
 		display: grid;

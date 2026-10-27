@@ -21,6 +21,8 @@ COPY --from=builder --chown=node:node /app/src/lib/validation.ts ./src/lib/valid
 COPY --from=builder --chown=node:node /app/src/lib/board ./src/lib/board
 COPY --from=builder --chown=node:node /app/src/lib/poll ./src/lib/poll
 COPY --from=builder --chown=node:node /app/src/lib/activity-templates.ts ./src/lib/activity-templates.ts
+COPY --from=builder --chown=node:node /app/docs/EDU-NARA-AI-API.md ./docs/EDU-NARA-AI-API.md
+COPY --from=builder --chown=node:node /app/skills/edu-nara-activity-builder/SKILL.md ./skills/edu-nara-activity-builder/SKILL.md
 COPY --from=builder --chown=node:node /app/scripts/start.ts /app/scripts/backup.ts /app/scripts/scheduled-backup.ts /app/scripts/maintenance.ts ./scripts/
 USER node
 VOLUME ["/app/data"]
