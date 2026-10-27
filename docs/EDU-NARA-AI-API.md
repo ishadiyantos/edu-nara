@@ -20,26 +20,26 @@ Kesimpulan praktis:
 
 Semua endpoint berada pada base URL deployment. Contoh production base URL: `https://edu.ishaalim.dev`. Hanya gunakan host yang dikonfirmasi pemilik sistem.
 
-| Method | Path | Fungsi | Auth/catatan |
-|---|---|---|---|
-| `POST` | `/api/join` | Join session dengan code + display name; app menetapkan participant cookie | Publik, dibatasi join/session policy |
-| `GET` | `/api/boards/{sessionCode}/posts` | Baca snapshot Board sesuai akses/column peserta | Admin session atau participant cookie |
-| `POST` | `/api/boards/{sessionCode}/posts` | Buat card teks/link/gambar dalam session Board yang open | Participant cookie; validasi session, column, rate limit, ukuran/media |
-| `POST` | `/api/boards/{sessionCode}/columns` | Tambah Board column untuk activity pemilik yang sudah terkait dengan session | Admin login; body JSON `{ "title": "..." }` |
-| `POST` | `/api/boards/{sessionCode}/columns/{columnId}` | Rename column terkait activity pemilik session | Admin login; body JSON `{ "title": "..." }` |
-| `POST` | `/api/boards/{sessionCode}/settings` | Ubah Board moderation | Admin login; body `{ "moderationEnabled": true }` |
-| `POST` | `/api/boards/posts/{postId}/moderate` | Moderate card | Admin login; action/status tervalidasi |
-| `POST` | `/api/boards/{sessionCode}/posts/{postId}/comments` | Tambah komentar | Participant cookie dan aturan visibilitas card |
-| `POST` | `/api/boards/{sessionCode}/posts/{postId}/reaction` | Toggle reaction | Participant cookie |
-| `POST` | `/api/boards/{sessionCode}/posts/{postId}/move` | Pindah card ke column/posisi lain | Admin login; body `{ "columnId": "...", "position": 0 }` |
-| `POST` | `/api/boards/{sessionCode}/columns/{columnId}/order` | Atur urutan card dalam column | Admin login; body `{ "ids": ["..."] }` |
-| `GET` | `/api/boards/images/{imageId}` | Baca gambar card terotorisasi | Admin/participant yang punya akses ke card/session |
-| `GET` | `/api/sessions/{sessionId}/events` | SSE live updates | Admin session atau participant cookie |
-| `GET` | `/api/crosswords/{sessionCode}/progress` | Baca progress milik peserta | Participant cookie valid dan belum expired |
-| `POST` | `/api/crosswords/{sessionCode}/progress` | Autosave crossword cells | Participant cookie; session harus open; jawaban tetap server-side |
-| `POST` | `/api/crosswords/{sessionCode}/check` | Cek cells dan hitung score | Participant cookie; session harus open; response berisi hasil per-cell, bukan answer key |
-| `POST` | `/api/polls/{sessionCode}/responses` | Submit quiz choice | Participant cookie; session/question tervalidasi |
-| `POST` | `/api/wordcloud/{sessionCode}/responses` | Submit wordcloud response | Participant cookie |
+| Method | Path                                                 | Fungsi                                                                       | Auth/catatan                                                                             |
+| ------ | ---------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `POST` | `/api/join`                                          | Join session dengan code + display name; app menetapkan participant cookie   | Publik, dibatasi join/session policy                                                     |
+| `GET`  | `/api/boards/{sessionCode}/posts`                    | Baca snapshot Board sesuai akses/column peserta                              | Admin session atau participant cookie                                                    |
+| `POST` | `/api/boards/{sessionCode}/posts`                    | Buat card teks/link/gambar dalam session Board yang open                     | Participant cookie; validasi session, column, rate limit, ukuran/media                   |
+| `POST` | `/api/boards/{sessionCode}/columns`                  | Tambah Board column untuk activity pemilik yang sudah terkait dengan session | Admin login; body JSON `{ "title": "..." }`                                              |
+| `POST` | `/api/boards/{sessionCode}/columns/{columnId}`       | Rename column terkait activity pemilik session                               | Admin login; body JSON `{ "title": "..." }`                                              |
+| `POST` | `/api/boards/{sessionCode}/settings`                 | Ubah Board moderation                                                        | Admin login; body `{ "moderationEnabled": true }`                                        |
+| `POST` | `/api/boards/posts/{postId}/moderate`                | Moderate card                                                                | Admin login; action/status tervalidasi                                                   |
+| `POST` | `/api/boards/{sessionCode}/posts/{postId}/comments`  | Tambah komentar                                                              | Participant cookie dan aturan visibilitas card                                           |
+| `POST` | `/api/boards/{sessionCode}/posts/{postId}/reaction`  | Toggle reaction                                                              | Participant cookie                                                                       |
+| `POST` | `/api/boards/{sessionCode}/posts/{postId}/move`      | Pindah card ke column/posisi lain                                            | Admin login; body `{ "columnId": "...", "position": 0 }`                                 |
+| `POST` | `/api/boards/{sessionCode}/columns/{columnId}/order` | Atur urutan card dalam column                                                | Admin login; body `{ "ids": ["..."] }`                                                   |
+| `GET`  | `/api/boards/images/{imageId}`                       | Baca gambar card terotorisasi                                                | Admin/participant yang punya akses ke card/session                                       |
+| `GET`  | `/api/sessions/{sessionId}/events`                   | SSE live updates                                                             | Admin session atau participant cookie                                                    |
+| `GET`  | `/api/crosswords/{sessionCode}/progress`             | Baca progress milik peserta                                                  | Participant cookie valid dan belum expired                                               |
+| `POST` | `/api/crosswords/{sessionCode}/progress`             | Autosave crossword cells                                                     | Participant cookie; session harus open; jawaban tetap server-side                        |
+| `POST` | `/api/crosswords/{sessionCode}/check`                | Cek cells dan hitung score                                                   | Participant cookie; session harus open; response berisi hasil per-cell, bukan answer key |
+| `POST` | `/api/polls/{sessionCode}/responses`                 | Submit quiz choice                                                           | Participant cookie; session/question tervalidasi                                         |
+| `POST` | `/api/wordcloud/{sessionCode}/responses`             | Submit wordcloud response                                                    | Participant cookie                                                                       |
 
 Path inventory lengkap dan schema harus diperiksa di `src/routes/api/` dan route handler terkait sebelum membangun integrasi. Endpoint UI/internal lain dapat berubah tanpa pemberitahuan.
 
@@ -60,9 +60,9 @@ Contoh `curl` hanya sesuai jika cookie admin diperoleh dari login aman di lingku
 
 ```js
 const response = await fetch('/api/boards/ABC123/columns', {
-  method: 'POST',
-  headers: { 'content-type': 'application/json' },
-  body: JSON.stringify({ title: 'Stakeholder dan Kebutuhan' })
+	method: 'POST',
+	headers: { 'content-type': 'application/json' },
+	body: JSON.stringify({ title: 'Stakeholder dan Kebutuhan' })
 });
 const result = await response.json();
 if (!response.ok || !result.ok) throw new Error(result.message ?? 'Column creation failed');
@@ -107,7 +107,7 @@ Content-Type: application/json
 {"title":"Diagnosis Media Internal","columns":["Fakta dan Asumsi","Stakeholder","Diagnosis","Usulan"]}
 ```
 
-`Idempotency-Key` wajib, 1–100 karakter `[A-Za-z0-9._:-]`. Retry dengan key dan payload sama mengembalikan activity yang sama dan tidak menggandakan Board; payload berbeda dengan key sama ditolak. Response `201` memuat `activity.id`, `title`, `type`, `launched:false`, dan URL editor. Session tidak dibuat. Tinjau/edit draft di UI sebelum membuat sesi kelas.
+`Idempotency-Key` wajib, 1–100 karakter `[A-Za-z0-9._:-]`. Retry dengan key dan payload sama mengembalikan activity ID yang sama dan tidak menggandakan Board; payload berbeda dengan key sama ditolak. Retry tidak menimpa perubahan manual yang dibuat setelah Board awal tercipta. Response `201` memuat `activity.id`, `title`, `type`, `launched:false`, dan URL editor. Session tidak dibuat. Tinjau/edit draft di UI sebelum membuat sesi kelas.
 
 Kelola key via UI; endpoint `GET/POST /api/admin/ai-keys` dan `DELETE /api/admin/ai-keys/{id}` juga tersedia untuk sesi admin same-origin. Raw token tidak pernah dikembalikan oleh GET/list.
 

@@ -1,4 +1,4 @@
-import { json } from '@sveltejs/kit';
+import { isHttpError, json } from '@sveltejs/kit';
 import { database } from '$lib/server/db/client';
 import { body, message } from '$lib/server/http';
 import { limits } from '$lib/server/security';
@@ -37,6 +37,7 @@ export const POST: import('./$types').RequestHandler = async (event) => {
 			{ status: 201, headers: { 'Cache-Control': 'no-store' } }
 		);
 	} catch (err) {
+		if (isHttpError(err)) throw err;
 		return json({ ok: false, message: message(err) }, { status: 400 });
 	}
 };

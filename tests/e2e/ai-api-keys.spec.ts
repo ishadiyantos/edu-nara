@@ -25,6 +25,15 @@ test('owner creates scoped key; local agent creates draft idempotently; revoke b
 	const retry = await request.post('/api/v1/admin/activities', { headers, data: payload });
 	expect(retry.status()).toBe(201);
 	expect((await retry.json()).activity.id).toBe(created.activity.id);
+	const oversized = await request.post('/api/v1/admin/activities', {
+		headers: {
+			...headers,
+			'idempotency-key': 'e2e-too-large',
+			'content-type': 'application/json'
+		},
+		data: 'x'.repeat(17000)
+	});
+	expect(oversized.status()).toBe(413);
 	const row = page.getByRole('listitem').filter({ hasText: 'E2E local agent' });
 	await row.getByRole('button', { name: 'Revoke' }).click();
 	const rejected = await request.post('/api/v1/admin/activities', {
