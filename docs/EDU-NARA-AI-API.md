@@ -6,13 +6,15 @@ Status diperiksa dari route source repository pada 2026-10-27. Dokumen ini membe
 
 Edu Nara sudah memiliki HTTP API untuk beberapa operasi **dalam sesi yang sudah ada**. Contoh: membaca/mengirim card Board, membuat column Board pada activity/session yang sudah diluncurkan, join peserta, Crossword progress/check, poll responses, dan live events.
 
-Namun, repo **belum menyediakan API publik/terdokumentasi untuk membuat activity library baru** (misalnya `POST /api/activities`), membuat template activity, mengelola crossword clue lewat API, atau membuat lalu meluncurkan session sebagai alur authoring tunggal. Dashboard admin membuat activity lewat SvelteKit form action `?/create`; itu bukan kontrak API stabil untuk AI lokal.
+API key terkelola kini tersedia, dengan scope terbatas untuk membuat **Board draft** berisi judul dan kolom. Key dibuat dari halaman admin, raw token tampil sekali, disimpan hanya sebagai SHA-256 hash, terikat ke owner, kedaluwarsa 1–365 hari (default 90), dan bisa dicabut. API key saat ini tidak membuat Crossword/Quiz/Word Cloud, tidak mengedit activity yang ada, tidak meluncurkan session, dan tidak membaca data kelas.
+
+Dashboard admin activity masih memakai SvelteKit form action `?/create`; itu bukan kontrak API stabil. Crossword clue editor juga belum punya REST authoring API.
 
 Kesimpulan praktis:
 
-- **AI lokal dapat membantu sekarang:** menyusun konten; memakai UI admin yang sudah login; dan menggunakan API runtime tertentu setelah activity/session dibuat.
-- **AI lokal belum punya jalur server API yang stabil untuk membuat seluruh activity dari nol.** Jangan menganggap endpoint operasional per session sebagai authoring API.
-- Untuk integrasi yang aman/andal, tambahkan authenticated Admin Authoring API; jangan memberi AI akses langsung ke SQLite production.
+- AI lokal bisa membuat Board draft lewat bearer API key, lalu dosen meninjau/mengeditnya di UI.
+- API runtime tetap terpisah dari API draft authoring.
+- Tambahkan scope baru hanya setelah kebutuhan dan batas keamanan ditentukan; jangan beri AI akses langsung ke SQLite production.
 
 ## Endpoint yang terverifikasi
 
@@ -84,22 +86,34 @@ Ini bisa menghindari copy-paste manual, tetapi masih mengandalkan UI. Perubahan 
 
 AI lokal dapat memakai API join/response runtime setelah activity/session tersedia. Jangan expose SQLite production atau cookie admin ke AI sebagai solusi permanen.
 
-### Pilihan C — Admin Authoring API (direkomendasikan untuk integrasi jangka panjang)
+### Pilihan C — API key terkelola untuk Board draft
 
-Tambahkan versi route terpisah, misalnya `/api/v1/admin/activities`, dengan desain minimum:
+Sudah tersedia di build yang memuat fitur ini:
 
-- Auth service-to-service: random high-entropy bearer token, hash token di DB, scope/permission, expiry/rotation/revocation. Simpan secret di local secret manager/environment, bukan prompt, git, atau log.
-- TLS only. Jangan expose API key di frontend.
-- `POST /api/v1/admin/activities` menerima `type`, `title`, dan idempotency key; hanya membuat **draft**, tidak launch.
-- Subresources tervalidasi: `/activities/{id}/board-columns`, `/crossword-entries`, `/questions`, `/options`.
-- Satu payload nested/transaksi untuk create + initial content supaya tidak meninggalkan activity setengah jadi.
-- Ownership authorization setiap operasi, Zod strict schema, payload limit, rate limit, audit log, dan error JSON konsisten.
-- `GET /api/v1/admin/activities/{id}` untuk read-back; jawaban benar hanya boleh muncul pada response admin yang authorized, tidak pernah pada student payload.
-- `POST /activities/{id}/sessions` menjadi operasi terpisah; default session `draft`. `POST /sessions/{id}/state` untuk Open/Close harus izin eksplisit.
-- Tidak ada endpoint yang menerima SQL, path file arbitrary, atau internal filesystem path.
-- Opsional: pembatasan source network/private VPN dan scopes khusus agent.
+- Halaman pemilik: `/admin/ai-keys`. Buat token dengan label dan masa aktif 1–365 hari (default UI 90 hari); revoke kapan saja.
+- API hanya menyimpan SHA-256 hash token, token mentah hanya tampil sekali setelah pembuatan.
+- Key terikat ke admin pemilik dan memiliki scope implementasi tetap: **membuat Board draft + kolom**. Belum ada scope editor Crossword/Quiz/Word Cloud.
+- Token tidak bisa mengedit activity lama, launch session, open/close session, membaca peserta/respons/hasil, atau mengakses API runtime yang memakai participant cookie.
+- Batas request authoring: 20 per menit per key; TLS wajib di deployment publik.
 
-Kontrak authoring API ini adalah **rekomendasi, belum terimplementasi**. Jangan mengirim request ke path contoh tersebut hingga route benar-benar ditambahkan dan diuji.
+Buat Board draft:
+
+```http
+POST /api/v1/admin/activities
+Authorization: Bearer eduai_<token>
+Idempotency-Key: <unique-request-id>
+Content-Type: application/json
+
+{"title":"Diagnosis Media Internal","columns":["Fakta dan Asumsi","Stakeholder","Diagnosis","Usulan"]}
+```
+
+`Idempotency-Key` wajib, 1–100 karakter `[A-Za-z0-9._:-]`. Retry dengan key dan payload sama mengembalikan activity yang sama dan tidak menggandakan Board; payload berbeda dengan key sama ditolak. Response `201` memuat `activity.id`, `title`, `type`, `launched:false`, dan URL editor. Session tidak dibuat. Tinjau/edit draft di UI sebelum membuat sesi kelas.
+
+Kelola key via UI; endpoint `GET/POST /api/admin/ai-keys` dan `DELETE /api/admin/ai-keys/{id}` juga tersedia untuk sesi admin same-origin. Raw token tidak pernah dikembalikan oleh GET/list.
+
+Header `Authorization` tidak boleh masuk log/transcript. Simpan token di secret manager/environment proses AI lokal, bukan source code atau prompt. Batasi outbound network ke host Edu Nara dan gunakan HTTPS.
+
+**Belum tersedia:** edit Board draft via AI API, membuat Crossword/Quiz/Word Cloud, generic activity types, read-back details lewat bearer API, session creation/launch. Rancang scope baru terpisah dan minta persetujuan sebelum memperluas token.
 
 ## Hal yang jangan dilakukan
 

@@ -2,12 +2,21 @@ import type { Handle } from '@sveltejs/kit';
 import { redirect } from '@sveltejs/kit';
 import { database } from './lib/server/db/client';
 import { authenticate } from './lib/server/auth';
-import { limits, sameOrigin } from './lib/server/security';
+import { isAiAuthoringRequest, limits, sameOrigin } from './lib/server/security';
 export const handle: Handle = async ({ event, resolve }) => {
 	const mutation = !['GET', 'HEAD', 'OPTIONS'].includes(event.request.method);
-	if (mutation && !sameOrigin(event.request.headers.get('origin'), event.url.origin))
-		return new Response('Origin not allowed.', { status: 403 });
 	const path = event.url.pathname;
+	const aiBearerMutation = isAiAuthoringRequest(
+		path,
+		event.request.method,
+		event.request.headers.get('authorization')
+	);
+	if (
+		mutation &&
+		!sameOrigin(event.request.headers.get('origin'), event.url.origin) &&
+		!aiBearerMutation
+	)
+		return new Response('Origin not allowed.', { status: 403 });
 	const adminRoute = path === '/admin' || path.startsWith('/admin/');
 	if (mutation || path.endsWith('/events')) {
 		const kind =

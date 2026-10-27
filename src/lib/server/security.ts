@@ -15,6 +15,11 @@ export class RateLimiter {
 	}
 }
 export const limits = new RateLimiter();
+export const isAiAuthoringRequest = (path: string, method: string, authorization: string | null) =>
+	path === '/api/v1/admin/activities' &&
+	method === 'POST' &&
+	/^Bearer eduai_[A-Za-z0-9_-]{43}$/.test(authorization ?? '');
+
 export const sameOrigin = (
 	origin: string | null,
 	expected: string,

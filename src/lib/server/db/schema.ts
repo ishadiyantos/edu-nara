@@ -12,6 +12,34 @@ export const adminSessions = sqliteTable('admin_sessions', {
 		.references(() => admins.id),
 	expiresAt: integer('expires_at').notNull()
 });
+export const aiApiKeys = sqliteTable(
+	'ai_api_keys',
+	{
+		id: text().primaryKey(),
+		tokenHash: text('token_hash').notNull().unique(),
+		adminId: text('admin_id')
+			.notNull()
+			.references(() => admins.id),
+		label: text().notNull(),
+		createdAt: integer('created_at').notNull(),
+		expiresAt: integer('expires_at').notNull(),
+		revokedAt: integer('revoked_at')
+	},
+	(t) => [index('ai_api_key_owner').on(t.adminId, t.createdAt)]
+);
+export const aiApiKeyRequests = sqliteTable(
+	'ai_api_key_requests',
+	{
+		apiKeyId: text('api_key_id')
+			.notNull()
+			.references(() => aiApiKeys.id),
+		requestKey: text('request_key').notNull(),
+		payloadHash: text('payload_hash').notNull(),
+		activityId: text('activity_id').notNull(),
+		createdAt: integer('created_at').notNull()
+	},
+	(t) => [uniqueIndex('ai_api_key_request_once').on(t.apiKeyId, t.requestKey)]
+);
 export const activities = sqliteTable('activities', {
 	id: text().primaryKey(),
 	boardModeration: integer('board_moderation', { mode: 'boolean' }).notNull().default(true),

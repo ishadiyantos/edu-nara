@@ -10,7 +10,8 @@
 	const links = [
 		['/admin', 'My Activities'],
 		['/admin/templates', 'Templates'],
-		['/admin/sessions', 'Class Sessions']
+		['/admin/sessions', 'Class Sessions'],
+		['/admin/ai-keys', 'AI API Keys']
 	];
 </script>
 
