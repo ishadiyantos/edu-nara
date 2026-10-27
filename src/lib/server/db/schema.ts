@@ -35,7 +35,9 @@ export const aiApiKeyRequests = sqliteTable(
 			.references(() => aiApiKeys.id),
 		requestKey: text('request_key').notNull(),
 		payloadHash: text('payload_hash').notNull(),
-		activityId: text('activity_id').notNull(),
+		activityId: text('activity_id')
+			.notNull()
+			.references(() => activities.id, { onDelete: 'cascade' }),
 		createdAt: integer('created_at').notNull()
 	},
 	(t) => [uniqueIndex('ai_api_key_request_once').on(t.apiKeyId, t.requestKey)]

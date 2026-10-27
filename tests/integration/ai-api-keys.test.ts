@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from 'vitest';
+import { eq } from 'drizzle-orm';
 import { openDatabase } from '../../src/lib/server/db/client';
 import { activities, admins, boardColumns, sessions } from '../../src/lib/server/db/schema';
 import { isAiAuthoringRequest } from '../../src/lib/server/security';
@@ -92,6 +93,11 @@ test('AI authoring accepts strict Board draft payload and never launches session
 		})
 	).toThrow();
 	expect(store.db.select().from(sessions).all()).toEqual([]);
+	store.db.delete(boardColumns).where(eq(boardColumns.activityId, activity.id)).run();
+	store.db.delete(activities).where(eq(activities.id, activity.id)).run();
+	expect(store.sqlite.prepare('SELECT count(*) AS count FROM ai_api_key_requests').get()).toEqual({
+		count: 0
+	});
 });
 
 test('only exact AI bearer authoring POST bypasses same-origin gate', () => {
